@@ -243,7 +243,7 @@ export default function SiteJobSummary() {
         )}
 
         <div className="p-4 space-y-5">
-          {/* Next Inspection */}
+          {/* Next Inspection - filled by technician */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Inspection Date</label>
             <input
@@ -264,77 +264,114 @@ export default function SiteJobSummary() {
             />
           </div>
 
-          <button
-            onClick={() => setBookingConfirmed(!bookingConfirmed)}
-            className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              bookingConfirmed
-                ? 'bg-rka-green text-primary-foreground'
-                : 'bg-muted text-foreground'
-            }`}
-          >
-            {bookingConfirmed && <Check className="w-5 h-5" />}
-            {bookingConfirmed ? 'Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
-          </button>
+          {/* ── Customer Section ── */}
+          <div className="border-t-2 border-primary/30 pt-4 mt-2">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <p className="text-sm font-bold text-primary uppercase tracking-wide">Customer to Complete</p>
+            </div>
 
-          {/* Customer Name */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Name</label>
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
-            />
+            {/* Confirm Booking */}
+            <div className="space-y-1 mb-4">
+              <div className="flex items-center gap-1">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Confirm Booking</label>
+                {!bookingConfirmed && <span className="text-xs font-bold text-rka-red">Required</span>}
+              </div>
+              <button
+                onClick={() => setBookingConfirmed(!bookingConfirmed)}
+                className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                  bookingConfirmed
+                    ? 'bg-rka-green text-primary-foreground'
+                    : 'bg-muted text-foreground ring-2 ring-primary/40'
+                }`}
+              >
+                {bookingConfirmed && <Check className="w-5 h-5" />}
+                {bookingConfirmed ? 'Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
+              </button>
+            </div>
+
+            {/* Customer Name */}
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Name</label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
+              />
+            </div>
+
+            {/* Customer Signature */}
+            <div className="mb-4">
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Signature</span>
+                {!customerSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+              </div>
+              <div className={`rounded-xl ${!customerSig ? 'ring-2 ring-primary/40' : ''}`}>
+                <SignaturePad label="" onSave={setCustomerSig} />
+              </div>
+            </div>
+
+            {/* Rating */}
+            <div className="mb-4">
+              <div className="flex items-center gap-1 mb-2">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rating</label>
+                {rating === 0 && <span className="text-xs font-bold text-rka-red">Required</span>}
+              </div>
+              <div className={`flex gap-2 p-2 rounded-xl ${rating === 0 ? 'ring-2 ring-primary/40 bg-muted/30' : ''}`}>
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    onClick={() => setRating(star)}
+                    className="tap-target flex items-center justify-center"
+                  >
+                    <Star
+                      className={`w-8 h-8 transition-all ${
+                        star <= rating ? 'fill-rka-yellow text-rka-yellow' : 'text-border'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Customer Feedback */}
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Feedback (optional)</label>
+              <textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Any feedback or comments from the customer..."
+                className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
+                rows={3}
+              />
+            </div>
+
+            {/* Testimonial Toggle */}
+            <button
+              onClick={() => setPublishTestimonial(!publishTestimonial)}
+              className={`w-full tap-target rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+                publishTestimonial
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {publishTestimonial ? <Check className="w-4 h-4" /> : null}
+              Permission to publish testimonial
+            </button>
           </div>
 
-          {/* Signatures */}
-          <SignaturePad label="Customer Signature" onSave={setCustomerSig} />
-          <SignaturePad label="Technician Signature" onSave={setTechSig} />
-
-          {/* Rating */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Rating (optional)</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map(star => (
-                <button
-                  key={star}
-                  onClick={() => setRating(star)}
-                  className="tap-target flex items-center justify-center"
-                >
-                  <Star
-                    className={`w-8 h-8 transition-all ${
-                      star <= rating ? 'fill-rka-yellow text-rka-yellow' : 'text-border'
-                    }`}
-                  />
-                </button>
-              ))}
+          {/* ── Technician Section ── */}
+          <div className="border-t-2 border-border pt-4 mt-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Technician to Complete</p>
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Signature</span>
+              {!techSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+            </div>
+            <div className={`rounded-xl ${!techSig ? 'ring-2 ring-primary/40' : ''}`}>
+              <SignaturePad label="" onSave={setTechSig} />
+            </div>
           </div>
-
-          {/* Customer Feedback */}
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Feedback (optional)</label>
-            <textarea
-              value={feedback}
-              onChange={(e) => setFeedback(e.target.value)}
-              placeholder="Any feedback or comments from the customer..."
-              className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
-              rows={3}
-            />
-          </div>
-          </div>
-
-          {/* Testimonial Toggle */}
-          <button
-            onClick={() => setPublishTestimonial(!publishTestimonial)}
-            className={`w-full tap-target rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-              publishTestimonial
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground'
-            }`}
-          >
-            {publishTestimonial ? <Check className="w-4 h-4" /> : null}
-            Permission to publish testimonial
-          </button>
         </div>
       </div>
 
