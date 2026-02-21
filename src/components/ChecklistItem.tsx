@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Check, AlertTriangle, MessageCircle, Camera, X, ZoomIn } from 'lucide-react';
+import { Check, AlertTriangle, MessageCircle, Camera, X, ZoomIn, RotateCcw } from 'lucide-react';
 import { InspectionItemResult, DefectType, DefectSeverity, RectificationTimeframe, TemplateItem } from '@/types/inspection';
 
 interface ChecklistItemProps {
@@ -8,17 +8,18 @@ interface ChecklistItemProps {
   onPass: () => void;
   onDefect: (result: InspectionItemResult) => void;
   isActive: boolean;
+  hasPreviousDefect?: boolean;
 }
 
 const defectTypes: DefectType[] = ['Mechanical', 'Electrical', 'Structural', 'Safety Device', 'Operational', 'Cosmetic'];
 const severities: DefectSeverity[] = ['Minor', 'Major', 'Critical'];
 const timeframes: RectificationTimeframe[] = ['Immediately', 'Within 7 Days', 'Within 30 Days', 'Before Next Service'];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_PHOTOS = 5;
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
-export function ChecklistItem({ item, result, onPass, onDefect, isActive }: ChecklistItemProps) {
+export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPreviousDefect }: ChecklistItemProps) {
   const [showExtras, setShowExtras] = useState(false);
   const [comment, setComment] = useState(result.comment || '');
   const [photos, setPhotos] = useState<string[]>(result.photos || []);
@@ -30,20 +31,24 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [defectSaved, setDefectSaved] = useState(false);
+  const [showUnresolvedOptions, setShowUnresolvedOptions] = useState(false);
+  const [unresolvedPhotos, setUnresolvedPhotos] = useState<string[]>(result.unresolvedPhotos || []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const defectFileInputRef = useRef<HTMLInputElement>(null);
+  const unresolvedFileInputRef = useRef<HTMLInputElement>(null);
 
   const isPass = result.result === 'pass';
   const isDefect = result.result === 'defect';
+  const isUnresolved = result.result === 'unresolved';
 
-  const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, forDefect: boolean) => {
+  const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, target: 'pass' | 'defect' | 'unresolved') => {
     try {
       const files = e.target.files;
       if (!files || files.length === 0) return;
       setUploadError(null);
 
-      const currentCount = forDefect ? defectPhotos.length : photos.length;
-      const remaining = MAX_PHOTOS - currentCount;
+      const currentPhotos = target === 'defect' ? defectPhotos : target === 'unresolved' ? unresolvedPhotos : photos;
+      const remaining = MAX_PHOTOS - currentPhotos.length;
 
       if (remaining <= 0) {
         setUploadError(`Maximum ${MAX_PHOTOS} photos allowed`);
@@ -66,8 +71,10 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
         reader.onload = (ev) => {
           try {
             const dataUrl = ev.target?.result as string;
-            if (forDefect) {
+            if (target === 'defect') {
               setDefectPhotos(prev => [...prev, dataUrl]);
+            } else if (target === 'unresolved') {
+              setUnresolvedPhotos(prev => [...prev, dataUrl]);
             } else {
               setPhotos(prev => [...prev, dataUrl]);
             }
@@ -76,10 +83,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
             setUploadError('Failed to process photo');
           }
         };
-        reader.onerror = () => {
-          console.error('FileReader error');
-          setUploadError('Failed to read photo file');
-        };
+        reader.onerror = () => setUploadError('Failed to read photo file');
         reader.readAsDataURL(file);
       }
       e.target.value = '';
@@ -87,11 +91,13 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
       console.error('Photo upload error:', err);
       setUploadError('Failed to upload photo');
     }
-  }, [defectPhotos.length, photos.length]);
+  }, [defectPhotos.length, photos.length, unresolvedPhotos.length]);
 
-  const removePhoto = (index: number, forDefect: boolean) => {
-    if (forDefect) {
+  const removePhoto = (index: number, target: 'pass' | 'defect' | 'unresolved') => {
+    if (target === 'defect') {
       setDefectPhotos(prev => prev.filter((_, i) => i !== index));
+    } else if (target === 'unresolved') {
+      setUnresolvedPhotos(prev => prev.filter((_, i) => i !== index));
     } else {
       setPhotos(prev => prev.filter((_, i) => i !== index));
     }
@@ -120,15 +126,46 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
     }
   };
 
+  const handleUnresolvedClick = () => {
+    setShowUnresolvedOptions(true);
+  };
+
+  const handleStillUnresolved = () => {
+    onDefect({
+      ...result,
+      result: 'unresolved',
+      unresolvedStatus: 'still_unresolved',
+      unresolvedPhotos,
+    });
+    setShowUnresolvedOptions(false);
+  };
+
+  const handleDefectResolved = () => {
+    onDefect({
+      ...result,
+      result: 'pass',
+      unresolvedStatus: 'resolved',
+      unresolvedPhotos,
+    });
+    setShowUnresolvedOptions(false);
+  };
+
   return (
     <div
       className={`border-b border-border transition-all duration-200 ${
-        isPass ? 'pass-row animate-flash-green' : isDefect ? 'defect-row' : ''
+        isPass ? 'pass-row animate-flash-green' : isDefect ? 'defect-row' : isUnresolved ? 'bg-rka-orange/10' : ''
       }`}
     >
       <div className="px-4 py-3">
-        <p className={`text-sm font-medium mb-3 leading-snug ${isPass ? 'text-rka-green-dark' : isDefect ? 'text-rka-red' : 'text-foreground'}`}>
+        <p className={`text-sm font-medium mb-3 leading-snug ${
+          isPass ? 'text-rka-green-dark' : isDefect ? 'text-rka-red' : isUnresolved ? 'text-rka-orange' : 'text-foreground'
+        }`}>
           {item.label}
+          {hasPreviousDefect && !isPass && !isDefect && !isUnresolved && (
+            <span className="ml-2 text-xs bg-rka-orange/20 text-rka-orange px-2 py-0.5 rounded-full font-semibold">
+              Previous Defect
+            </span>
+          )}
         </p>
 
         <div className="flex gap-2">
@@ -147,7 +184,6 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
           <button
             onClick={() => {
               if (isDefect) {
-                // Unselect: clear defect
                 onDefect({ ...result, result: undefined, defect: undefined, comment: undefined, photos: undefined });
               } else {
                 onDefect({ ...result, result: 'defect', defect: { defectType: 'Mechanical', severity: 'Minor', rectificationTimeframe: 'Within 7 Days', recommendedAction: '', notes: '', photos: [] } });
@@ -163,6 +199,20 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
             DEFECT
           </button>
 
+          {hasPreviousDefect && (
+            <button
+              onClick={handleUnresolvedClick}
+              className={`flex-1 tap-target rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all ${
+                isUnresolved
+                  ? 'bg-rka-orange text-destructive-foreground shadow-md'
+                  : 'bg-rka-orange/10 text-rka-orange border-2 border-rka-orange active:bg-rka-orange active:text-destructive-foreground'
+              }`}
+            >
+              <RotateCcw className="w-4 h-4" />
+              UNRESOLVED
+            </button>
+          )}
+
           {(isPass || isDefect) && (
             <button
               onClick={() => setShowExtras(!showExtras)}
@@ -174,6 +224,67 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
             </button>
           )}
         </div>
+
+        {/* Unresolved Defect Options */}
+        {showUnresolvedOptions && (
+          <div className="mt-3 space-y-3 bg-background rounded-lg p-3 border border-rka-orange/30">
+            <p className="text-sm font-semibold text-rka-orange">Previous defect found — what is the status?</p>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Add Photo (optional)</label>
+              <input
+                ref={unresolvedFileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handlePhotoUpload(e, 'unresolved')}
+                multiple
+              />
+              <button
+                onClick={() => unresolvedFileInputRef.current?.click()}
+                disabled={unresolvedPhotos.length >= MAX_PHOTOS}
+                className="mt-1 tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
+              >
+                <Camera className="w-5 h-5" />
+                {unresolvedPhotos.length > 0 ? `Add more (${unresolvedPhotos.length}/${MAX_PHOTOS})` : 'Tap to add photo'}
+              </button>
+              {uploadError && <p className="text-xs text-rka-red mt-1">{uploadError}</p>}
+              {unresolvedPhotos.length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {unresolvedPhotos.map((p, i) => (
+                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-border shadow-sm">
+                      <img src={p} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" onClick={() => setPreviewPhoto(p)} />
+                      <button onClick={() => setPreviewPhoto(p)} className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
+                        <ZoomIn className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => removePhoto(i, 'unresolved')} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-1">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleStillUnresolved}
+                className="flex-1 tap-target rounded-lg font-bold text-sm bg-rka-orange text-destructive-foreground flex items-center justify-center gap-2"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                Defect Still Unresolved
+              </button>
+              <button
+                onClick={handleDefectResolved}
+                className="flex-1 tap-target rounded-lg font-bold text-sm bg-rka-green text-primary-foreground flex items-center justify-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                Defect Resolved
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Optional comment + photo for PASS */}
         {isPass && showExtras && (
@@ -192,7 +303,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
                 accept="image/*"
                 capture="environment"
                 className="hidden"
-                onChange={(e) => handlePhotoUpload(e, false)}
+                onChange={(e) => handlePhotoUpload(e, 'pass')}
                 multiple
               />
               <button
@@ -212,7 +323,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
                       <button onClick={() => setPreviewPhoto(p)} className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
                         <ZoomIn className="w-3 h-3" />
                       </button>
-                      <button onClick={() => removePhoto(i, false)} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-1">
+                      <button onClick={() => removePhoto(i, 'pass')} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-1">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -302,7 +413,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
                 accept="image/*"
                 capture="environment"
                 className="hidden"
-                onChange={(e) => handlePhotoUpload(e, true)}
+                onChange={(e) => handlePhotoUpload(e, 'defect')}
                 multiple
               />
               <button
@@ -322,7 +433,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
                       <button onClick={() => setPreviewPhoto(p)} className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
                         <ZoomIn className="w-3 h-3" />
                       </button>
-                      <button onClick={() => removePhoto(i, true)} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-1">
+                      <button onClick={() => removePhoto(i, 'defect')} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-1">
                         <X className="w-3 h-3" />
                       </button>
                     </div>

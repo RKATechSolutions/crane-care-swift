@@ -6,7 +6,7 @@ interface ProgressBarProps {
 
 export function ProgressBar({ currentSection, totalSections, sectionNames }: ProgressBarProps) {
   return (
-    <div className="bg-muted/50 px-4 py-3 border-b border-border sticky top-0 z-30">
+    <div className="bg-background px-4 py-3 border-b border-border sticky top-0 z-30">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-bold">
           {sectionNames[currentSection]} ({currentSection + 1} of {totalSections})
