@@ -70,28 +70,6 @@ export default function DefectSummary() {
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Now' } })}
-                  className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
-                    item.defect!.quoteStatus === 'Quote Now'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-foreground active:bg-foreground/10'
-                  }`}
-                >
-                  Quote Now
-                </button>
-                <button
-                  onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Later' } })}
-                  className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
-                    item.defect!.quoteStatus === 'Quote Later'
-                      ? 'bg-foreground text-background'
-                      : 'bg-muted text-foreground active:bg-foreground/10'
-                  }`}
-                >
-                  Quote Later
-                </button>
-              </div>
             </div>
           ))}
         </div>
