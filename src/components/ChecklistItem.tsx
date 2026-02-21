@@ -36,42 +36,56 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
   const isDefect = result.result === 'defect';
 
   const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, forDefect: boolean) => {
-    const files = e.target.files;
-    if (!files) return;
-    setUploadError(null);
+    try {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      setUploadError(null);
 
-    const currentCount = forDefect ? defectPhotos.length : photos.length;
-    const remaining = MAX_PHOTOS - currentCount;
+      const currentCount = forDefect ? defectPhotos.length : photos.length;
+      const remaining = MAX_PHOTOS - currentCount;
 
-    if (remaining <= 0) {
-      setUploadError(`Maximum ${MAX_PHOTOS} photos allowed`);
-      e.target.value = '';
-      return;
-    }
-
-    const validFiles = Array.from(files).slice(0, remaining);
-
-    for (const file of validFiles) {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        setUploadError('Invalid file type. Use JPG, PNG, or WebP');
-        continue;
+      if (remaining <= 0) {
+        setUploadError(`Maximum ${MAX_PHOTOS} photos allowed`);
+        e.target.value = '';
+        return;
       }
-      if (file.size > MAX_FILE_SIZE) {
-        setUploadError('File too large (max 10MB)');
-        continue;
-      }
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
-        if (forDefect) {
-          setDefectPhotos(prev => [...prev, dataUrl]);
-        } else {
-          setPhotos(prev => [...prev, dataUrl]);
+
+      const validFiles = Array.from(files).slice(0, remaining);
+
+      for (const file of validFiles) {
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          setUploadError('Invalid file type. Use JPG, PNG, or WebP');
+          continue;
         }
-      };
-      reader.readAsDataURL(file);
+        if (file.size > MAX_FILE_SIZE) {
+          setUploadError('File too large (max 10MB)');
+          continue;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const dataUrl = ev.target?.result as string;
+            if (forDefect) {
+              setDefectPhotos(prev => [...prev, dataUrl]);
+            } else {
+              setPhotos(prev => [...prev, dataUrl]);
+            }
+          } catch (err) {
+            console.error('Error processing photo:', err);
+            setUploadError('Failed to process photo');
+          }
+        };
+        reader.onerror = () => {
+          console.error('FileReader error');
+          setUploadError('Failed to read photo file');
+        };
+        reader.readAsDataURL(file);
+      }
+      e.target.value = '';
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      setUploadError('Failed to upload photo');
     }
-    e.target.value = '';
   }, [defectPhotos.length, photos.length]);
 
   const removePhoto = (index: number, forDefect: boolean) => {
@@ -83,20 +97,24 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
   };
 
   const handleDefectSave = () => {
-    onDefect({
-      ...result,
-      result: 'defect',
-      comment,
-      photos,
-      defect: {
-        defectType,
-        severity,
-        rectificationTimeframe: timeframe,
-        recommendedAction: '',
-        notes: defectComment,
-        photos: defectPhotos,
-      },
-    });
+    try {
+      onDefect({
+        ...result,
+        result: 'defect',
+        comment,
+        photos,
+        defect: {
+          defectType,
+          severity,
+          rectificationTimeframe: timeframe,
+          recommendedAction: '',
+          notes: defectComment,
+          photos: defectPhotos,
+        },
+      });
+    } catch (err) {
+      console.error('Error saving defect:', err);
+    }
   };
 
   return (
@@ -125,7 +143,10 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
 
           <button
             onClick={() => {
-              if (!isDefect) {
+              if (isDefect) {
+                // Unselect: clear defect
+                onDefect({ ...result, result: undefined, defect: undefined, comment: undefined, photos: undefined });
+              } else {
                 onDefect({ ...result, result: 'defect', defect: { defectType: 'Mechanical', severity: 'Minor', rectificationTimeframe: 'Within 7 Days', recommendedAction: '', notes: '', photos: [] } });
               }
             }}

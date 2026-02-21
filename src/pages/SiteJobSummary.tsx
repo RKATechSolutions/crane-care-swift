@@ -149,7 +149,7 @@ export default function SiteJobSummary() {
             }`}
           >
             {bookingConfirmed && <Check className="w-5 h-5" />}
-            {bookingConfirmed ? 'Booking Confirmed' : 'Confirm Booking'}
+            {bookingConfirmed ? 'Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
           </button>
 
           {/* Customer Name */}
