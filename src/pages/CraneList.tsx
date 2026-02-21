@@ -30,9 +30,13 @@ export default function CraneList() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
   const [loading, setLoading] = useState(true);
-  const site = state.selectedSite!;
+  const site = state.selectedSite;
 
   useEffect(() => {
+    if (!site) {
+      setLoading(false);
+      return;
+    }
     const fetchAssets = async () => {
       setLoading(true);
       const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer';
@@ -108,6 +112,14 @@ export default function CraneList() {
   }, [site.name, site.id]);
 
   // Convert DB assets to Crane objects for inspection compatibility
+  if (!site) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">No site selected</p>
+      </div>
+    );
+  }
+
   const assetToCrane = (asset: DbAsset): Crane => ({
     id: `asset-${asset.id}`,
     siteId: site.id,
