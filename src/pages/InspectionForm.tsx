@@ -36,8 +36,24 @@ export default function InspectionForm() {
 
   const isUnsafe = inspection.craneStatus === 'Unsafe to Operate';
 
-  const defects = inspection.items.filter(i => i.result === 'defect');
+  const defects = inspection.items.filter(i => i.result === 'defect' || i.result === 'unresolved');
   const totalCompleted = inspection.items.filter(i => i.result).length;
+
+  // Determine which items had defects in previous inspections for this crane
+  const previousDefectItemIds = useMemo(() => {
+    const previousInspections = state.inspections.filter(
+      i => i.craneId === inspection.craneId && i.id !== inspection.id && i.status === 'completed'
+    );
+    const ids = new Set<string>();
+    previousInspections.forEach(insp => {
+      insp.items.forEach(item => {
+        if (item.result === 'defect' || item.result === 'unresolved') {
+          ids.add(item.templateItemId);
+        }
+      });
+    });
+    return ids;
+  }, [state.inspections, inspection.craneId, inspection.id]);
   const totalItems = inspection.items.length;
   const allComplete = totalCompleted === totalItems;
 
@@ -100,7 +116,7 @@ export default function InspectionForm() {
       />
 
       {/* Section Tabs */}
-      <div className="flex overflow-x-auto border-b border-border bg-muted/30 px-2 gap-1 py-1 no-scrollbar sticky top-[72px] z-20">
+      <div className="flex overflow-x-auto border-b border-border bg-background px-2 gap-1 py-1 no-scrollbar sticky top-[72px] z-20">
         {sections.map((sec, idx) => {
           const secItems = inspection.items.filter(i => i.sectionId === sec.id);
           const secDone = secItems.filter(i => i.result).length;
@@ -150,6 +166,7 @@ export default function InspectionForm() {
             onPass={() => handlePass(item.id)}
             onDefect={(r) => handleDefect(item.id, r)}
             isActive={!result.result}
+            hasPreviousDefect={previousDefectItemIds.has(item.id)}
           />
         ))}
       </div>
@@ -188,11 +205,14 @@ export default function InspectionForm() {
         ) : (
           <>
             <button
-              onClick={() => dispatch({ type: 'SAVE_INSPECTION' })}
+              onClick={() => {
+                dispatch({ type: 'SAVE_INSPECTION' });
+                dispatch({ type: 'BACK_TO_CRANES' });
+              }}
               className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
-              Save Draft
+              Save Form and Return to Assets
             </button>
             <button
               onClick={handleComplete}

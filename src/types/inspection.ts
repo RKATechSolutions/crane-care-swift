@@ -89,10 +89,12 @@ export interface Inspection {
 export interface InspectionItemResult {
   templateItemId: string;
   sectionId: string;
-  result?: 'pass' | 'defect';
+  result?: 'pass' | 'defect' | 'unresolved';
   comment?: string;
   photos?: string[];
   defect?: DefectDetail;
+  unresolvedStatus?: 'still_unresolved' | 'resolved';
+  unresolvedPhotos?: string[];
 }
 
 export interface DefectDetail {
