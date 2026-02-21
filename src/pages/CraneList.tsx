@@ -35,18 +35,15 @@ export default function CraneList() {
   useEffect(() => {
     const fetchAssets = async () => {
       setLoading(true);
-      // Try matching by account_name to the site name
-      const searchTerms = [
-        site.name,
-        site.name.split(' - ')[0],
-        site.name.split(' ')[0],
-      ];
+      const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer';
 
-      for (const term of searchTerms) {
+      // 1. Try client_id if this is a DB client site
+      if (site.id.startsWith('db-')) {
+        const clientId = site.id.replace('db-', '');
         const { data } = await supabase
           .from('assets')
-          .select('id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer')
-          .ilike('account_name', `%${term}%`)
+          .select(selectFields)
+          .eq('client_id', clientId)
           .order('class_name');
 
         if (data && data.length > 0) {
@@ -56,17 +53,51 @@ export default function CraneList() {
         }
       }
 
-      // Also try matching if the site was selected from DB clients
-      if (site.id.startsWith('db-')) {
-        const clientId = site.id.replace('db-', '');
+      // 2. Look up client by name match, then query assets by client_id
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, client_name');
+
+      if (clients) {
+        const siteLower = site.name.toLowerCase();
+        const matchedClient = clients.find(c => {
+          const cl = c.client_name.toLowerCase();
+          return cl === siteLower || 
+                 cl.includes(siteLower) || 
+                 siteLower.includes(cl) ||
+                 cl.startsWith(siteLower.split(' - ')[0].toLowerCase()) ||
+                 siteLower.startsWith(cl.split(' ')[0]);
+        });
+
+        if (matchedClient) {
+          const { data } = await supabase
+            .from('assets')
+            .select(selectFields)
+            .or(`client_id.eq.${matchedClient.id},account_name.ilike.%${matchedClient.client_name}%`)
+            .order('class_name');
+
+          if (data && data.length > 0) {
+            setDbAssets(data);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // 3. Fallback: direct account_name search
+      const searchTerms = [site.name, site.name.split(' - ')[0]];
+      for (const term of searchTerms) {
+        if (term.length < 3) continue;
         const { data } = await supabase
           .from('assets')
-          .select('id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer')
-          .eq('client_id', clientId)
+          .select(selectFields)
+          .ilike('account_name', `%${term}%`)
           .order('class_name');
 
         if (data && data.length > 0) {
           setDbAssets(data);
+          setLoading(false);
+          return;
         }
       }
 

@@ -31,15 +31,20 @@ export default function Sites() {
         .order('client_name');
       if (clients) setDbClients(clients);
 
-      // Fetch asset counts grouped by account_name
+      // Fetch asset counts grouped by client_id and account_name
       const { data: assets } = await supabase
         .from('assets')
-        .select('account_name');
+        .select('client_id, account_name');
       
       if (assets) {
         const counts: Record<string, number> = {};
         for (const a of assets) {
-          const name = a.account_name?.toLowerCase();
+          // Index by client_id
+          if (a.client_id) {
+            counts[`cid:${a.client_id}`] = (counts[`cid:${a.client_id}`] || 0) + 1;
+          }
+          // Also index by account_name for fallback
+          const name = (a.account_name as string | null)?.toLowerCase();
           if (name) counts[name] = (counts[name] || 0) + 1;
         }
         setAssetCounts(counts);
@@ -63,11 +68,22 @@ export default function Sites() {
 
   const allSites = [...state.sites, ...dbSitesAsSites];
 
-  const getAssetCount = (siteName: string): number => {
-    // Try exact match, then prefix match
+  const getAssetCount = (siteId: string, siteName: string): number => {
+    // 1. Try client_id lookup for DB sites
+    if (siteId.startsWith('db-')) {
+      const clientId = siteId.replace('db-', '');
+      if (assetCounts[`cid:${clientId}`]) return assetCounts[`cid:${clientId}`];
+    }
+    // 2. Try by client_id from dbClients matching the name
+    const matchedClient = dbClients.find(c => c.client_name.toLowerCase() === siteName.toLowerCase());
+    if (matchedClient && assetCounts[`cid:${matchedClient.id}`]) {
+      return assetCounts[`cid:${matchedClient.id}`];
+    }
+    // 3. Fallback: account_name match
     const lower = siteName.toLowerCase();
     if (assetCounts[lower]) return assetCounts[lower];
     for (const [key, count] of Object.entries(assetCounts)) {
+      if (key.startsWith('cid:')) continue;
       if (key.includes(lower.split(' - ')[0].toLowerCase()) || lower.includes(key.split(' ')[0])) {
         return count;
       }
@@ -106,7 +122,7 @@ export default function Sites() {
 
       <div className="flex-1">
         {filtered.map(site => {
-          const dbAssetCount = getAssetCount(site.name);
+          const dbAssetCount = getAssetCount(site.id, site.name);
           const totalEquipment = site.cranes.length > 0 ? site.cranes.length : dbAssetCount;
 
           return (

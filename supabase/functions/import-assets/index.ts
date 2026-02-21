@@ -27,11 +27,33 @@ serve(async (req) => {
       .from("clients")
       .select("id, client_name");
 
-    const clientMap = new Map<string, string>();
+    // Build multiple lookup maps for fuzzy client matching
+    const exactMap = new Map<string, string>();
+    const clientNames: Array<{lower: string, id: string}> = [];
     if (allClients) {
       for (const c of allClients) {
-        clientMap.set(c.client_name.toLowerCase(), c.id);
+        exactMap.set(c.client_name.toLowerCase(), c.id);
+        clientNames.push({ lower: c.client_name.toLowerCase(), id: c.id });
       }
+    }
+
+    function findClientId(accountName: string | null): string | null {
+      if (!accountName) return null;
+      const lower = accountName.toLowerCase().trim();
+      // 1. Exact match
+      if (exactMap.has(lower)) return exactMap.get(lower)!;
+      // 2. Client name contains account name or vice versa
+      for (const c of clientNames) {
+        if (c.lower.includes(lower) || lower.includes(c.lower)) return c.id;
+      }
+      // 3. First word match (for cases like "Greens Foods" matching "Greens Foods Pty Ltd")
+      const firstWord = lower.split(' ')[0];
+      if (firstWord.length >= 4) {
+        for (const c of clientNames) {
+          if (c.lower.startsWith(firstWord)) return c.id;
+        }
+      }
+      return null;
     }
 
     // Clear existing assets first
@@ -39,12 +61,14 @@ serve(async (req) => {
 
     // Map and insert in batches
     let inserted = 0;
+    let linked = 0;
     const batchSize = 50;
 
     for (let i = 0; i < assets.length; i += batchSize) {
       const batch = assets.slice(i, i + batchSize).map((a: any) => {
         const accountName = a.accountName?.trim() || null;
-        const clientId = accountName ? clientMap.get(accountName.toLowerCase()) : null;
+        const clientId = findClientId(accountName);
+        if (clientId) linked++;
 
         return {
           external_id: a.id?.toString() || null,
@@ -103,7 +127,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, imported: inserted }),
+      JSON.stringify({ success: true, imported: inserted, linked }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
