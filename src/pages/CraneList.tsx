@@ -109,7 +109,7 @@ export default function CraneList() {
     };
 
     fetchAssets();
-  }, [site.name, site.id]);
+  }, [site?.name, site?.id]);
 
   // Convert DB assets to Crane objects for inspection compatibility
   if (!site) {
