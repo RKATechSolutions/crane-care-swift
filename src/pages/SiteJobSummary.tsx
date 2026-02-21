@@ -5,6 +5,7 @@ import { SignaturePad } from '@/components/SignaturePad';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { addDays, format } from 'date-fns';
 import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X } from 'lucide-react';
+import rkaReviewQr from '@/assets/rka-review-qr.png';
 
 export default function SiteJobSummary() {
   const { state, dispatch } = useApp();
@@ -333,6 +334,14 @@ export default function SiteJobSummary() {
                   </button>
                 ))}
               </div>
+              {rating === 5 && (
+                <div className="mt-3 p-4 rounded-xl bg-rka-green-light text-center space-y-3">
+                  <p className="text-sm font-bold text-rka-green-dark">
+                    Thank you for your rating, please give us a Google Review here!
+                  </p>
+                  <img src={rkaReviewQr} alt="Scan to leave a Google Review" className="w-32 h-32 mx-auto rounded-lg" />
+                </div>
+              )}
             </div>
 
             {/* Customer Feedback */}
