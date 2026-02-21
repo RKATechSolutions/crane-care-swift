@@ -97,7 +97,7 @@ export default function Sites() {
   );
 
   if (showImport) {
-    return <ImportAssets />;
+    return <ImportAssets onBack={() => setShowImport(false)} />;
   }
 
   return (
