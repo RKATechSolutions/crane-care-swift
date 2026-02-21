@@ -50,20 +50,36 @@ export default function SiteJobSummary() {
 
   useEffect(() => {
     const fetchClient = async () => {
-      const { data: clients } = await supabase
-        .from('clients')
-        .select('*')
-        .ilike('client_name', `%${site.name}%`)
-        .limit(1);
+      // Try exact match first, then progressively broader matches
+      const searchTerms = [
+        site.name,
+        site.name.split(' - ')[0], // e.g. "Bluescope Steel" from "Bluescope Steel - Western Port"
+        site.name.split(' ')[0],   // e.g. "Bluescope"
+      ];
 
-      if (clients && clients.length > 0) {
-        setClientInfo(clients[0]);
-        setCustomerName(clients[0].primary_contact_name || site.contactName);
+      let matched: any = null;
+      for (const term of searchTerms) {
+        if (!term || term.length < 3) continue;
+        const { data: clients } = await supabase
+          .from('clients')
+          .select('*')
+          .ilike('client_name', `%${term}%`)
+          .limit(1);
+
+        if (clients && clients.length > 0) {
+          matched = clients[0];
+          break;
+        }
+      }
+
+      if (matched) {
+        setClientInfo(matched);
+        setCustomerName(matched.primary_contact_name || site.contactName);
 
         const { data: contacts } = await supabase
           .from('client_contacts')
           .select('*')
-          .eq('client_id', clients[0].id)
+          .eq('client_id', matched.id)
           .eq('status', 'Active');
 
         if (contacts) setClientContacts(contacts);
