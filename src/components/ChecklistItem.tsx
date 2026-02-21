@@ -21,8 +21,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
   const [defectType, setDefectType] = useState<DefectType>(result.defect?.defectType || 'Mechanical');
   const [severity, setSeverity] = useState<DefectSeverity>(result.defect?.severity || 'Minor');
   const [timeframe, setTimeframe] = useState<RectificationTimeframe>(result.defect?.rectificationTimeframe || 'Within 7 Days');
-  const [action, setAction] = useState(result.defect?.recommendedAction || '');
-  const [notes, setNotes] = useState(result.defect?.notes || '');
+  const [defectComment, setDefectComment] = useState(result.defect?.notes || '');
   const [defectPhotos, setDefectPhotos] = useState<string[]>(result.defect?.photos || []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const defectFileInputRef = useRef<HTMLInputElement>(null);
@@ -60,12 +59,14 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
     onDefect({
       ...result,
       result: 'defect',
+      comment,
+      photos,
       defect: {
         defectType,
         severity,
         rectificationTimeframe: timeframe,
-        recommendedAction: action,
-        notes,
+        recommendedAction: '',
+        notes: defectComment,
         photos: defectPhotos,
       },
     });
@@ -227,22 +228,11 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recommended Action</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Comment (optional)</label>
               <textarea
-                value={action}
-                onChange={(e) => setAction(e.target.value)}
-                placeholder="What should be done..."
-                className="w-full p-3 border border-border rounded-lg bg-background text-sm resize-none mt-1"
-                rows={2}
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Notes</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Additional notes..."
+                value={defectComment}
+                onChange={(e) => setDefectComment(e.target.value)}
+                placeholder="Add a comment..."
                 className="w-full p-3 border border-border rounded-lg bg-background text-sm resize-none mt-1"
                 rows={2}
               />
