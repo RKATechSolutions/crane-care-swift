@@ -117,20 +117,17 @@ export default function CraneList() {
         })}
       </div>
 
-      {/* Site Job Summary button - show when at least one crane completed */}
-      {state.inspections.some(i => i.siteId === site.id && i.status === 'completed') && (
-        <div className="p-4 border-t border-border">
-          <button
-            onClick={() => {
-              // Navigate to site job summary - we'll use selectedCrane = null as signal
-              dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
-            }}
-            className="w-full tap-target bg-foreground text-background rounded-xl font-bold text-base"
-          >
-            Complete Site Job Summary
-          </button>
-        </div>
-      )}
+      {/* Site Job Summary button - always available */}
+      <div className="p-4 border-t border-border">
+        <button
+          onClick={() => {
+            dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
+          }}
+          className="w-full tap-target bg-foreground text-background rounded-xl font-bold text-base"
+        >
+          Complete Site Job Summary
+        </button>
+      </div>
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
     </div>
