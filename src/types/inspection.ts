@@ -91,6 +91,7 @@ export interface InspectionItemResult {
   sectionId: string;
   result?: 'pass' | 'defect';
   comment?: string;
+  photos?: string[];
   defect?: DefectDetail;
 }
 
@@ -116,6 +117,7 @@ export interface SiteJobSummary {
   customerSignature?: string;
   technicianSignature?: string;
   rating?: number;
+  feedback?: string;
   publishTestimonial: boolean;
   completedAt?: string;
 }

@@ -29,6 +29,7 @@ export default function SiteJobSummary() {
   const [customerSig, setCustomerSig] = useState('');
   const [techSig, setTechSig] = useState('');
   const [rating, setRating] = useState(0);
+  const [feedback, setFeedback] = useState('');
   const [publishTestimonial, setPublishTestimonial] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -45,6 +46,7 @@ export default function SiteJobSummary() {
         customerSignature: customerSig,
         technicianSignature: techSig,
         rating: rating || undefined,
+        feedback: feedback || undefined,
         publishTestimonial,
         completedAt: new Date().toISOString(),
       },
@@ -182,7 +184,19 @@ export default function SiteJobSummary() {
                   />
                 </button>
               ))}
-            </div>
+          </div>
+
+          {/* Customer Feedback */}
+          <div>
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Feedback (optional)</label>
+            <textarea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Any feedback or comments from the customer..."
+              className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
+              rows={3}
+            />
+          </div>
           </div>
 
           {/* Testimonial Toggle */}

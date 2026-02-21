@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Check, AlertTriangle, MessageCircle, ChevronDown } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Check, AlertTriangle, MessageCircle, Camera, X } from 'lucide-react';
 import { InspectionItemResult, DefectType, DefectSeverity, RectificationTimeframe, TemplateItem } from '@/types/inspection';
 
 interface ChecklistItemProps {
@@ -15,15 +15,46 @@ const severities: DefectSeverity[] = ['Minor', 'Major', 'Critical'];
 const timeframes: RectificationTimeframe[] = ['Immediately', 'Within 7 Days', 'Within 30 Days', 'Before Next Service'];
 
 export function ChecklistItem({ item, result, onPass, onDefect, isActive }: ChecklistItemProps) {
-  const [showComment, setShowComment] = useState(false);
+  const [showExtras, setShowExtras] = useState(false);
   const [comment, setComment] = useState(result.comment || '');
+  const [photos, setPhotos] = useState<string[]>(result.photos || []);
   const [defectType, setDefectType] = useState<DefectType>(result.defect?.defectType || 'Mechanical');
   const [severity, setSeverity] = useState<DefectSeverity>(result.defect?.severity || 'Minor');
   const [timeframe, setTimeframe] = useState<RectificationTimeframe>(result.defect?.rectificationTimeframe || 'Within 7 Days');
   const [action, setAction] = useState(result.defect?.recommendedAction || '');
   const [notes, setNotes] = useState(result.defect?.notes || '');
+  const [defectPhotos, setDefectPhotos] = useState<string[]>(result.defect?.photos || []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const defectFileInputRef = useRef<HTMLInputElement>(null);
+
   const isPass = result.result === 'pass';
   const isDefect = result.result === 'defect';
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, forDefect: boolean) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        if (forDefect) {
+          setDefectPhotos(prev => [...prev, dataUrl]);
+        } else {
+          setPhotos(prev => [...prev, dataUrl]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const removePhoto = (index: number, forDefect: boolean) => {
+    if (forDefect) {
+      setDefectPhotos(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setPhotos(prev => prev.filter((_, i) => i !== index));
+    }
+  };
 
   const handleDefectSave = () => {
     onDefect({
@@ -35,16 +66,9 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
         rectificationTimeframe: timeframe,
         recommendedAction: action,
         notes,
-        photos: result.defect?.photos || [],
+        photos: defectPhotos,
       },
     });
-  };
-
-  const handlePassWithComment = () => {
-    onPass();
-    if (comment) {
-      // comment is saved separately
-    }
   };
 
   return (
@@ -89,9 +113,9 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
 
           {(isPass || isDefect) && (
             <button
-              onClick={() => setShowComment(!showComment)}
+              onClick={() => setShowExtras(!showExtras)}
               className={`tap-target w-12 rounded-lg flex items-center justify-center transition-all ${
-                showComment ? 'bg-foreground/10' : 'bg-muted'
+                showExtras ? 'bg-foreground/10' : 'bg-muted'
               }`}
             >
               <MessageCircle className="w-5 h-5 text-muted-foreground" />
@@ -99,16 +123,46 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
           )}
         </div>
 
-        {/* Comment for PASS */}
-        {isPass && showComment && (
-          <div className="mt-3">
+        {/* Optional comment + photo for PASS */}
+        {isPass && showExtras && (
+          <div className="mt-3 space-y-3">
             <textarea
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Add comment..."
+              placeholder="Add comment (optional)..."
               className="w-full p-3 border border-border rounded-lg bg-background text-sm resize-none"
               rows={2}
             />
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handlePhotoUpload(e, false)}
+                multiple
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted"
+              >
+                <Camera className="w-5 h-5" />
+                Tap to add photo (optional)
+              </button>
+              {photos.length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {photos.map((p, i) => (
+                    <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+                      <img src={p} alt="" className="w-full h-full object-cover" />
+                      <button onClick={() => removePhoto(i, false)} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-0.5">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -121,7 +175,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
                 {defectTypes.map(dt => (
                   <button
                     key={dt}
-                    onClick={() => { setDefectType(dt); }}
+                    onClick={() => setDefectType(dt)}
                     className={`tap-target rounded-lg text-sm font-medium px-3 transition-all ${
                       defectType === dt
                         ? 'bg-foreground text-background'
@@ -195,10 +249,35 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Photo Upload *</label>
-              <button className="mt-1 tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center text-sm text-muted-foreground active:bg-muted">
-                📷 Tap to add photo
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Photos</label>
+              <input
+                ref={defectFileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => handlePhotoUpload(e, true)}
+                multiple
+              />
+              <button
+                onClick={() => defectFileInputRef.current?.click()}
+                className="mt-1 tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted"
+              >
+                <Camera className="w-5 h-5" />
+                Tap to add photo
               </button>
+              {defectPhotos.length > 0 && (
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  {defectPhotos.map((p, i) => (
+                    <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+                      <img src={p} alt="" className="w-full h-full object-cover" />
+                      <button onClick={() => removePhoto(i, true)} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-0.5">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <button
