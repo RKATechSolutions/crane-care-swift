@@ -40,6 +40,7 @@ export default function SiteJobSummary() {
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const [defectsSaved, setDefectsSaved] = useState(false);
   const [defectsExpanded, setDefectsExpanded] = useState(true);
+  const [jobType, setJobType] = useState('Periodic Inspection');
   const [customerDefectComments, setCustomerDefectComments] = useState('');
 
   // Gather all defects across completed inspections
@@ -152,7 +153,16 @@ export default function SiteJobSummary() {
             </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Type</label>
-              <p className="text-sm font-medium mt-0.5">Periodic Inspection</p>
+              <select
+                value={jobType}
+                onChange={(e) => setJobType(e.target.value)}
+                className="w-full tap-target px-4 border border-border rounded-xl bg-background text-sm font-medium mt-1 appearance-none cursor-pointer"
+              >
+                <option value="Periodic Inspection">Periodic Inspection</option>
+                <option value="Repair">Repair</option>
+                <option value="Breakdown / Fault">Breakdown / Fault</option>
+                <option value="Commissioning">Commissioning</option>
+              </select>
             </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Name</label>
