@@ -3,9 +3,12 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { SignaturePad } from '@/components/SignaturePad';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
+import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle } from 'lucide-react';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
+
+const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
 export default function SiteJobSummary() {
   const { state, dispatch } = useApp();
@@ -31,10 +34,13 @@ export default function SiteJobSummary() {
   const [techSig, setTechSig] = useState('');
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
-  const [publishTestimonial, setPublishTestimonial] = useState(false);
+  const [publishTestimonial, setPublishTestimonial] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [expandedDefects, setExpandedDefects] = useState<Set<string>>(new Set());
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [defectsSaved, setDefectsSaved] = useState(false);
+  const [defectsExpanded, setDefectsExpanded] = useState(true);
+  const [customerDefectComments, setCustomerDefectComments] = useState('');
 
   // Gather all defects across completed inspections
   const allDefects = completedInspections.flatMap(insp => {
@@ -60,6 +66,11 @@ export default function SiteJobSummary() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  const handleSaveDefects = () => {
+    setDefectsSaved(true);
+    setDefectsExpanded(false);
   };
 
   const handleSubmit = () => {
@@ -93,7 +104,7 @@ export default function SiteJobSummary() {
               <Check className="w-8 h-8 text-rka-green" />
             </div>
             <h2 className="text-2xl font-black mb-2">Job Complete</h2>
-            <p className="text-muted-foreground">Site job summary saved successfully</p>
+            <p className="text-muted-foreground">Report sent to customer</p>
             <p className="text-sm text-muted-foreground mt-1">
               Next inspection: {format(new Date(nextDate), 'dd MMM yyyy')}
             </p>
@@ -134,13 +145,6 @@ export default function SiteJobSummary() {
                       {defectCount} defect{defectCount !== 1 ? 's' : ''}
                     </span>
                   )}
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                    insp.craneStatus === 'Safe to Operate' ? 'bg-rka-green-light text-rka-green-dark' :
-                    insp.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
-                    'bg-rka-orange-light text-rka-orange'
-                  }`}>
-                    {insp.craneStatus}
-                  </span>
                 </div>
               </div>
             );
@@ -150,57 +154,74 @@ export default function SiteJobSummary() {
         {/* Defect Review for Customer */}
         {allDefects.length > 0 && (
           <div className="px-4 py-3 border-b border-border">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Defects Found — Customer Review ({allDefects.length})
-            </p>
-            {allDefects.map(({ inspection: insp, item, crane, itemLabel }) => {
-              const isExpanded = expandedDefects.has(item.templateItemId);
-              return (
-                <div key={`${insp.id}-${item.templateItemId}`} className="mb-3 border border-border rounded-xl overflow-hidden bg-background">
-                  {/* Defect header */}
-                  <button
-                    onClick={() => toggleDefect(item.templateItemId)}
-                    className="w-full px-4 py-3 flex items-start gap-3 text-left"
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      item.defect!.severity === 'Critical' ? 'bg-rka-red-light' :
-                      item.defect!.severity === 'Major' ? 'bg-rka-orange-light' : 'bg-rka-yellow/20'
-                    }`}>
-                      <AlertTriangle className={`w-4 h-4 ${
-                        item.defect!.severity === 'Critical' ? 'text-rka-red' :
-                        item.defect!.severity === 'Major' ? 'text-rka-orange' : 'text-rka-yellow'
-                      }`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm">{itemLabel}</p>
-                      <p className="text-xs text-muted-foreground">{crane?.name}</p>
-                      <div className="flex flex-wrap gap-1.5 mt-1.5">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                          item.defect!.severity === 'Critical' ? 'bg-rka-red text-destructive-foreground' :
-                          item.defect!.severity === 'Major' ? 'bg-rka-orange text-destructive-foreground' :
-                          'bg-rka-yellow text-foreground'
-                        }`}>{item.defect!.severity}</span>
-                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{item.defect!.defectType}</span>
-                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{item.defect!.rectificationTimeframe}</span>
-                      </div>
-                    </div>
-                    {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" /> : <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />}
-                  </button>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Defects Found — Customer Review ({allDefects.length})
+              </p>
+              {defectsSaved && (
+                <button
+                  onClick={() => { setDefectsExpanded(!defectsExpanded); }}
+                  className="text-xs font-bold text-primary flex items-center gap-1"
+                >
+                  {defectsExpanded ? 'Collapse' : 'Edit Defects'}
+                  {defectsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+              )}
+            </div>
 
-                  {/* Expanded details */}
-                  {isExpanded && (
-                    <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
-                      {item.defect!.notes && (
-                        <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Comment</p>
-                          <p className="text-sm">{item.defect!.notes}</p>
+            {defectsSaved && !defectsExpanded && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-rka-green-light mb-2">
+                <CheckCircle className="w-5 h-5 text-rka-green" />
+                <p className="text-sm font-bold text-rka-green-dark">Defect details saved</p>
+              </div>
+            )}
+
+            {defectsExpanded && (
+              <>
+                {allDefects.map(({ inspection: insp, item, crane, itemLabel }) => {
+                  const isExpanded = expandedDefects.has(item.templateItemId);
+                  const defectPhotos = item.defect?.photos || [];
+                  return (
+                    <div key={`${insp.id}-${item.templateItemId}`} className="mb-3 border border-border rounded-xl overflow-hidden bg-background">
+                      {/* Defect header - always show photos inline */}
+                      <button
+                        onClick={() => toggleDefect(item.templateItemId)}
+                        className="w-full px-4 py-3 flex items-start gap-3 text-left"
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          item.defect!.severity === 'Critical' ? 'bg-rka-red-light' :
+                          item.defect!.severity === 'Major' ? 'bg-rka-orange-light' : 'bg-rka-yellow/20'
+                        }`}>
+                          <AlertTriangle className={`w-4 h-4 ${
+                            item.defect!.severity === 'Critical' ? 'text-rka-red' :
+                            item.defect!.severity === 'Major' ? 'text-rka-orange' : 'text-rka-yellow'
+                          }`} />
                         </div>
-                      )}
-                      {item.defect!.photos && item.defect!.photos.length > 0 && (
-                        <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Photos</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm">{itemLabel}</p>
+                          <p className="text-xs text-muted-foreground">{crane?.name}</p>
+                          <div className="flex flex-wrap gap-1.5 mt-1.5">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                              item.defect!.severity === 'Critical' ? 'bg-rka-red text-destructive-foreground' :
+                              item.defect!.severity === 'Major' ? 'bg-rka-orange text-destructive-foreground' :
+                              'bg-rka-yellow text-foreground'
+                            }`}>{item.defect!.severity}</span>
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{item.defect!.defectType}</span>
+                            <span className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{item.defect!.rectificationTimeframe}</span>
+                          </div>
+                          {/* Show comment from technician */}
+                          {item.defect!.notes && (
+                            <p className="text-xs text-muted-foreground mt-1.5 italic">"{item.defect!.notes}"</p>
+                          )}
+                        </div>
+                        {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" /> : <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />}
+                      </button>
+
+                      {/* Photos always visible outside dropdown */}
+                      {defectPhotos.length > 0 && (
+                        <div className="px-4 pb-2">
                           <div className="flex gap-2 flex-wrap">
-                            {item.defect!.photos.map((p, i) => (
+                            {defectPhotos.map((p, i) => (
                               <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-border shadow-sm cursor-pointer" onClick={() => setPreviewPhoto(p)}>
                                 <img src={p} alt={`Defect photo ${i + 1}`} className="w-full h-full object-cover" />
                                 <div className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
@@ -211,32 +232,90 @@ export default function SiteJobSummary() {
                           </div>
                         </div>
                       )}
-                    </div>
-                  )}
 
-                  {/* Quote buttons always visible */}
-                  <div className="flex gap-2 px-4 pb-3">
-                    <button
-                      onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Now' } })}
-                      className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
-                        item.defect!.quoteStatus === 'Quote Now'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-foreground active:bg-foreground/10'
-                      }`}
-                    >
-                      Quote Now
-                    </button>
-                    <button
-                      onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Later' } })}
-                      className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
-                        item.defect!.quoteStatus === 'Quote Later'
-                          ? 'bg-foreground text-background'
-                          : 'bg-muted text-foreground active:bg-foreground/10'
-                      }`}
-                    >
-                      Quote Later
-                    </button>
-                  </div>
+                      {/* Expanded details */}
+                      {isExpanded && (
+                        <div className="px-4 pb-3 space-y-2 border-t border-border pt-3">
+                          {item.defect!.notes && (
+                            <div>
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Technician Comment</p>
+                              <p className="text-sm">{item.defect!.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Quote buttons always visible */}
+                      <div className="flex gap-2 px-4 pb-3">
+                        <button
+                          onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Now' } })}
+                          className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
+                            item.defect!.quoteStatus === 'Quote Now'
+                              ? 'bg-rka-green text-primary-foreground'
+                              : 'bg-muted text-foreground active:bg-foreground/10'
+                          }`}
+                        >
+                          {item.defect!.quoteStatus === 'Quote Now' && <Check className="w-4 h-4 inline mr-1" />}
+                          Quote Now
+                        </button>
+                        <button
+                          onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Later' } })}
+                          className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
+                            item.defect!.quoteStatus === 'Quote Later'
+                              ? 'bg-foreground text-background'
+                              : 'bg-muted text-foreground active:bg-foreground/10'
+                          }`}
+                        >
+                          {item.defect!.quoteStatus === 'Quote Later' && <Check className="w-4 h-4 inline mr-1" />}
+                          Quote Later
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Customer comments about defects/quotes */}
+                <div className="mb-3">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Comments on Defects / Quotes (optional)</label>
+                  <textarea
+                    value={customerDefectComments}
+                    onChange={(e) => setCustomerDefectComments(e.target.value)}
+                    placeholder="Any additional info about defects, when quote later items should be done, general comments..."
+                    className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Save defects button */}
+                <button
+                  onClick={handleSaveDefects}
+                  className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                >
+                  <Check className="w-5 h-5" />
+                  Save Defect Details
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Crane Status Summary */}
+        {completedInspections.some(i => i.craneStatus) && (
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asset Operational Status</p>
+            {completedInspections.map(insp => {
+              const crane = site.cranes.find(c => c.id === insp.craneId);
+              if (!insp.craneStatus) return null;
+              return (
+                <div key={insp.id} className="flex items-center justify-between py-2">
+                  <span className="font-medium text-sm">{crane?.name}</span>
+                  <span className={`text-xs font-bold px-3 py-1 rounded-lg ${
+                    insp.craneStatus === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+                    insp.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red text-destructive-foreground' :
+                    'bg-rka-orange text-destructive-foreground'
+                  }`}>
+                    {insp.craneStatus}
+                  </span>
                 </div>
               );
             })}
@@ -340,6 +419,14 @@ export default function SiteJobSummary() {
                     Thank you for your rating, please give us a Google Review here!
                   </p>
                   <img src={rkaReviewQr} alt="Scan to leave a Google Review" className="w-32 h-32 mx-auto rounded-lg" />
+                  <a
+                    href={GOOGLE_REVIEW_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-sm font-bold text-primary underline"
+                  >
+                    Tap here to leave a review →
+                  </a>
                 </div>
               )}
             </div>
@@ -356,18 +443,18 @@ export default function SiteJobSummary() {
               />
             </div>
 
-            {/* Testimonial Toggle */}
-            <button
-              onClick={() => setPublishTestimonial(!publishTestimonial)}
-              className={`w-full tap-target rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-                publishTestimonial
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground'
-              }`}
-            >
-              {publishTestimonial ? <Check className="w-4 h-4" /> : null}
-              Permission to publish testimonial
-            </button>
+            {/* Testimonial Checkbox - default ticked */}
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 mb-4">
+              <Checkbox
+                id="testimonial"
+                checked={publishTestimonial}
+                onCheckedChange={(checked) => setPublishTestimonial(checked === true)}
+                className="mt-0.5"
+              />
+              <label htmlFor="testimonial" className="text-sm font-medium leading-snug cursor-pointer">
+                I give permission to publish my feedback as a testimonial
+              </label>
+            </div>
           </div>
 
           {/* ── Technician Section ── */}
@@ -388,9 +475,10 @@ export default function SiteJobSummary() {
         <button
           onClick={handleSubmit}
           disabled={!customerSig || !techSig}
-          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base disabled:opacity-40"
+          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base disabled:opacity-40 flex items-center justify-center gap-2"
         >
-          Complete Site Job
+          <Send className="w-5 h-5" />
+          Complete Job and Send Report
         </button>
         <button
           onClick={() => {/* TODO: generate shareable link */}}

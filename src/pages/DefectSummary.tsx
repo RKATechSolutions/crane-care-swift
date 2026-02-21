@@ -1,6 +1,6 @@
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { AlertTriangle, ChevronRight } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function DefectSummary() {
   const { state, dispatch } = useApp();
@@ -35,7 +35,7 @@ export default function DefectSummary() {
         </div>
       ) : (
         <div className="flex-1">
-          {defects.map((item, idx) => (
+          {defects.map((item) => (
             <div key={item.templateItemId} className="border-b border-border p-4">
               <div className="flex items-start gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -64,14 +64,27 @@ export default function DefectSummary() {
                       {item.defect!.rectificationTimeframe}
                     </span>
                   </div>
-                  {item.defect!.recommendedAction && (
-                    <p className="text-xs text-muted-foreground mt-2">{item.defect!.recommendedAction}</p>
+                  {item.defect!.notes && (
+                    <p className="text-xs text-muted-foreground mt-2 italic">"{item.defect!.notes}"</p>
                   )}
                 </div>
               </div>
-
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Crane Operational Status */}
+      {inspection.craneStatus && (
+        <div className="px-4 py-3 border-t border-border">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asset Operational Status</p>
+          <div className={`w-full text-center py-3 rounded-xl font-bold text-base ${
+            inspection.craneStatus === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+            inspection.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red text-destructive-foreground' :
+            'bg-rka-orange text-destructive-foreground'
+          }`}>
+            {inspection.craneStatus}
+          </div>
         </div>
       )}
 
@@ -80,7 +93,7 @@ export default function DefectSummary() {
           onClick={() => dispatch({ type: 'BACK_TO_CRANES' })}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base"
         >
-          Back to Crane List
+          Complete Form and Return to Asset List
         </button>
       </div>
     </div>
