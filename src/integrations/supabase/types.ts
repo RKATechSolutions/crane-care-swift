@@ -14,7 +14,107 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      client_contacts: {
+        Row: {
+          client_id: string
+          contact_email: string | null
+          contact_given_name: string | null
+          contact_mobile: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contact_position: string | null
+          contact_surname: string | null
+          created_at: string
+          id: string
+          status: string | null
+        }
+        Insert: {
+          client_id: string
+          contact_email?: string | null
+          contact_given_name?: string | null
+          contact_mobile?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_position?: string | null
+          contact_surname?: string | null
+          created_at?: string
+          id?: string
+          status?: string | null
+        }
+        Update: {
+          client_id?: string
+          contact_email?: string | null
+          contact_given_name?: string | null
+          contact_mobile?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_position?: string | null
+          contact_surname?: string | null
+          created_at?: string
+          id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          client_name: string
+          created_at: string
+          created_date: string | null
+          id: string
+          location_address: string | null
+          primary_contact_email: string | null
+          primary_contact_given_name: string | null
+          primary_contact_mobile: string | null
+          primary_contact_name: string | null
+          primary_contact_position: string | null
+          primary_contact_surname: string | null
+          send_schedule_reminders: string | null
+          site_induction_details: string | null
+          status: string
+        }
+        Insert: {
+          client_name: string
+          created_at?: string
+          created_date?: string | null
+          id?: string
+          location_address?: string | null
+          primary_contact_email?: string | null
+          primary_contact_given_name?: string | null
+          primary_contact_mobile?: string | null
+          primary_contact_name?: string | null
+          primary_contact_position?: string | null
+          primary_contact_surname?: string | null
+          send_schedule_reminders?: string | null
+          site_induction_details?: string | null
+          status?: string
+        }
+        Update: {
+          client_name?: string
+          created_at?: string
+          created_date?: string | null
+          id?: string
+          location_address?: string | null
+          primary_contact_email?: string | null
+          primary_contact_given_name?: string | null
+          primary_contact_mobile?: string | null
+          primary_contact_name?: string | null
+          primary_contact_position?: string | null
+          primary_contact_surname?: string | null
+          send_schedule_reminders?: string | null
+          site_induction_details?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
