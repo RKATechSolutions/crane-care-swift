@@ -34,7 +34,7 @@ type Action =
   | { type: 'ADD_ADMIN_NOTE'; payload: AdminNote }
   | { type: 'BACK_TO_SITES' }
   | { type: 'BACK_TO_CRANES' }
-  | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later' } };
+  | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } };
 
 const initialState: AppState = {
   currentUser: null,
@@ -150,14 +150,28 @@ function reducer(state: AppState, action: Action): AppState {
     case 'BACK_TO_CRANES':
       return { ...state, selectedCrane: null, currentInspection: null };
     case 'UPDATE_DEFECT_QUOTE': {
-      if (!state.currentInspection) return state;
-      const items = state.currentInspection.items.map(item => {
-        if (item.templateItemId === action.payload.itemId && item.defect) {
-          return { ...item, defect: { ...item.defect, quoteStatus: action.payload.quoteStatus } };
+      const updateQuoteItems = (items: InspectionItemResult[]) =>
+        items.map(item => {
+          if (item.templateItemId === action.payload.itemId && item.defect) {
+            return { ...item, defect: { ...item.defect, quoteStatus: action.payload.quoteStatus } };
+          }
+          return item;
+        });
+
+      // Update in inspections list (for SiteJobSummary)
+      const updatedInspections = state.inspections.map(insp => {
+        if (action.payload.inspectionId && insp.id === action.payload.inspectionId) {
+          return { ...insp, items: updateQuoteItems(insp.items) };
         }
-        return item;
+        return insp;
       });
-      return { ...state, currentInspection: { ...state.currentInspection, items } };
+
+      // Also update currentInspection if active
+      const updatedCurrent = state.currentInspection
+        ? { ...state.currentInspection, items: updateQuoteItems(state.currentInspection.items) }
+        : state.currentInspection;
+
+      return { ...state, inspections: updatedInspections, currentInspection: updatedCurrent };
     }
     default:
       return state;

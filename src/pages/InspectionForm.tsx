@@ -1,11 +1,11 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { ProgressBar } from '@/components/ProgressBar';
 import { ChecklistItem } from '@/components/ChecklistItem';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { CraneOperationalStatus, InspectionItemResult } from '@/types/inspection';
-import { Save, CheckCircle, RotateCcw, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Save, CheckCircle, RotateCcw, AlertTriangle, Check } from 'lucide-react';
 
 export default function InspectionForm() {
   const { state, dispatch } = useApp();
@@ -15,11 +15,11 @@ export default function InspectionForm() {
 
   const inspection = state.currentInspection!;
 
-  // Scroll to top when section changes
   const handleSectionChange = useCallback((idx: number) => {
     setCurrentSectionIdx(idx);
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, []);
+
   const template = state.templates.find(t => t.id === inspection.templateId)!;
   const crane = state.selectedSite!.cranes.find(c => c.id === inspection.craneId)!;
 
@@ -41,27 +41,35 @@ export default function InspectionForm() {
   const totalItems = inspection.items.length;
   const allComplete = totalCompleted === totalItems;
 
+  // Check if all items in current section are passed
+  const currentSectionAllPassed = sectionItems.every(({ result }) => result.result === 'pass');
+
   const handlePass = useCallback((itemId: string) => {
     const existing = inspection.items.find(i => i.templateItemId === itemId)!;
-    // Toggle: if already pass, unselect
     const newResult = existing.result === 'pass' ? undefined : 'pass' as const;
     dispatch({
       type: 'UPDATE_INSPECTION_ITEM',
-      payload: {
-        itemId,
-        result: { ...existing, result: newResult },
-      },
+      payload: { itemId, result: { ...existing, result: newResult } },
     });
-    // Auto-save after each action
     setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
   }, [dispatch, inspection.items]);
+
+  const handlePassAll = useCallback(() => {
+    const items = sectionItems.filter(({ result }) => result.result !== 'pass');
+    items.forEach(({ item, result }) => {
+      dispatch({
+        type: 'UPDATE_INSPECTION_ITEM',
+        payload: { itemId: item.id, result: { ...result, result: 'pass' } },
+      });
+    });
+    setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
+  }, [dispatch, sectionItems]);
 
   const handleDefect = useCallback((itemId: string, result: InspectionItemResult) => {
     dispatch({
       type: 'UPDATE_INSPECTION_ITEM',
       payload: { itemId, result },
     });
-    // Auto-save after each action
     setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
   }, [dispatch]);
 
@@ -92,7 +100,7 @@ export default function InspectionForm() {
       />
 
       {/* Section Tabs */}
-      <div className="flex overflow-x-auto border-b border-border bg-muted/30 px-2 gap-1 py-1 no-scrollbar">
+      <div className="flex overflow-x-auto border-b border-border bg-muted/30 px-2 gap-1 py-1 no-scrollbar sticky top-[72px] z-20">
         {sections.map((sec, idx) => {
           const secItems = inspection.items.filter(i => i.sectionId === sec.id);
           const secDone = secItems.filter(i => i.result).length;
@@ -114,6 +122,22 @@ export default function InspectionForm() {
             </button>
           );
         })}
+      </div>
+
+      {/* Pass All Button */}
+      <div className="px-4 py-2 border-b border-border">
+        <button
+          onClick={handlePassAll}
+          disabled={currentSectionAllPassed}
+          className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+            currentSectionAllPassed
+              ? 'bg-rka-green/20 text-rka-green-dark'
+              : 'bg-rka-green text-primary-foreground'
+          }`}
+        >
+          <Check className="w-5 h-5" />
+          {currentSectionAllPassed ? 'All Passed ✓' : `Pass All — ${currentSection.name}`}
+        </button>
       </div>
 
       {/* Checklist Items */}
@@ -143,10 +167,10 @@ export default function InspectionForm() {
         {currentSectionIdx < sections.length - 1 && (
           <button
             onClick={() => handleSectionChange(currentSectionIdx + 1)}
-            className="flex-1 tap-target bg-rka-green text-primary-foreground rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+            className="flex-1 tap-target bg-foreground text-background rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
           >
-            {sections[currentSectionIdx + 1].name}
-            <ArrowRight className="w-5 h-5" />
+            <Check className="w-5 h-5 text-rka-green" />
+            Next Section — {sections[currentSectionIdx + 1].name}
           </button>
         )}
       </div>
