@@ -3,6 +3,8 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { ProgressBar } from '@/components/ProgressBar';
 import { ChecklistItem } from '@/components/ChecklistItem';
+import { SingleSelectItem } from '@/components/SingleSelectItem';
+import { NumericInputItem } from '@/components/NumericInputItem';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { CraneOperationalStatus, InspectionItemResult } from '@/types/inspection';
 import { Save, CheckCircle, RotateCcw, AlertTriangle, Check } from 'lucide-react';
@@ -57,9 +59,10 @@ export default function InspectionForm() {
   const totalItems = inspection.items.length;
   const allComplete = totalCompleted === totalItems;
 
-  // Check if all items in current section are passed
-  const currentSectionAllPassed = sectionItems.every(({ result }) => result.result === 'pass');
-
+  // Check if all items in current section are passed (only checklist items for "Pass All")
+  const checklistSectionItems = sectionItems.filter(({ item }) => !item.type || item.type === 'checklist');
+  const currentSectionAllPassed = checklistSectionItems.every(({ result }) => result.result === 'pass');
+  const hasChecklistItems = checklistSectionItems.length > 0;
   const handlePass = useCallback((itemId: string) => {
     const existing = inspection.items.find(i => i.templateItemId === itemId)!;
     const newResult = existing.result === 'pass' ? undefined : 'pass' as const;
@@ -71,7 +74,7 @@ export default function InspectionForm() {
   }, [dispatch, inspection.items]);
 
   const handlePassAll = useCallback(() => {
-    const items = sectionItems.filter(({ result }) => result.result !== 'pass');
+    const items = checklistSectionItems.filter(({ result }) => result.result !== 'pass');
     items.forEach(({ item, result }) => {
       dispatch({
         type: 'UPDATE_INSPECTION_ITEM',
@@ -79,7 +82,15 @@ export default function InspectionForm() {
       });
     });
     setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
-  }, [dispatch, sectionItems]);
+  }, [dispatch, checklistSectionItems]);
+
+  const handleItemUpdate = useCallback((itemId: string, result: InspectionItemResult) => {
+    dispatch({
+      type: 'UPDATE_INSPECTION_ITEM',
+      payload: { itemId, result },
+    });
+    setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
+  }, [dispatch]);
 
   const handleDefect = useCallback((itemId: string, result: InspectionItemResult) => {
     dispatch({
@@ -140,35 +151,63 @@ export default function InspectionForm() {
         })}
       </div>
 
-      {/* Pass All Button */}
-      <div className="px-4 py-2 border-b border-border">
-        <button
-          onClick={handlePassAll}
-          disabled={currentSectionAllPassed}
-          className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-            currentSectionAllPassed
-              ? 'bg-rka-green/20 text-rka-green-dark'
-              : 'bg-rka-green text-primary-foreground'
-          }`}
-        >
-          <Check className="w-5 h-5" />
-          {currentSectionAllPassed ? 'All Passed ✓' : `Pass All — ${currentSection.name}`}
-        </button>
-      </div>
+      {/* Pass All Button - only for sections with checklist items */}
+      {hasChecklistItems && (
+        <div className="px-4 py-2 border-b border-border">
+          <button
+            onClick={handlePassAll}
+            disabled={currentSectionAllPassed}
+            className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+              currentSectionAllPassed
+                ? 'bg-rka-green/20 text-rka-green-dark'
+                : 'bg-rka-green text-primary-foreground'
+            }`}
+          >
+            <Check className="w-5 h-5" />
+            {currentSectionAllPassed ? 'All Passed ✓' : `Pass All — ${currentSection.name}`}
+          </button>
+        </div>
+      )}
 
-      {/* Checklist Items */}
+      {/* Section Items */}
       <div className="flex-1">
-        {sectionItems.map(({ item, result }) => (
-          <ChecklistItem
-            key={item.id}
-            item={item}
-            result={result}
-            onPass={() => handlePass(item.id)}
-            onDefect={(r) => handleDefect(item.id, r)}
-            isActive={!result.result}
-            hasPreviousDefect={previousDefectItemIds.has(item.id)}
-          />
-        ))}
+        {sectionItems.map(({ item, result }) => {
+          const itemType = item.type || 'checklist';
+          
+          if (itemType === 'single_select') {
+            return (
+              <SingleSelectItem
+                key={item.id}
+                item={item}
+                result={result}
+                onUpdate={(r) => handleItemUpdate(item.id, r)}
+              />
+            );
+          }
+          
+          if (itemType === 'numeric') {
+            return (
+              <NumericInputItem
+                key={item.id}
+                item={item}
+                result={result}
+                onUpdate={(r) => handleItemUpdate(item.id, r)}
+              />
+            );
+          }
+
+          return (
+            <ChecklistItem
+              key={item.id}
+              item={item}
+              result={result}
+              onPass={() => handlePass(item.id)}
+              onDefect={(r) => handleDefect(item.id, r)}
+              isActive={!result.result}
+              hasPreviousDefect={previousDefectItemIds.has(item.id)}
+            />
+          );
+        })}
       </div>
 
       {/* Section Navigation */}
