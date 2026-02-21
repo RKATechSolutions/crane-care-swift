@@ -62,13 +62,13 @@ export const mockTemplate: InspectionTemplate = {
       sortOrder: 0,
       items: [
         // A. Major Inspection Currency
-        { id: 's0-1', label: '10 Year Major Inspection Status', sortOrder: 1, type: 'single_select', options: ['Current', 'Not Current', 'Not Due'], required: true },
-        { id: 's0-2', label: '25 Year Structural Inspection Status', sortOrder: 2, type: 'single_select', options: ['Current', 'Not Current', 'Not Due'], required: true },
+        { id: 's0-1', label: '10 Year Major Inspection Status', sortOrder: 1, type: 'single_select', options: ['Due', 'Not Due'], required: true, optionalComment: true },
+        { id: 's0-2', label: '25 Year Structural Inspection Status', sortOrder: 2, type: 'single_select', options: ['Due', 'Not Due'], required: true, optionalComment: true },
         { id: 's0-3', label: 'Major Inspection Plate Fitted and Updated', sortOrder: 3, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
         // B. Log Book & Prestart
-        { id: 's0-4', label: 'Crane Log Book Present On Site', sortOrder: 4, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
-        { id: 's0-5', label: 'Log Book Up To Date', sortOrder: 5, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
-        { id: 's0-6', label: 'Operator Pre-Start System In Place', sortOrder: 6, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
+        { id: 's0-4', label: 'Crane Log Book Present On Site', sortOrder: 4, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true, optionalComment: true, optionalPhoto: true },
+        { id: 's0-5', label: 'Log Information Current', sortOrder: 5, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
+        { id: 's0-6', label: 'Operator Pre-Start System In Place and Carried Out', sortOrder: 6, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
         // C. Isolation Devices
         { id: 's0-7', label: 'Main Isolating Switch', sortOrder: 7 },
         { id: 's0-8', label: 'Crane Isolating Switch', sortOrder: 8 },
