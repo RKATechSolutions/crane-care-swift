@@ -29,6 +29,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
   const [defectPhotos, setDefectPhotos] = useState<string[]>(result.defect?.photos || []);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
+  const [defectSaved, setDefectSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const defectFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -112,6 +113,8 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
           photos: defectPhotos,
         },
       });
+      setDefectSaved(true);
+      setTimeout(() => setDefectSaved(false), 2000);
     } catch (err) {
       console.error('Error saving defect:', err);
     }
@@ -330,9 +333,15 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
 
             <button
               onClick={handleDefectSave}
-              className="w-full tap-target bg-foreground text-background rounded-lg font-bold text-sm"
+              className={`w-full tap-target rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                defectSaved ? 'bg-rka-green text-primary-foreground' : 'bg-foreground text-background'
+              }`}
             >
-              Save Defect Details
+              {defectSaved ? (
+                <><Check className="w-5 h-5" /> Saved ✓</>
+              ) : (
+                'Save Defect Details'
+              )}
             </button>
           </div>
         )}

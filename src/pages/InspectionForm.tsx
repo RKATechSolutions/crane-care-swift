@@ -5,7 +5,7 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { ChecklistItem } from '@/components/ChecklistItem';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { CraneOperationalStatus, InspectionItemResult } from '@/types/inspection';
-import { Save, CheckCircle, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Save, CheckCircle, RotateCcw, AlertTriangle, ArrowRight } from 'lucide-react';
 
 export default function InspectionForm() {
   const { state, dispatch } = useApp();
@@ -143,9 +143,10 @@ export default function InspectionForm() {
         {currentSectionIdx < sections.length - 1 && (
           <button
             onClick={() => handleSectionChange(currentSectionIdx + 1)}
-            className="flex-1 tap-target bg-foreground text-background rounded-xl font-semibold text-sm"
+            className="flex-1 tap-target bg-rka-green text-primary-foreground rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
           >
-            {sections[currentSectionIdx + 1].name} →
+            {sections[currentSectionIdx + 1].name}
+            <ArrowRight className="w-5 h-5" />
           </button>
         )}
       </div>
