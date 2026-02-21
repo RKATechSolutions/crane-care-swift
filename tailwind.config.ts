@@ -7,7 +7,7 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: "1rem",
       screens: {
         "2xl": "1400px",
       },
@@ -47,6 +47,16 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        rka: {
+          green: "hsl(var(--rka-green))",
+          "green-light": "hsl(var(--rka-green-light))",
+          "green-dark": "hsl(var(--rka-green-dark))",
+          red: "hsl(var(--rka-red))",
+          "red-light": "hsl(var(--rka-red-light))",
+          orange: "hsl(var(--rka-orange))",
+          "orange-light": "hsl(var(--rka-orange-light))",
+          yellow: "hsl(var(--rka-yellow))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -65,25 +75,27 @@ export default {
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "slide-in": {
+          from: { transform: "translateX(100%)", opacity: "0" },
+          to: { transform: "translateX(0)", opacity: "1" },
+        },
+        "flash-green": {
+          "0%": { backgroundColor: "hsl(145 70% 36% / 0.3)" },
+          "100%": { backgroundColor: "hsl(145 50% 94%)" },
         },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "slide-in": "slide-in 0.2s ease-out",
+        "flash-green": "flash-green 0.4s ease-out",
       },
     },
   },

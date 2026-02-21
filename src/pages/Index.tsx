@@ -1,14 +1,36 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useApp } from '@/contexts/AppContext';
+import Login from './Login';
+import Sites from './Sites';
+import CraneList from './CraneList';
+import InspectionForm from './InspectionForm';
+import DefectSummary from './DefectSummary';
+import SiteJobSummary from './SiteJobSummary';
 
 const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
-  );
+  const { state } = useApp();
+
+  // Not logged in
+  if (!state.currentUser) return <Login />;
+
+  // No site selected
+  if (!state.selectedSite) return <Sites />;
+
+  // Site Job Summary
+  if (state.selectedCrane?.id === '__site_summary__') return <SiteJobSummary />;
+
+  // Active inspection
+  if (state.currentInspection) {
+    // If completed, show defect summary
+    if (state.currentInspection.status === 'completed') {
+      const hasDefects = state.currentInspection.items.some(i => i.result === 'defect');
+      if (hasDefects) return <DefectSummary />;
+      return <DefectSummary />;
+    }
+    return <InspectionForm />;
+  }
+
+  // Crane list
+  return <CraneList />;
 };
 
 export default Index;
