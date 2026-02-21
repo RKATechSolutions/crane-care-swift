@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-export default function ImportAssets() {
-  const { dispatch } = useApp();
+interface ImportAssetsProps {
+  onBack: () => void;
+}
+
+export default function ImportAssets({ onBack }: ImportAssetsProps) {
   const [status, setStatus] = useState<'idle' | 'parsing' | 'uploading' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [count, setCount] = useState(0);
@@ -59,7 +61,7 @@ export default function ImportAssets() {
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader
         title="Import Assets"
-        onBack={() => dispatch({ type: 'BACK_TO_SITES' })}
+        onBack={onBack}
       />
 
       <div className="flex-1 p-6 flex flex-col items-center justify-center gap-6">
@@ -90,7 +92,7 @@ export default function ImportAssets() {
             <CheckCircle className="w-12 h-12 text-rka-green mx-auto" />
             <p className="text-lg font-bold text-rka-green">{message}</p>
             <button
-              onClick={() => dispatch({ type: 'BACK_TO_SITES' })}
+              onClick={onBack}
               className="tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base px-8"
             >
               Back to Sites
