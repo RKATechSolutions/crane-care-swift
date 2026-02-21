@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { SignaturePad } from '@/components/SignaturePad';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User } from 'lucide-react';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
+import { supabase } from '@/integrations/supabase/client';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
@@ -42,6 +43,34 @@ export default function SiteJobSummary() {
   const [defectsExpanded, setDefectsExpanded] = useState(true);
   const [jobType, setJobType] = useState('Periodic Inspection');
   const [customerDefectComments, setCustomerDefectComments] = useState('');
+
+  // Client info from database
+  const [clientInfo, setClientInfo] = useState<any>(null);
+  const [clientContacts, setClientContacts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchClient = async () => {
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('*')
+        .ilike('client_name', `%${site.name}%`)
+        .limit(1);
+
+      if (clients && clients.length > 0) {
+        setClientInfo(clients[0]);
+        setCustomerName(clients[0].primary_contact_name || site.contactName);
+
+        const { data: contacts } = await supabase
+          .from('client_contacts')
+          .select('*')
+          .eq('client_id', clients[0].id)
+          .eq('status', 'Active');
+
+        if (contacts) setClientContacts(contacts);
+      }
+    };
+    fetchClient();
+  }, [site.name]);
 
   // Gather all defects across completed inspections
   const allDefects = completedInspections.flatMap(insp => {
@@ -147,9 +176,68 @@ export default function SiteJobSummary() {
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Business Name</label>
               <p className="text-sm font-bold mt-0.5">RKA Crane Services</p>
             </div>
+
+            {/* Client Info Section */}
+            {clientInfo && (
+              <div className="border border-primary/20 rounded-xl p-3 bg-primary/5 space-y-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <Building2 className="w-4 h-4 text-primary" />
+                  <label className="text-xs font-semibold text-primary uppercase tracking-wide">Client Information</label>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Client Name</label>
+                  <p className="text-sm font-bold mt-0.5">{clientInfo.client_name}</p>
+                </div>
+                {clientInfo.primary_contact_name && (
+                  <div className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-muted-foreground" />
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Primary Contact</label>
+                      <p className="text-sm font-medium">{clientInfo.primary_contact_name}</p>
+                    </div>
+                  </div>
+                )}
+                {clientInfo.primary_contact_email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                    <p className="text-sm font-medium">{clientInfo.primary_contact_email}</p>
+                  </div>
+                )}
+                {clientInfo.primary_contact_mobile && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                    <p className="text-sm font-medium">{clientInfo.primary_contact_mobile}</p>
+                  </div>
+                )}
+                {clientInfo.site_induction_details && (
+                  <div className="mt-1 p-2 rounded-lg bg-rka-orange-light">
+                    <label className="text-xs font-semibold text-rka-orange uppercase tracking-wide">⚠️ Site Induction</label>
+                    <p className="text-sm font-medium mt-0.5">{clientInfo.site_induction_details}</p>
+                  </div>
+                )}
+                {clientContacts.length > 0 && (
+                  <div className="mt-1">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Other Contacts</label>
+                    <div className="space-y-1 mt-1">
+                      {clientContacts.slice(0, 3).map((c, i) => (
+                        <div key={i} className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">{c.contact_name}</span>
+                          {c.contact_position && <span className="ml-1">({c.contact_position})</span>}
+                          {c.contact_email && <span className="ml-1">• {c.contact_email}</span>}
+                        </div>
+                      ))}
+                      {clientContacts.length > 3 && (
+                        <p className="text-xs text-muted-foreground">+{clientContacts.length - 3} more contacts</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Site Address</label>
-              <p className="text-sm font-medium mt-0.5">{site.address}</p>
+              <p className="text-sm font-medium mt-0.5">{clientInfo?.location_address || site.address}</p>
             </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Type</label>
