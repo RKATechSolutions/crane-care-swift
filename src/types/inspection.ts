@@ -64,6 +64,8 @@ export interface TemplateItem {
   options?: string[]; // for single_select
   conditionalCommentOn?: string; // value that triggers required comment (e.g. 'No')
   required?: boolean; // default true for single_select
+  optionalComment?: boolean; // show optional comment field always
+  optionalPhoto?: boolean; // show optional photo upload always
 }
 
 // ===== Inspection =====
