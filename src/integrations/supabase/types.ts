@@ -14,6 +14,161 @@ export type Database = {
   }
   public: {
     Tables: {
+      assets: {
+        Row: {
+          account_id: string | null
+          account_name: string | null
+          account_num: string | null
+          area_name: string | null
+          asset_created_at: string | null
+          asset_id1: string | null
+          asset_id2: string | null
+          asset_type: string | null
+          capacity: string | null
+          class_name: string
+          client_id: string | null
+          configuration: string | null
+          control_type: string | null
+          crane_manufacturer: string | null
+          created_at: string
+          created_by_id: string | null
+          description: string | null
+          external_id: string | null
+          grade_size: string | null
+          hoist_configuration: string | null
+          hook_type: string | null
+          id: string
+          latitude: number | null
+          length_lift: string | null
+          lifting_medium_hoist1: string | null
+          lifting_medium_hoist2: string | null
+          location_id: string | null
+          location_name: string | null
+          location_num: string | null
+          longitude: number | null
+          manufacturer: string | null
+          manufacturer_hoist1: string | null
+          manufacturer_hoist2: string | null
+          model_hoist1: string | null
+          model_hoist2: string | null
+          model_number: string | null
+          pendant_brand: string | null
+          pendant_remote: string | null
+          power: string | null
+          serial_hoist1: string | null
+          serial_hoist2: string | null
+          serial_number: string | null
+          status: string | null
+          trolley_configuration: string | null
+          trolley_serial: string | null
+          urgent_note: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          account_name?: string | null
+          account_num?: string | null
+          area_name?: string | null
+          asset_created_at?: string | null
+          asset_id1?: string | null
+          asset_id2?: string | null
+          asset_type?: string | null
+          capacity?: string | null
+          class_name: string
+          client_id?: string | null
+          configuration?: string | null
+          control_type?: string | null
+          crane_manufacturer?: string | null
+          created_at?: string
+          created_by_id?: string | null
+          description?: string | null
+          external_id?: string | null
+          grade_size?: string | null
+          hoist_configuration?: string | null
+          hook_type?: string | null
+          id?: string
+          latitude?: number | null
+          length_lift?: string | null
+          lifting_medium_hoist1?: string | null
+          lifting_medium_hoist2?: string | null
+          location_id?: string | null
+          location_name?: string | null
+          location_num?: string | null
+          longitude?: number | null
+          manufacturer?: string | null
+          manufacturer_hoist1?: string | null
+          manufacturer_hoist2?: string | null
+          model_hoist1?: string | null
+          model_hoist2?: string | null
+          model_number?: string | null
+          pendant_brand?: string | null
+          pendant_remote?: string | null
+          power?: string | null
+          serial_hoist1?: string | null
+          serial_hoist2?: string | null
+          serial_number?: string | null
+          status?: string | null
+          trolley_configuration?: string | null
+          trolley_serial?: string | null
+          urgent_note?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          account_name?: string | null
+          account_num?: string | null
+          area_name?: string | null
+          asset_created_at?: string | null
+          asset_id1?: string | null
+          asset_id2?: string | null
+          asset_type?: string | null
+          capacity?: string | null
+          class_name?: string
+          client_id?: string | null
+          configuration?: string | null
+          control_type?: string | null
+          crane_manufacturer?: string | null
+          created_at?: string
+          created_by_id?: string | null
+          description?: string | null
+          external_id?: string | null
+          grade_size?: string | null
+          hoist_configuration?: string | null
+          hook_type?: string | null
+          id?: string
+          latitude?: number | null
+          length_lift?: string | null
+          lifting_medium_hoist1?: string | null
+          lifting_medium_hoist2?: string | null
+          location_id?: string | null
+          location_name?: string | null
+          location_num?: string | null
+          longitude?: number | null
+          manufacturer?: string | null
+          manufacturer_hoist1?: string | null
+          manufacturer_hoist2?: string | null
+          model_hoist1?: string | null
+          model_hoist2?: string | null
+          model_number?: string | null
+          pendant_brand?: string | null
+          pendant_remote?: string | null
+          power?: string | null
+          serial_hoist1?: string | null
+          serial_hoist2?: string | null
+          serial_number?: string | null
+          status?: string | null
+          trolley_configuration?: string | null
+          trolley_serial?: string | null
+          urgent_note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contacts: {
         Row: {
           client_id: string

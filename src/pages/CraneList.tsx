@@ -1,15 +1,97 @@
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
-import { useState } from 'react';
-import { ChevronRight, PlayCircle, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { PlayCircle, Info, Package } from 'lucide-react';
 import { Crane, InspectionItemResult } from '@/types/inspection';
-import { mockTemplate } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DbAsset {
+  id: string;
+  class_name: string;
+  asset_id1: string | null;
+  asset_id2: string | null;
+  status: string | null;
+  account_name: string | null;
+  location_name: string | null;
+  area_name: string | null;
+  description: string | null;
+  asset_type: string | null;
+  capacity: string | null;
+  manufacturer: string | null;
+  model_number: string | null;
+  serial_number: string | null;
+  length_lift: string | null;
+  crane_manufacturer: string | null;
+}
 
 export default function CraneList() {
   const { state, dispatch } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
+  const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
+  const [loading, setLoading] = useState(true);
   const site = state.selectedSite!;
+
+  useEffect(() => {
+    const fetchAssets = async () => {
+      setLoading(true);
+      // Try matching by account_name to the site name
+      const searchTerms = [
+        site.name,
+        site.name.split(' - ')[0],
+        site.name.split(' ')[0],
+      ];
+
+      for (const term of searchTerms) {
+        const { data } = await supabase
+          .from('assets')
+          .select('id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer')
+          .ilike('account_name', `%${term}%`)
+          .order('class_name');
+
+        if (data && data.length > 0) {
+          setDbAssets(data);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Also try matching if the site was selected from DB clients
+      if (site.id.startsWith('db-')) {
+        const clientId = site.id.replace('db-', '');
+        const { data } = await supabase
+          .from('assets')
+          .select('id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer')
+          .eq('client_id', clientId)
+          .order('class_name');
+
+        if (data && data.length > 0) {
+          setDbAssets(data);
+        }
+      }
+
+      setLoading(false);
+    };
+
+    fetchAssets();
+  }, [site.name, site.id]);
+
+  // Convert DB assets to Crane objects for inspection compatibility
+  const assetToCrane = (asset: DbAsset): Crane => ({
+    id: `asset-${asset.id}`,
+    siteId: site.id,
+    name: asset.asset_id2 || asset.description || asset.asset_id1 || asset.class_name,
+    type: asset.class_name === 'Overhead Crane' ? 'Single Girder Overhead' : asset.class_name as any,
+    serialNumber: asset.serial_number || asset.asset_id1 || 'N/A',
+    capacity: asset.capacity || 'N/A',
+    manufacturer: asset.crane_manufacturer || asset.manufacturer || 'N/A',
+    yearInstalled: 0,
+  });
+
+  // Use DB assets if available, otherwise fall back to mock cranes
+  const displayAssets = dbAssets.length > 0 ? dbAssets : [];
+  const mockCranes = site.cranes || [];
+  const hasDbAssets = dbAssets.length > 0;
 
   const startInspection = (crane: Crane) => {
     dispatch({ type: 'SELECT_CRANE', payload: crane });
@@ -19,7 +101,6 @@ export default function CraneList() {
     );
     if (!template) return;
 
-    // Check for existing draft
     const existing = state.inspections.find(
       i => i.craneId === crane.id && i.status !== 'completed'
     );
@@ -32,7 +113,6 @@ export default function CraneList() {
       section.items.map(item => ({
         templateItemId: item.id,
         sectionId: section.id,
-        // Numeric items are optional data capture - auto-mark as pass
         ...(item.type === 'numeric' ? { result: 'pass' as const } : {}),
       }))
     );
@@ -57,17 +137,98 @@ export default function CraneList() {
     return state.inspections.find(i => i.craneId === craneId);
   };
 
+  // Group DB assets by class_name
+  const groupedAssets = displayAssets.reduce((acc, asset) => {
+    const key = asset.class_name;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(asset);
+    return acc;
+  }, {} as Record<string, DbAsset[]>);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader
         title={site.name}
-        subtitle={`${site.cranes.length} cranes`}
+        subtitle={hasDbAssets ? `${dbAssets.length} assets` : `${mockCranes.length} cranes`}
         onBack={() => dispatch({ type: 'BACK_TO_SITES' })}
         onNoteToAdmin={() => setNoteOpen(true)}
       />
 
       <div className="flex-1">
-        {site.cranes.map(crane => {
+        {loading && (
+          <div className="p-8 text-center text-muted-foreground">Loading assets...</div>
+        )}
+
+        {!loading && hasDbAssets && Object.entries(groupedAssets).map(([className, assets]) => (
+          <div key={className}>
+            <div className="px-4 py-2 bg-muted/50 border-b border-border">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5" />
+                {className} ({assets.length})
+              </p>
+            </div>
+            {assets.map(asset => {
+              const crane = assetToCrane(asset);
+              const canInspect = asset.class_name === 'Overhead Crane';
+              const existing = getInspectionStatus(crane.id);
+
+              return (
+                <div key={asset.id} className="border-b border-border">
+                  <div className="px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-base">{crane.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {asset.asset_type || asset.class_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {[asset.capacity, crane.manufacturer, asset.serial_number ? `SN: ${asset.serial_number}` : null]
+                            .filter(Boolean).join(' • ') || 'No details'}
+                        </p>
+                        {asset.location_name && (
+                          <p className="text-xs text-muted-foreground">📍 {asset.location_name}{asset.area_name ? ` — ${asset.area_name}` : ''}</p>
+                        )}
+                      </div>
+                      {existing?.status === 'completed' && (
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${
+                          existing.craneStatus === 'Safe to Operate' ? 'bg-rka-green-light text-rka-green-dark' :
+                          existing.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
+                          'bg-rka-orange-light text-rka-orange'
+                        }`}>
+                          {existing.craneStatus}
+                        </span>
+                      )}
+                    </div>
+
+                    {canInspect ? (
+                      <button
+                        onClick={() => startInspection(crane)}
+                        className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
+                          existing?.status === 'completed'
+                            ? 'bg-muted text-foreground'
+                            : existing?.status === 'in_progress'
+                            ? 'bg-rka-orange text-destructive-foreground'
+                            : 'bg-primary text-primary-foreground shadow-lg'
+                        }`}
+                      >
+                        <PlayCircle className="w-5 h-5" />
+                        {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
+                      </button>
+                    ) : (
+                      <div className="mt-3 tap-target rounded-xl bg-muted flex items-center justify-center gap-2 text-muted-foreground text-sm">
+                        <Info className="w-4 h-4" />
+                        Inspection form not available yet
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {/* Fallback to mock cranes if no DB assets */}
+        {!loading && !hasDbAssets && mockCranes.map(crane => {
           const canInspect = crane.type === 'Single Girder Overhead';
           const existing = getInspectionStatus(crane.id);
 
@@ -117,9 +278,16 @@ export default function CraneList() {
             </div>
           );
         })}
+
+        {!loading && !hasDbAssets && mockCranes.length === 0 && (
+          <div className="p-8 text-center text-muted-foreground">
+            <p className="font-medium">No assets found for this site</p>
+            <p className="text-sm mt-1">Import assets via the admin tools</p>
+          </div>
+        )}
       </div>
 
-      {/* Site Job Summary button - always available */}
+      {/* Site Job Summary button */}
       <div className="p-4 border-t border-border">
         <button
           onClick={() => {
