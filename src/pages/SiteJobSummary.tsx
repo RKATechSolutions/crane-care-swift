@@ -71,6 +71,11 @@ export default function SiteJobSummary() {
   const handleSaveDefects = () => {
     setDefectsSaved(true);
     setDefectsExpanded(false);
+    // Scroll to next inspection date section
+    setTimeout(() => {
+      const el = document.getElementById('next-inspection-date');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const handleSubmit = () => {
@@ -248,7 +253,7 @@ export default function SiteJobSummary() {
                       {/* Quote buttons always visible */}
                       <div className="flex gap-2 px-4 pb-3">
                         <button
-                          onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Now' } })}
+                          onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Now', inspectionId: insp.id } })}
                           className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
                             item.defect!.quoteStatus === 'Quote Now'
                               ? 'bg-rka-green text-primary-foreground'
@@ -259,7 +264,7 @@ export default function SiteJobSummary() {
                           Quote Now
                         </button>
                         <button
-                          onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Later' } })}
+                          onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Later', inspectionId: insp.id } })}
                           className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
                             item.defect!.quoteStatus === 'Quote Later'
                               ? 'bg-foreground text-background'
@@ -324,7 +329,7 @@ export default function SiteJobSummary() {
 
         <div className="p-4 space-y-5">
           {/* Next Inspection - filled by technician */}
-          <div>
+          <div id="next-inspection-date">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Inspection Date</label>
             <input
               type="date"
@@ -366,7 +371,7 @@ export default function SiteJobSummary() {
                 }`}
               >
                 {bookingConfirmed && <Check className="w-5 h-5" />}
-                {bookingConfirmed ? 'Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
+                {bookingConfirmed ? 'Calendar Invite Sent and Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
               </button>
             </div>
 
@@ -423,6 +428,10 @@ export default function SiteJobSummary() {
                     href={GOOGLE_REVIEW_URL}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(GOOGLE_REVIEW_URL, '_blank', 'noopener,noreferrer');
+                    }}
                     className="inline-block text-sm font-bold text-primary underline"
                   >
                     Tap here to leave a review →
