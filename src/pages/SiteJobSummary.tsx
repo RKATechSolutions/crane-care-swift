@@ -135,6 +135,36 @@ export default function SiteJobSummary() {
       />
 
       <div className="flex-1 overflow-y-auto">
+        {/* Job Report Header */}
+        <div className="px-4 py-4 border-b border-border bg-muted/30 space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground italic">
+            Australian Standards Reference: AS 2550.1 – Safe Use of Cranes (General Record Requirements)
+          </p>
+
+          <div className="grid grid-cols-1 gap-2">
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Business Name</label>
+              <p className="text-sm font-bold mt-0.5">RKA Crane Services</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Site Address</label>
+              <p className="text-sm font-medium mt-0.5">{site.address}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Type</label>
+              <p className="text-sm font-medium mt-0.5">Periodic Inspection</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Name</label>
+              <p className="text-sm font-medium mt-0.5">{state.currentUser?.name || '—'}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date and Time Scheduled</label>
+              <p className="text-sm font-medium mt-0.5">{format(new Date(), 'dd MMM yyyy, HH:mm')}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Completed Inspections Summary */}
         <div className="px-4 py-3 border-b border-border bg-muted/30">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Completed Inspections</p>
