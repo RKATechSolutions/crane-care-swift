@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -14,6 +14,12 @@ export default function InspectionForm() {
   const [showStatusPicker, setShowStatusPicker] = useState(false);
 
   const inspection = state.currentInspection!;
+
+  // Scroll to top when section changes
+  const handleSectionChange = useCallback((idx: number) => {
+    setCurrentSectionIdx(idx);
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, []);
   const template = state.templates.find(t => t.id === inspection.templateId)!;
   const crane = state.selectedSite!.cranes.find(c => c.id === inspection.craneId)!;
 
@@ -37,13 +43,17 @@ export default function InspectionForm() {
 
   const handlePass = useCallback((itemId: string) => {
     const existing = inspection.items.find(i => i.templateItemId === itemId)!;
+    // Toggle: if already pass, unselect
+    const newResult = existing.result === 'pass' ? undefined : 'pass' as const;
     dispatch({
       type: 'UPDATE_INSPECTION_ITEM',
       payload: {
         itemId,
-        result: { ...existing, result: 'pass' },
+        result: { ...existing, result: newResult },
       },
     });
+    // Auto-save after each action
+    setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
   }, [dispatch, inspection.items]);
 
   const handleDefect = useCallback((itemId: string, result: InspectionItemResult) => {
@@ -51,6 +61,8 @@ export default function InspectionForm() {
       type: 'UPDATE_INSPECTION_ITEM',
       payload: { itemId, result },
     });
+    // Auto-save after each action
+    setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
   }, [dispatch]);
 
   const handleComplete = () => {
@@ -88,7 +100,7 @@ export default function InspectionForm() {
           return (
             <button
               key={sec.id}
-              onClick={() => setCurrentSectionIdx(idx)}
+              onClick={() => handleSectionChange(idx)}
               className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
                 idx === currentSectionIdx
                   ? 'bg-foreground text-background'
@@ -122,7 +134,7 @@ export default function InspectionForm() {
       <div className="px-4 py-2 border-t border-border flex gap-2">
         {currentSectionIdx > 0 && (
           <button
-            onClick={() => setCurrentSectionIdx(currentSectionIdx - 1)}
+            onClick={() => handleSectionChange(currentSectionIdx - 1)}
             className="flex-1 tap-target bg-muted rounded-xl font-semibold text-sm"
           >
             ← {sections[currentSectionIdx - 1].name}
@@ -130,7 +142,7 @@ export default function InspectionForm() {
         )}
         {currentSectionIdx < sections.length - 1 && (
           <button
-            onClick={() => setCurrentSectionIdx(currentSectionIdx + 1)}
+            onClick={() => handleSectionChange(currentSectionIdx + 1)}
             className="flex-1 tap-target bg-foreground text-background rounded-xl font-semibold text-sm"
           >
             {sections[currentSectionIdx + 1].name} →
