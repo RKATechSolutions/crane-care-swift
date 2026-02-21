@@ -103,7 +103,13 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
     }
   };
 
+  const canSaveDefect = defectPhotos.length > 0;
+
   const handleDefectSave = () => {
+    if (!canSaveDefect) {
+      setUploadError('At least one photo is required for defects');
+      return;
+    }
     try {
       onDefect({
         ...result,
@@ -406,7 +412,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Photos</label>
+              <label className="text-xs font-semibold text-rka-red uppercase tracking-wide">Photos (Required) *</label>
               <input
                 ref={defectFileInputRef}
                 type="file"
@@ -419,10 +425,12 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
               <button
                 onClick={() => defectFileInputRef.current?.click()}
                 disabled={defectPhotos.length >= MAX_PHOTOS}
-                className="mt-1 tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
+                className={`mt-1 tap-target w-full rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm active:bg-muted disabled:opacity-40 ${
+                  defectPhotos.length === 0 ? 'border-rka-red/50 text-rka-red' : 'border-border text-muted-foreground'
+                }`}
               >
                 <Camera className="w-5 h-5" />
-                {defectPhotos.length > 0 ? `Add more (${defectPhotos.length}/${MAX_PHOTOS})` : 'Tap to add photo'}
+                {defectPhotos.length > 0 ? `Add more (${defectPhotos.length}/${MAX_PHOTOS})` : '⚠ Tap to add photo (required)'}
               </button>
               {uploadError && <p className="text-xs text-rka-red mt-1">{uploadError}</p>}
               {defectPhotos.length > 0 && (
@@ -444,12 +452,15 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
 
             <button
               onClick={handleDefectSave}
+              disabled={!canSaveDefect}
               className={`w-full tap-target rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                defectSaved ? 'bg-rka-green text-primary-foreground' : 'bg-foreground text-background'
+                defectSaved ? 'bg-rka-green text-primary-foreground' : canSaveDefect ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'
               }`}
             >
               {defectSaved ? (
                 <><Check className="w-5 h-5" /> Saved ✓</>
+              ) : !canSaveDefect ? (
+                'Add photo to save defect'
               ) : (
                 'Save Defect Details'
               )}

@@ -54,10 +54,16 @@ export interface TemplateSection {
   items: TemplateItem[];
 }
 
+export type TemplateItemType = 'checklist' | 'single_select' | 'numeric';
+
 export interface TemplateItem {
   id: string;
   label: string;
   sortOrder: number;
+  type?: TemplateItemType; // default 'checklist'
+  options?: string[]; // for single_select
+  conditionalCommentOn?: string; // value that triggers required comment (e.g. 'No')
+  required?: boolean; // default true for single_select
 }
 
 // ===== Inspection =====
@@ -95,6 +101,9 @@ export interface InspectionItemResult {
   defect?: DefectDetail;
   unresolvedStatus?: 'still_unresolved' | 'resolved';
   unresolvedPhotos?: string[];
+  selectedValue?: string; // for single_select items
+  conditionalComment?: string; // comment when conditional trigger met
+  numericValue?: number; // for numeric items
 }
 
 export interface DefectDetail {

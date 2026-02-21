@@ -32,6 +32,8 @@ export default function CraneList() {
       section.items.map(item => ({
         templateItemId: item.id,
         sectionId: section.id,
+        // Numeric items are optional data capture - auto-mark as pass
+        ...(item.type === 'numeric' ? { result: 'pass' as const } : {}),
       }))
     );
 

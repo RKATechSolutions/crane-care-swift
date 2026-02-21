@@ -51,10 +51,36 @@ export const mockTemplate: InspectionTemplate = {
   id: 'tmpl-1',
   craneType: 'Single Girder Overhead',
   inspectionType: 'Quarterly',
-  version: 1,
+  version: 6,
   isActive: true,
   createdAt: '2024-01-15',
   sections: [
+    // SECTION 0 – HISTORICAL & LIFECYCLE VERIFICATION
+    {
+      id: 'sec-lifecycle',
+      name: 'Lifecycle',
+      sortOrder: 0,
+      items: [
+        // A. Major Inspection Currency
+        { id: 's0-1', label: '10 Year Major Inspection Status', sortOrder: 1, type: 'single_select', options: ['Current', 'Not Current', 'Not Due'], required: true },
+        { id: 's0-2', label: '25 Year Structural Inspection Status', sortOrder: 2, type: 'single_select', options: ['Current', 'Not Current', 'Not Due'], required: true },
+        { id: 's0-3', label: 'Major Inspection Plate Fitted and Updated', sortOrder: 3, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
+        // B. Log Book & Prestart
+        { id: 's0-4', label: 'Crane Log Book Present On Site', sortOrder: 4, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
+        { id: 's0-5', label: 'Log Book Up To Date', sortOrder: 5, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
+        { id: 's0-6', label: 'Operator Pre-Start System In Place', sortOrder: 6, type: 'single_select', options: ['Yes', 'No'], conditionalCommentOn: 'No', required: true },
+        // C. Isolation Devices
+        { id: 's0-7', label: 'Main Isolating Switch', sortOrder: 7 },
+        { id: 's0-8', label: 'Crane Isolating Switch', sortOrder: 8 },
+        // D. Runway & Structural Interface
+        { id: 's0-9', label: 'Foundations / Anchor Bolts', sortOrder: 9 },
+        { id: 's0-10', label: 'Runway Stops', sortOrder: 10 },
+        { id: 's0-11', label: 'Rail Splicing', sortOrder: 11 },
+        { id: 's0-12', label: 'Rail Spacing', sortOrder: 12 },
+        { id: 's0-13', label: 'Runway Power Conductor Guards', sortOrder: 13 },
+      ],
+    },
+    // SECTION 1 – STRUCTURAL
     {
       id: 'sec-structure',
       name: 'Structure',
@@ -67,9 +93,10 @@ export const mockTemplate: InspectionTemplate = {
         { id: 'item-5', label: 'Walkways and access — check condition and handrails secure', sortOrder: 5 },
       ],
     },
+    // SECTION 2 – MECHANICAL SYSTEMS (HOIST)
     {
       id: 'sec-hoist',
-      name: 'Hoist',
+      name: 'Mechanical',
       sortOrder: 2,
       items: [
         { id: 'item-6', label: 'Wire rope — check for broken wires, kinks or corrosion', sortOrder: 1 },
@@ -78,8 +105,17 @@ export const mockTemplate: InspectionTemplate = {
         { id: 'item-9', label: 'Hoist brake — functional test', sortOrder: 4 },
         { id: 'item-10', label: 'Drum and sheaves — check for wear and groove condition', sortOrder: 5 },
         { id: 'item-11', label: 'Load chain (if applicable) — check for wear and elongation', sortOrder: 6 },
+        // NEW items added at end
+        { id: 'item-m1', label: 'Drive Shaft – Bridge', sortOrder: 7 },
+        { id: 'item-m2', label: 'Drive Shaft – Trolley', sortOrder: 8 },
+        { id: 'item-m3', label: 'Wheel Bearings', sortOrder: 9 },
+        { id: 'item-m4', label: 'Equalizer Sheave', sortOrder: 10 },
+        { id: 'item-m5', label: 'Rope Guide', sortOrder: 11 },
+        { id: 'item-m6', label: 'Coupling', sortOrder: 12 },
+        { id: 'item-m7', label: 'Holding Brake – Hoist', sortOrder: 13 },
       ],
     },
+    // SECTION 3 – ELECTRICAL & CONTROL
     {
       id: 'sec-electrical',
       name: 'Electrical',
@@ -90,12 +126,41 @@ export const mockTemplate: InspectionTemplate = {
         { id: 'item-14', label: 'Isolator and main switch — operational check', sortOrder: 3 },
         { id: 'item-15', label: 'Warning devices — horn, lights functional test', sortOrder: 4 },
         { id: 'item-16', label: 'Wiring and connections — visual check for damage', sortOrder: 5 },
+        // NEW limit switch items
+        { id: 'item-e1', label: 'Lower Limit Switch', sortOrder: 6 },
+        { id: 'item-e2', label: 'Primary Upper Limit Switch', sortOrder: 7 },
+        { id: 'item-e3', label: 'Ultimate Upper Limit Switch', sortOrder: 8 },
+        // Condition Monitor Data Capture
+        { id: 'item-cm1', label: 'Hoist SWP Percentage', sortOrder: 9, type: 'numeric' },
+        { id: 'item-cm2', label: 'Brake SWP Percentage', sortOrder: 10, type: 'numeric' },
+        { id: 'item-cm3', label: 'Total Starts', sortOrder: 11, type: 'numeric' },
+        { id: 'item-cm4', label: 'Total Run Time (Hours)', sortOrder: 12, type: 'numeric' },
+        { id: 'item-cm5', label: 'Total Cycles', sortOrder: 13, type: 'numeric' },
+        { id: 'item-cm6', label: 'Recorded Overloads', sortOrder: 14, type: 'numeric' },
+        { id: 'item-cm7', label: 'Recorded Emergency Stops', sortOrder: 15, type: 'numeric' },
+        { id: 'item-cm8', label: 'Maximum Recorded Load Percentage', sortOrder: 16, type: 'numeric' },
       ],
     },
+    // SECTION 4 – SAFETY & COMPLIANCE DEVICES
+    {
+      id: 'sec-safety',
+      name: 'Safety',
+      sortOrder: 4,
+      items: [
+        { id: 'item-22', label: 'Overload protection — functional test', sortOrder: 1 },
+        { id: 'item-23', label: 'Upper limit switch — functional test', sortOrder: 2 },
+        { id: 'item-24', label: 'Lower limit switch — functional test', sortOrder: 3 },
+        { id: 'item-25', label: 'Emergency stop — all E-stops functional', sortOrder: 4 },
+        { id: 'item-26', label: 'Anti-collision (if fitted) — functional test', sortOrder: 5 },
+        // NEW
+        { id: 'item-s1', label: 'Hook Block Capacity Markings', sortOrder: 6 },
+      ],
+    },
+    // SECTION 5 – TRAVEL
     {
       id: 'sec-travel',
       name: 'Travel',
-      sortOrder: 4,
+      sortOrder: 5,
       items: [
         { id: 'item-17', label: 'Long travel — smooth operation, no abnormal noise', sortOrder: 1 },
         { id: 'item-18', label: 'Cross travel — smooth operation, no abnormal noise', sortOrder: 2 },
@@ -104,23 +169,14 @@ export const mockTemplate: InspectionTemplate = {
         { id: 'item-21', label: 'Buffer stops — check condition and mounting', sortOrder: 5 },
       ],
     },
-    {
-      id: 'sec-safety',
-      name: 'Safety',
-      sortOrder: 5,
-      items: [
-        { id: 'item-22', label: 'Overload protection — functional test', sortOrder: 1 },
-        { id: 'item-23', label: 'Upper limit switch — functional test', sortOrder: 2 },
-        { id: 'item-24', label: 'Lower limit switch — functional test', sortOrder: 3 },
-        { id: 'item-25', label: 'Emergency stop — all E-stops functional', sortOrder: 4 },
-        { id: 'item-26', label: 'Anti-collision (if fitted) — functional test', sortOrder: 5 },
-      ],
-    },
+    // SECTION 6 – ASSET OUTCOME
     {
       id: 'sec-general',
-      name: 'General',
+      name: 'Asset Outcome',
       sortOrder: 6,
       items: [
+        // NEW Certificate Issued field above existing items
+        { id: 'item-cert', label: 'Certificate Issued', sortOrder: 0, type: 'single_select', options: ['Yes', 'No'], required: true },
         { id: 'item-27', label: 'Crane ID plate — legible and present', sortOrder: 1 },
         { id: 'item-28', label: 'SWL markings — clearly visible', sortOrder: 2 },
         { id: 'item-29', label: 'Lubrication — adequate across all points', sortOrder: 3 },
