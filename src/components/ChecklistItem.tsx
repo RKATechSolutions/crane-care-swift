@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { Check, AlertTriangle, MessageCircle, Camera, X } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Check, AlertTriangle, MessageCircle, Camera, X, ZoomIn } from 'lucide-react';
 import { InspectionItemResult, DefectType, DefectSeverity, RectificationTimeframe, TemplateItem } from '@/types/inspection';
 
 interface ChecklistItemProps {
@@ -14,6 +14,10 @@ const defectTypes: DefectType[] = ['Mechanical', 'Electrical', 'Structural', 'Sa
 const severities: DefectSeverity[] = ['Minor', 'Major', 'Critical'];
 const timeframes: RectificationTimeframe[] = ['Immediately', 'Within 7 Days', 'Within 30 Days', 'Before Next Service'];
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_PHOTOS = 5;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
+
 export function ChecklistItem({ item, result, onPass, onDefect, isActive }: ChecklistItemProps) {
   const [showExtras, setShowExtras] = useState(false);
   const [comment, setComment] = useState(result.comment || '');
@@ -23,16 +27,39 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
   const [timeframe, setTimeframe] = useState<RectificationTimeframe>(result.defect?.rectificationTimeframe || 'Within 7 Days');
   const [defectComment, setDefectComment] = useState(result.defect?.notes || '');
   const [defectPhotos, setDefectPhotos] = useState<string[]>(result.defect?.photos || []);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const defectFileInputRef = useRef<HTMLInputElement>(null);
 
   const isPass = result.result === 'pass';
   const isDefect = result.result === 'defect';
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, forDefect: boolean) => {
+  const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, forDefect: boolean) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach(file => {
+    setUploadError(null);
+
+    const currentCount = forDefect ? defectPhotos.length : photos.length;
+    const remaining = MAX_PHOTOS - currentCount;
+
+    if (remaining <= 0) {
+      setUploadError(`Maximum ${MAX_PHOTOS} photos allowed`);
+      e.target.value = '';
+      return;
+    }
+
+    const validFiles = Array.from(files).slice(0, remaining);
+
+    for (const file of validFiles) {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setUploadError('Invalid file type. Use JPG, PNG, or WebP');
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setUploadError('File too large (max 10MB)');
+        continue;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
         const dataUrl = ev.target?.result as string;
@@ -43,9 +70,9 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
         }
       };
       reader.readAsDataURL(file);
-    });
+    }
     e.target.value = '';
-  };
+  }, [defectPhotos.length, photos.length]);
 
   const removePhoto = (index: number, forDefect: boolean) => {
     if (forDefect) {
@@ -146,17 +173,22 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted"
+                disabled={photos.length >= MAX_PHOTOS}
+                className="tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
               >
                 <Camera className="w-5 h-5" />
-                Tap to add photo (optional)
+                {photos.length > 0 ? `Add more (${photos.length}/${MAX_PHOTOS})` : 'Tap to add photo (optional)'}
               </button>
+              {uploadError && <p className="text-xs text-rka-red mt-1">{uploadError}</p>}
               {photos.length > 0 && (
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {photos.map((p, i) => (
-                    <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
-                      <img src={p} alt="" className="w-full h-full object-cover" />
-                      <button onClick={() => removePhoto(i, false)} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-0.5">
+                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-border shadow-sm">
+                      <img src={p} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" onClick={() => setPreviewPhoto(p)} />
+                      <button onClick={() => setPreviewPhoto(p)} className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
+                        <ZoomIn className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => removePhoto(i, false)} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-1">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -251,17 +283,22 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
               />
               <button
                 onClick={() => defectFileInputRef.current?.click()}
-                className="mt-1 tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted"
+                disabled={defectPhotos.length >= MAX_PHOTOS}
+                className="mt-1 tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
               >
                 <Camera className="w-5 h-5" />
-                Tap to add photo
+                {defectPhotos.length > 0 ? `Add more (${defectPhotos.length}/${MAX_PHOTOS})` : 'Tap to add photo'}
               </button>
+              {uploadError && <p className="text-xs text-rka-red mt-1">{uploadError}</p>}
               {defectPhotos.length > 0 && (
                 <div className="flex gap-2 mt-2 flex-wrap">
                   {defectPhotos.map((p, i) => (
-                    <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
-                      <img src={p} alt="" className="w-full h-full object-cover" />
-                      <button onClick={() => removePhoto(i, true)} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-0.5">
+                    <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-border shadow-sm">
+                      <img src={p} alt={`Defect photo ${i + 1}`} className="w-full h-full object-cover" onClick={() => setPreviewPhoto(p)} />
+                      <button onClick={() => setPreviewPhoto(p)} className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
+                        <ZoomIn className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => removePhoto(i, true)} className="absolute top-0 right-0 bg-rka-red text-destructive-foreground rounded-bl-lg p-1">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -279,6 +316,19 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive }: Chec
           </div>
         )}
       </div>
+
+      {/* Fullscreen Photo Preview */}
+      {previewPhoto && (
+        <div
+          className="fixed inset-0 z-[200] bg-foreground/90 flex items-center justify-center p-4"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <button className="absolute top-4 right-4 bg-background rounded-full p-2 shadow-lg" onClick={() => setPreviewPhoto(null)}>
+            <X className="w-6 h-6 text-foreground" />
+          </button>
+          <img src={previewPhoto} alt="Preview" className="max-w-full max-h-full rounded-lg object-contain" />
+        </div>
+      )}
     </div>
   );
 }
