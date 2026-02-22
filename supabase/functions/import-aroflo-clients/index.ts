@@ -52,30 +52,32 @@ serve(async (req) => {
         'join=' + encodeURIComponent('contacts,locations'),
       ].join('&');
 
-      // Generate timestamp in ISO 8601 format
+      // Generate timestamp in ISO 8601 format (matching PHP date("Y-m-d\TH:i:s.u\Z"))
       const now = new Date();
-      const afDatetimeUtc = now.toISOString();
+      const afDatetimeUtc = now.toISOString().replace(/(\.\d{3})Z$/, '$1000Z');
 
-      // Build the HMAC auth string
-      // AroFlo HMAC construction: sign the auth string containing credentials + timestamp + URL params
-      const authString = uEncoded + orgEncoded + afDatetimeUtc + urlVarString;
-      console.log('Auth string (first 50 chars):', authString.substring(0, 50) + '...');
+      // Build Authorization string: uencoded=<val>&pencoded=<val>&orgEncoded=<val>
+      const authorization = `uencoded=${encodeURIComponent(uEncoded)}&pencoded=${encodeURIComponent(pEncoded)}&orgEncoded=${encodeURIComponent(orgEncoded)}`;
+
+      // Build HMAC payload: method+urlPath+accept+authorization+afdatetimeutc+postfields (joined with +)
+      const method = 'GET';
+      const urlPath = '';
+      const accept = 'text/json';
+      const payloadString = [method, urlPath, accept, authorization, afDatetimeUtc, urlVarString].join('+');
       
-      const hmacSignature = await generateHmacSignature(authString, secretKey);
+      const hmacSignature = await generateHmacSignature(payloadString, secretKey);
 
       const apiUrl = `https://api.aroflo.com/?${urlVarString}`;
-      console.log(`Fetching AroFlo clients page ${page} from: ${apiUrl}`);
+      console.log(`Fetching AroFlo clients page ${page}...`);
 
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Authentication': `HMAC ${hmacSignature}`,
-          'Authorization': `Bearer ${pEncoded}`,
-          'Accept': 'text/json',
+          'Authorization': authorization,
+          'Accept': accept,
           'afdatetimeutc': afDatetimeUtc,
-          'orgEncoded': orgEncoded,
-          'uEncoded': uEncoded,
-          'pEncoded': pEncoded,
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
       });
 
