@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 async function generateHmacSignature(message: string, secretKey: string): Promise<string> {
@@ -52,27 +52,25 @@ serve(async (req) => {
         'join=' + encodeURIComponent('contacts,locations'),
       ].join('&');
 
-      // Generate timestamp in ISO format for the header
+      // Generate timestamp in ISO 8601 format
       const now = new Date();
-      const afDatetimeUtc = now.toISOString().replace('T', ' ').replace(/\.\d+Z$/, '');
+      const afDatetimeUtc = now.toISOString();
 
       // Build the HMAC auth string
-      // The message to sign is: uEncoded + orgEncoded + afdatetimeutc
-      // For GET requests the URL query string is also part of it
-      const authMessage = uEncoded + orgEncoded + afDatetimeUtc;
-      const hmacSignature = await generateHmacSignature(authMessage, secretKey);
-
-      // Authorization is base64 of uEncoded:pEncoded
-      const authorizationValue = btoa(uEncoded + ':' + pEncoded);
+      // AroFlo HMAC construction: sign the auth string containing credentials + timestamp + URL params
+      const authString = uEncoded + orgEncoded + afDatetimeUtc + urlVarString;
+      console.log('Auth string (first 50 chars):', authString.substring(0, 50) + '...');
+      
+      const hmacSignature = await generateHmacSignature(authString, secretKey);
 
       const apiUrl = `https://api.aroflo.com/?${urlVarString}`;
-      console.log(`Fetching AroFlo clients page ${page}...`);
+      console.log(`Fetching AroFlo clients page ${page} from: ${apiUrl}`);
 
       const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Authentication': `HMAC ${hmacSignature}`,
-          'Authorization': authorizationValue,
+          'Authorization': `Bearer ${pEncoded}`,
           'Accept': 'text/json',
           'afdatetimeutc': afDatetimeUtc,
           'orgEncoded': orgEncoded,
@@ -81,16 +79,19 @@ serve(async (req) => {
         },
       });
 
-      if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`AroFlo API error [${response.status}]: ${body}`);
+      const responseText = await response.text();
+      console.log(`AroFlo response status: ${response.status}`);
+      console.log(`AroFlo response body (first 500 chars): ${responseText.substring(0, 500)}`);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(`AroFlo returned non-JSON response: ${responseText.substring(0, 200)}`);
       }
 
-      const data = await response.json();
-      console.log(`AroFlo response status: ${data.status}, message: ${data.statusmessage}`);
-
       if (data.status !== '0' && data.status !== 0) {
-        throw new Error(`AroFlo API login failed: ${data.statusmessage}`);
+        throw new Error(`AroFlo API error (status ${data.status}): ${data.statusmessage}`);
       }
 
       const clients = data.zoneresponse?.clients || [];
@@ -131,7 +132,7 @@ serve(async (req) => {
         address.state,
         address.postcode,
       ].filter(Boolean);
-      const locationAddress = addressParts.join(', ') || client.address?.addressline1 || '';
+      const locationAddress = addressParts.join(', ') || '';
 
       // Get primary contact info
       const primaryContact = client.contacts?.[0] || {};
@@ -145,7 +146,6 @@ serve(async (req) => {
         .maybeSingle();
 
       if (existing) {
-        // Update
         await supabase
           .from('clients')
           .update({
@@ -161,7 +161,6 @@ serve(async (req) => {
           .eq('id', existing.id);
         updated++;
       } else {
-        // Insert
         await supabase
           .from('clients')
           .insert({
