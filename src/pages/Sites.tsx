@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { Search, MapPin, ChevronRight, LogOut, Building2, Upload, Plus } from 'lucide-react';
+import { Search, MapPin, ChevronRight, LogOut, Building2, Upload, Plus, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ImportAssets from './ImportAssets';
+import { toast } from 'sonner';
 
 interface DbClient {
   id: string;
@@ -26,6 +27,7 @@ export default function Sites() {
   const [newClientContact, setNewClientContact] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [addingClient, setAddingClient] = useState(false);
+  const [importingAroflo, setImportingAroflo] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -241,6 +243,36 @@ export default function Sites() {
 
       <div className="p-4 border-t border-border space-y-2">
         <button
+          onClick={async () => {
+            setImportingAroflo(true);
+            try {
+              const { data, error } = await supabase.functions.invoke('import-aroflo-clients');
+              if (error) throw error;
+              if (data?.success) {
+                toast.success(data.message);
+                // Refresh clients list
+                const { data: clients } = await supabase
+                  .from('clients')
+                  .select('id, client_name, location_address, primary_contact_name, primary_contact_mobile, status')
+                  .eq('status', 'Active')
+                  .order('client_name');
+                if (clients) setDbClients(clients);
+              } else {
+                toast.error(data?.error || 'Import failed');
+              }
+            } catch (err: any) {
+              toast.error(err.message || 'Failed to import from AroFlo');
+            } finally {
+              setImportingAroflo(false);
+            }
+          }}
+          disabled={importingAroflo}
+          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${importingAroflo ? 'animate-spin' : ''}`} />
+          {importingAroflo ? 'Importing from AroFlo...' : 'Import Clients from AroFlo'}
+        </button>
+        <button
           onClick={() => setShowAddClient(true)}
           className="w-full tap-target bg-accent text-accent-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2"
         >
@@ -249,7 +281,7 @@ export default function Sites() {
         </button>
         <button
           onClick={() => setShowImport(true)}
-          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2"
+          className="w-full tap-target bg-accent text-accent-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2"
         >
           <Upload className="w-4 h-4" />
           Import Assets
