@@ -16,148 +16,217 @@ export type Database = {
     Tables: {
       assets: {
         Row: {
+          access_suggestion: string | null
           account_id: string | null
           account_name: string | null
           account_num: string | null
           area_name: string | null
           asset_created_at: string | null
+          asset_criticality_level: string | null
           asset_id1: string | null
           asset_id2: string | null
+          asset_lifecycle_stage: string | null
           asset_type: string | null
+          barcode: string | null
+          brand_make: string | null
           capacity: string | null
           class_name: string
           client_id: string | null
+          commission_date: string | null
+          compliance_status: string | null
           configuration: string | null
           control_type: string | null
+          crane_classification: string | null
           crane_manufacturer: string | null
+          crane_operational_status: string | null
           created_at: string
           created_by_id: string | null
           description: string | null
+          design_standard: string | null
+          duty_class: string | null
+          environment_exposure: string | null
           external_id: string | null
           grade_size: string | null
           hoist_configuration: string | null
           hook_type: string | null
           id: string
+          installation_date: string | null
           latitude: number | null
           length_lift: string | null
+          lift_height_m: number | null
           lifting_medium_hoist1: string | null
           lifting_medium_hoist2: string | null
           location_id: string | null
           location_name: string | null
           location_num: string | null
           longitude: number | null
+          major_inspection_due_date: string | null
+          major_inspection_interval_years: number | null
           manufacturer: string | null
           manufacturer_hoist1: string | null
           manufacturer_hoist2: string | null
           model_hoist1: string | null
           model_hoist2: string | null
           model_number: string | null
+          notes: string | null
           pendant_brand: string | null
           pendant_remote: string | null
           power: string | null
+          power_supply: string | null
+          replacement_risk_category: string | null
           serial_hoist1: string | null
           serial_hoist2: string | null
           serial_number: string | null
+          service_class_usage_intensity: string | null
           status: string | null
+          structural_design_life_years: number | null
+          swl_tonnes: string | null
           trolley_configuration: string | null
           trolley_serial: string | null
           urgent_note: string | null
+          year_manufactured: number | null
         }
         Insert: {
+          access_suggestion?: string | null
           account_id?: string | null
           account_name?: string | null
           account_num?: string | null
           area_name?: string | null
           asset_created_at?: string | null
+          asset_criticality_level?: string | null
           asset_id1?: string | null
           asset_id2?: string | null
+          asset_lifecycle_stage?: string | null
           asset_type?: string | null
+          barcode?: string | null
+          brand_make?: string | null
           capacity?: string | null
           class_name: string
           client_id?: string | null
+          commission_date?: string | null
+          compliance_status?: string | null
           configuration?: string | null
           control_type?: string | null
+          crane_classification?: string | null
           crane_manufacturer?: string | null
+          crane_operational_status?: string | null
           created_at?: string
           created_by_id?: string | null
           description?: string | null
+          design_standard?: string | null
+          duty_class?: string | null
+          environment_exposure?: string | null
           external_id?: string | null
           grade_size?: string | null
           hoist_configuration?: string | null
           hook_type?: string | null
           id?: string
+          installation_date?: string | null
           latitude?: number | null
           length_lift?: string | null
+          lift_height_m?: number | null
           lifting_medium_hoist1?: string | null
           lifting_medium_hoist2?: string | null
           location_id?: string | null
           location_name?: string | null
           location_num?: string | null
           longitude?: number | null
+          major_inspection_due_date?: string | null
+          major_inspection_interval_years?: number | null
           manufacturer?: string | null
           manufacturer_hoist1?: string | null
           manufacturer_hoist2?: string | null
           model_hoist1?: string | null
           model_hoist2?: string | null
           model_number?: string | null
+          notes?: string | null
           pendant_brand?: string | null
           pendant_remote?: string | null
           power?: string | null
+          power_supply?: string | null
+          replacement_risk_category?: string | null
           serial_hoist1?: string | null
           serial_hoist2?: string | null
           serial_number?: string | null
+          service_class_usage_intensity?: string | null
           status?: string | null
+          structural_design_life_years?: number | null
+          swl_tonnes?: string | null
           trolley_configuration?: string | null
           trolley_serial?: string | null
           urgent_note?: string | null
+          year_manufactured?: number | null
         }
         Update: {
+          access_suggestion?: string | null
           account_id?: string | null
           account_name?: string | null
           account_num?: string | null
           area_name?: string | null
           asset_created_at?: string | null
+          asset_criticality_level?: string | null
           asset_id1?: string | null
           asset_id2?: string | null
+          asset_lifecycle_stage?: string | null
           asset_type?: string | null
+          barcode?: string | null
+          brand_make?: string | null
           capacity?: string | null
           class_name?: string
           client_id?: string | null
+          commission_date?: string | null
+          compliance_status?: string | null
           configuration?: string | null
           control_type?: string | null
+          crane_classification?: string | null
           crane_manufacturer?: string | null
+          crane_operational_status?: string | null
           created_at?: string
           created_by_id?: string | null
           description?: string | null
+          design_standard?: string | null
+          duty_class?: string | null
+          environment_exposure?: string | null
           external_id?: string | null
           grade_size?: string | null
           hoist_configuration?: string | null
           hook_type?: string | null
           id?: string
+          installation_date?: string | null
           latitude?: number | null
           length_lift?: string | null
+          lift_height_m?: number | null
           lifting_medium_hoist1?: string | null
           lifting_medium_hoist2?: string | null
           location_id?: string | null
           location_name?: string | null
           location_num?: string | null
           longitude?: number | null
+          major_inspection_due_date?: string | null
+          major_inspection_interval_years?: number | null
           manufacturer?: string | null
           manufacturer_hoist1?: string | null
           manufacturer_hoist2?: string | null
           model_hoist1?: string | null
           model_hoist2?: string | null
           model_number?: string | null
+          notes?: string | null
           pendant_brand?: string | null
           pendant_remote?: string | null
           power?: string | null
+          power_supply?: string | null
+          replacement_risk_category?: string | null
           serial_hoist1?: string | null
           serial_hoist2?: string | null
           serial_number?: string | null
+          service_class_usage_intensity?: string | null
           status?: string | null
+          structural_design_life_years?: number | null
+          swl_tonnes?: string | null
           trolley_configuration?: string | null
           trolley_serial?: string | null
           urgent_note?: string | null
+          year_manufactured?: number | null
         }
         Relationships: [
           {
