@@ -264,89 +264,91 @@ export default function Sites() {
       </div>
 
       {showAddClient && (
-        <div className="p-4 border-t border-border bg-muted/30 space-y-3">
-          <p className="font-semibold text-sm">New Client</p>
-          <input
-            type="text"
-            value={newClientName}
-            onChange={(e) => setNewClientName(e.target.value)}
-            placeholder="Client name *"
-            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <input
-            type="text"
-            value={newClientAddress}
-            onChange={(e) => setNewClientAddress(e.target.value)}
-            placeholder="Address"
-            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <div className="flex gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAddClient(false)}>
+          <div className="bg-background rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto p-5 space-y-3 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="font-bold text-lg">New Client</p>
             <input
               type="text"
-              value={newContactGivenName}
-              onChange={(e) => setNewContactGivenName(e.target.value)}
-              placeholder="Contact first name"
-              className="flex-1 h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={newClientName}
+              onChange={(e) => setNewClientName(e.target.value)}
+              placeholder="Client name *"
+              className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <input
               type="text"
-              value={newContactSurname}
-              onChange={(e) => setNewContactSurname(e.target.value)}
-              placeholder="Contact surname"
-              className="flex-1 h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              value={newClientAddress}
+              onChange={(e) => setNewClientAddress(e.target.value)}
+              placeholder="Address"
+              className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
-          </div>
-          <input
-            type="text"
-            value={newContactPosition}
-            onChange={(e) => setNewContactPosition(e.target.value)}
-            placeholder="Position / Role"
-            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <input
-            type="tel"
-            value={newContactMobile}
-            onChange={(e) => setNewContactMobile(e.target.value)}
-            placeholder="Mobile"
-            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <input
-            type="email"
-            value={newContactEmail}
-            onChange={(e) => setNewContactEmail(e.target.value)}
-            placeholder="Email"
-            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <textarea
-            value={newSiteInduction}
-            onChange={(e) => setNewSiteInduction(e.target.value)}
-            placeholder="Site induction details"
-            rows={2}
-            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-          />
-          <select
-            value={newScheduleReminders}
-            onChange={(e) => setNewScheduleReminders(e.target.value)}
-            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="">Schedule reminders...</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-          <div className="flex gap-2">
-            <button
-              onClick={handleAddClient}
-              disabled={!newClientName.trim() || addingClient}
-              className="flex-1 h-10 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-50"
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newContactGivenName}
+                onChange={(e) => setNewContactGivenName(e.target.value)}
+                placeholder="Contact first name"
+                className="flex-1 h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <input
+                type="text"
+                value={newContactSurname}
+                onChange={(e) => setNewContactSurname(e.target.value)}
+                placeholder="Contact surname"
+                className="flex-1 h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <input
+              type="text"
+              value={newContactPosition}
+              onChange={(e) => setNewContactPosition(e.target.value)}
+              placeholder="Position / Role"
+              className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <input
+              type="tel"
+              value={newContactMobile}
+              onChange={(e) => setNewContactMobile(e.target.value)}
+              placeholder="Mobile"
+              className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <input
+              type="email"
+              value={newContactEmail}
+              onChange={(e) => setNewContactEmail(e.target.value)}
+              placeholder="Email"
+              className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <textarea
+              value={newSiteInduction}
+              onChange={(e) => setNewSiteInduction(e.target.value)}
+              placeholder="Site induction details"
+              rows={2}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
+            <select
+              value={newScheduleReminders}
+              onChange={(e) => setNewScheduleReminders(e.target.value)}
+              className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              {addingClient ? 'Saving...' : 'Save Client'}
-            </button>
-            <button
-              onClick={() => setShowAddClient(false)}
-              className="flex-1 h-10 bg-muted rounded-lg text-muted-foreground font-medium text-sm"
-            >
-              Cancel
-            </button>
+              <option value="">Schedule reminders...</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={handleAddClient}
+                disabled={!newClientName.trim() || addingClient}
+                className="flex-1 h-10 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-50"
+              >
+                {addingClient ? 'Saving...' : 'Save Client'}
+              </button>
+              <button
+                onClick={() => setShowAddClient(false)}
+                className="flex-1 h-10 bg-muted rounded-lg text-muted-foreground font-medium text-sm"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
