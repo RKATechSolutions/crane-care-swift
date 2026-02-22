@@ -72,7 +72,7 @@ serve(async (req) => {
     for (let i = 0; i < assetArray.length; i += batchSize) {
       const batch = assetArray.slice(i, i + batchSize).map((a: any) => {
         const clientName = a.clientName?.trim() || null;
-        const clientId = a.matchedClientId || findClientId(clientName);
+        const clientId = findClientId(clientName);
         if (clientId) linked++;
 
         return {
@@ -82,12 +82,14 @@ serve(async (req) => {
           asset_id2: a.assetId2 || null,
           status: a.status || "In Service",
           account_name: clientName,
+          account_num: a.accountNum || null,
           barcode: a.barcode || null,
           location_id: a.locationId?.toString() || null,
           location_name: a.locationName || null,
           location_num: a.locationNum || null,
           area_name: a.areaName || null,
           description: a.description || null,
+          urgent_note: a.urgentNote || null,
           latitude: a.latitude ? parseFloat(a.latitude) : null,
           longitude: a.longitude ? parseFloat(a.longitude) : null,
           asset_created_at: a.createdAt || null,
@@ -95,7 +97,7 @@ serve(async (req) => {
           asset_type: a.assetType || null,
           capacity: a.capacity || null,
           manufacturer: a.manufacturer || null,
-          crane_manufacturer: a.manufacturer || null,
+          crane_manufacturer: a.craneManufacturer || a.manufacturer || null,
           model_number: a.modelNumber || null,
           serial_number: a.serialNumber || null,
           length_lift: a.lengthLift || null,

@@ -9,6 +9,14 @@ interface ImportAssetsProps {
 }
 
 // Parse the master XLSX format with asset sheets
+// Columns: 0:source_sheet, 1:id, 2:accountId, 3:accountName, 4:inspectall_customer_id,
+// 5:match_status, 6:matched_client_name, 7:className, 8:id1, 9:id2, 10:status,
+// 11:accountNum, 12:locationId, 13:locationName, 14:locationNum, 15:areaName,
+// 16:description, 17:urgentNote, 18:latitude, 19:longitude, 20:createdAt, 21:createdById,
+// 22:Configuration, 23:Grade&Size, 24:Length, 25:Manufacturer, 26:Type, 27:Capacity,
+// 28:ModelNumber, 29:Length/Lift, 30:HookType, 31:SerialNumber, 32:Power, 33:Pendant/Remote,
+// 34:CraneMfg, 35:HoistConfig, 36:TrolleyConfig, 37-40:Hoist1, 41-44:Hoist2,
+// 49:ControlType, 50:PendantBrand, 51:TrolleySerial
 function parseMasterAssets(workbook: XLSX.WorkBook): any[] {
   const assets: any[] = [];
   const seenIds = new Set<string>();
@@ -16,68 +24,47 @@ function parseMasterAssets(workbook: XLSX.WorkBook): any[] {
   for (const sheetName of workbook.SheetNames) {
     const sheet = workbook.Sheets[sheetName];
     const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (rows.length < 3) continue;
 
-    // Skip sheets that look like client-only data (check first data row)
-    if (rows.length < 2) continue;
+    // Check if this is an asset sheet by looking at header row
+    const header0 = String(rows[0]?.[0] || '').toLowerCase();
+    // Skip client sheets (first col is "Client Name" or similar)
+    if (header0.includes('client') && !header0.includes('chain') && !header0.includes('crane')) continue;
 
-    for (let i = 1; i < rows.length; i++) {
+    // Find the header row - look for 'classname' or 'className' in row
+    let headerRow = -1;
+    for (let h = 0; h < Math.min(3, rows.length); h++) {
+      const rowStr = rows[h]?.map(c => String(c).toLowerCase()).join('|') || '';
+      if (rowStr.includes('classname') || rowStr.includes('accountname')) {
+        headerRow = h;
+        break;
+      }
+    }
+    if (headerRow === -1) continue;
+
+    for (let i = headerRow + 1; i < rows.length; i++) {
       const r = rows[i];
-      if (!r || r.length < 10) continue;
-
-      // Detect asset rows: column 0 starts with a number (like "25825 Overhead Crane")
-      const col0 = String(r[0] || '').trim();
-      if (!col0 || col0 === 'client_name') continue;
-
-      // Master format columns (asset sheets):
-      // 0: class_label (e.g. "25825 Overhead Crane")
-      // 1: aroflo_asset_id
-      // 2: inspectall_customer_id
-      // 3: client_name
-      // 4: matched_id
-      // 5: match_status
-      // 6: matched_client_name
-      // 7: class_name (clean)
-      // 8: asset_id1 / serial
-      // 9: asset_id2
-      // 10: status
-      // 11: barcode
-      // 12: location_id
-      // 13: location_name
-      // 14: location_num
-      // 15: area_name
-      // 16: description
-      // 17: lat
-      // 18: lng
-      // 19: created_at
-      // 20: created_by_id
-      // 21: grade/size/config (varies)
-      // 22-23: length
-      // 24: manufacturer/brand
-      // 25: asset_type
-      // 26: capacity
-      // 27: model
-      // 28: lift/length
-      // 29-30: more fields
-      // 31: serial_number (from hoist)
-      // Then hoist details...
+      if (!r || r.length < 8) continue;
 
       const className = String(r[7] || '').trim();
-      if (!className) continue;
+      if (!className || className === 'classname') continue;
 
       const externalId = String(r[1] || '').trim();
-      const key = externalId || `${r[3]}-${r[8]}-${r[16]}`;
+      if (!externalId) continue;
+
+      const key = externalId;
       if (seenIds.has(key)) continue;
       seenIds.add(key);
 
       const clientName = String(r[3] || r[6] || '').trim();
 
       assets.push({
-        externalId: externalId || null,
+        externalId,
         className,
         assetId1: String(r[8] || '').trim() || null,
         assetId2: String(r[9] || '').trim() || null,
         status: String(r[10] || 'In Service').trim(),
-        barcode: String(r[11] || '').trim() || null,
+        accountNum: String(r[11] || '').trim() || null,
         clientName: clientName || null,
         matchedClientId: String(r[4] || '').trim() || null,
         locationId: String(r[12] || '').trim() || null,
@@ -85,31 +72,36 @@ function parseMasterAssets(workbook: XLSX.WorkBook): any[] {
         locationNum: String(r[14] || '').trim() || null,
         areaName: String(r[15] || '').trim() || null,
         description: String(r[16] || '').trim() || null,
-        latitude: r[17] || null,
-        longitude: r[18] || null,
-        createdAt: String(r[19] || '').trim() || null,
-        createdById: String(r[20] || '').trim() || null,
-        // Asset details (positions vary by sheet but typically):
-        manufacturer: String(r[24] || '').trim() || null,
-        assetType: String(r[25] || '').trim() || null,
-        capacity: String(r[26] || '').trim() || null,
-        modelNumber: String(r[27] || '').trim() || null,
-        lengthLift: String(r[28] || '').trim() || null,
-        powerSupply: String(r[29] || '').trim() || null,
+        urgentNote: String(r[17] || '').trim() || null,
+        latitude: r[18] || null,
+        longitude: r[19] || null,
+        createdAt: String(r[20] || '').trim() || null,
+        createdById: String(r[21] || '').trim() || null,
+        configuration: String(r[22] || '').trim() || null,
+        gradeSize: String(r[23] || '').trim() || null,
+        lengthLift: String(r[24] || r[29] || '').trim() || null,
+        manufacturer: String(r[25] || '').trim() || null,
+        assetType: String(r[26] || '').trim() || null,
+        capacity: String(r[27] || '').trim() || null,
+        modelNumber: String(r[28] || '').trim() || null,
+        hookType: String(r[30] || '').trim() || null,
         serialNumber: String(r[31] || '').trim() || null,
-        controlType: String(r[32] || '').trim() || null,
-        configuration: String(r[33] || '').trim() || null,
-        hoistConfig: String(r[34] || '').trim() || null,
-        liftMedHoist1: String(r[36] || '').trim() || null,
-        mfgHoist1: String(r[37] || '').trim() || null,
-        modelHoist1: String(r[38] || '').trim() || null,
-        serialHoist1: String(r[39] || '').trim() || null,
-        liftMedHoist2: String(r[40] || '').trim() || null,
-        mfgHoist2: String(r[41] || '').trim() || null,
-        modelHoist2: String(r[42] || '').trim() || null,
-        serialHoist2: String(r[43] || '').trim() || null,
-        pendantRemote: String(r[44] || '').trim() || null,
-        pendantBrand: String(r[45] || '').trim() || null,
+        power: String(r[32] || '').trim() || null,
+        pendantRemote: String(r[33] || '').trim() || null,
+        craneManufacturer: String(r[34] || '').trim() || null,
+        hoistConfig: String(r[35] || '').trim() || null,
+        trolleyConfig: String(r[36] || '').trim() || null,
+        liftMedHoist1: String(r[37] || '').trim() || null,
+        mfgHoist1: String(r[38] || '').trim() || null,
+        modelHoist1: String(r[39] || '').trim() || null,
+        serialHoist1: String(r[40] || '').trim() || null,
+        liftMedHoist2: String(r[41] || '').trim() || null,
+        mfgHoist2: String(r[42] || '').trim() || null,
+        modelHoist2: String(r[43] || '').trim() || null,
+        serialHoist2: String(r[44] || '').trim() || null,
+        controlType: String(r[49] || '').trim() || null,
+        pendantBrand: String(r[50] || '').trim() || null,
+        trolleySerial: String(r[51] || '').trim() || null,
       });
     }
   }
@@ -169,7 +161,10 @@ export default function ImportAssets({ onBack }: ImportAssetsProps) {
   const handleMasterFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await processMasterFile(file);
+  };
 
+  const processMasterFile = async (file: File | Blob) => {
     try {
       setStatus('parsing');
       setMessage('Parsing master spreadsheet...');
@@ -183,22 +178,51 @@ export default function ImportAssets({ onBack }: ImportAssetsProps) {
         throw new Error('No assets found in file. Check the format.');
       }
 
-      setMessage(`Parsed ${assets.length} unique assets. Importing...`);
+      setMessage(`Parsed ${assets.length} unique assets. Importing in batches...`);
       setStatus('uploading');
 
-      const { data: result, error } = await supabase.functions.invoke('import-master-assets', {
-        body: { assets },
-      });
+      // Send in chunks of 200 to avoid payload limits
+      const chunkSize = 200;
+      let totalImported = 0;
+      let totalLinked = 0;
+      let totalSkipped = 0;
 
-      if (error) throw error;
-      if (result?.error) throw new Error(result.error);
+      for (let i = 0; i < assets.length; i += chunkSize) {
+        const chunk = assets.slice(i, i + chunkSize);
+        setMessage(`Importing batch ${Math.floor(i / chunkSize) + 1} of ${Math.ceil(assets.length / chunkSize)} (${chunk.length} assets)...`);
 
-      setCount(result?.imported || assets.length);
+        const { data: result, error } = await supabase.functions.invoke('import-master-assets', {
+          body: { assets: chunk },
+        });
+
+        if (error) throw error;
+        if (result?.error) throw new Error(result.error);
+
+        totalImported += result?.imported || 0;
+        totalLinked += result?.linked || 0;
+        totalSkipped += result?.skipped || 0;
+      }
+
+      setCount(totalImported);
       setStatus('done');
-      setMessage(`Imported ${result?.imported || 0} assets (${result?.linked || 0} linked to clients, ${result?.skipped || 0} skipped)`);
+      setMessage(`Imported ${totalImported} assets (${totalLinked} linked to clients, ${totalSkipped} skipped)`);
     } catch (err: any) {
       setStatus('error');
       setMessage(err.message || 'Import failed');
+    }
+  };
+
+  const handleLoadBundledFile = async () => {
+    try {
+      setStatus('parsing');
+      setMessage('Loading bundled master file...');
+      const response = await fetch('/data/Master_Assets.xlsx');
+      if (!response.ok) throw new Error('Could not load bundled file');
+      const blob = await response.blob();
+      await processMasterFile(blob);
+    } catch (err: any) {
+      setStatus('error');
+      setMessage(err.message || 'Failed to load bundled file');
     }
   };
 
@@ -230,6 +254,14 @@ export default function ImportAssets({ onBack }: ImportAssetsProps) {
                 Standard Asset Export
                 <input type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" />
               </label>
+
+              <button
+                onClick={handleLoadBundledFile}
+                className="tap-target bg-accent text-accent-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 px-8 w-full"
+              >
+                <Database className="w-5 h-5" />
+                Load Bundled Master File
+              </button>
             </div>
           </>
         )}
