@@ -112,26 +112,25 @@ export default function Sites() {
   const handleAddClient = async () => {
     if (!newClientName.trim()) return;
     setAddingClient(true);
-    const contactName = [newContactGivenName.trim(), newContactSurname.trim()].filter(Boolean).join(' ');
-    const { error } = await supabase.from('clients').insert({
-      client_name: newClientName.trim(),
-      location_address: newClientAddress.trim() || null,
-      primary_contact_given_name: newContactGivenName.trim() || null,
-      primary_contact_surname: newContactSurname.trim() || null,
-      primary_contact_name: contactName || null,
-      primary_contact_position: newContactPosition.trim() || null,
-      primary_contact_mobile: newContactMobile.trim() || null,
-      primary_contact_email: newContactEmail.trim() || null,
-      site_induction_details: newSiteInduction.trim() || null,
-      send_schedule_reminders: newScheduleReminders || null,
-      status: 'Active',
-    });
-    if (error) {
-      toast.error(error.message || 'Failed to save client');
-      setAddingClient(false);
-      return;
-    }
-    {
+    try {
+      const contactName = [newContactGivenName.trim(), newContactSurname.trim()].filter(Boolean).join(' ');
+      const { error } = await supabase.from('clients').insert({
+        client_name: newClientName.trim(),
+        location_address: newClientAddress.trim() || null,
+        primary_contact_given_name: newContactGivenName.trim() || null,
+        primary_contact_surname: newContactSurname.trim() || null,
+        primary_contact_name: contactName || null,
+        primary_contact_position: newContactPosition.trim() || null,
+        primary_contact_mobile: newContactMobile.trim() || null,
+        primary_contact_email: newContactEmail.trim() || null,
+        site_induction_details: newSiteInduction.trim() || null,
+        send_schedule_reminders: newScheduleReminders || null,
+        status: 'Active',
+      });
+      if (error) {
+        toast.error(error.message || 'Failed to save client');
+        return;
+      }
       const { data: clients } = await supabase
         .from('clients')
         .select('id, client_name, location_address, primary_contact_name, primary_contact_mobile, status')
@@ -149,8 +148,12 @@ export default function Sites() {
       setNewScheduleReminders('');
       setShowAddClient(false);
       toast.success('Client added successfully');
+    } catch (err: any) {
+      console.error('Error adding client:', err);
+      toast.error(err.message || 'An unexpected error occurred');
+    } finally {
+      setAddingClient(false);
     }
-    setAddingClient(false);
   };
 
   if (showImport) {
