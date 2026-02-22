@@ -24,8 +24,11 @@ export default function Sites() {
   const [showAddClient, setShowAddClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientAddress, setNewClientAddress] = useState('');
-  const [newClientContact, setNewClientContact] = useState('');
-  const [newClientPhone, setNewClientPhone] = useState('');
+  const [newContactGivenName, setNewContactGivenName] = useState('');
+  const [newContactSurname, setNewContactSurname] = useState('');
+  const [newContactPosition, setNewContactPosition] = useState('');
+  const [newContactMobile, setNewContactMobile] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
   const [addingClient, setAddingClient] = useState(false);
   const [importingAroflo, setImportingAroflo] = useState(false);
 
@@ -107,11 +110,16 @@ export default function Sites() {
   const handleAddClient = async () => {
     if (!newClientName.trim()) return;
     setAddingClient(true);
+    const contactName = [newContactGivenName.trim(), newContactSurname.trim()].filter(Boolean).join(' ');
     const { error } = await supabase.from('clients').insert({
       client_name: newClientName.trim(),
       location_address: newClientAddress.trim() || null,
-      primary_contact_name: newClientContact.trim() || null,
-      primary_contact_mobile: newClientPhone.trim() || null,
+      primary_contact_given_name: newContactGivenName.trim() || null,
+      primary_contact_surname: newContactSurname.trim() || null,
+      primary_contact_name: contactName || null,
+      primary_contact_position: newContactPosition.trim() || null,
+      primary_contact_mobile: newContactMobile.trim() || null,
+      primary_contact_email: newContactEmail.trim() || null,
       status: 'Active',
     });
     if (!error) {
@@ -123,8 +131,11 @@ export default function Sites() {
       if (clients) setDbClients(clients);
       setNewClientName('');
       setNewClientAddress('');
-      setNewClientContact('');
-      setNewClientPhone('');
+      setNewContactGivenName('');
+      setNewContactSurname('');
+      setNewContactPosition('');
+      setNewContactMobile('');
+      setNewContactEmail('');
       setShowAddClient(false);
     }
     setAddingClient(false);
@@ -254,18 +265,41 @@ export default function Sites() {
             placeholder="Address"
             className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newContactGivenName}
+              onChange={(e) => setNewContactGivenName(e.target.value)}
+              placeholder="Contact first name"
+              className="flex-1 h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <input
+              type="text"
+              value={newContactSurname}
+              onChange={(e) => setNewContactSurname(e.target.value)}
+              placeholder="Contact surname"
+              className="flex-1 h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
           <input
             type="text"
-            value={newClientContact}
-            onChange={(e) => setNewClientContact(e.target.value)}
-            placeholder="Contact name"
+            value={newContactPosition}
+            onChange={(e) => setNewContactPosition(e.target.value)}
+            placeholder="Position / Role"
             className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <input
-            type="text"
-            value={newClientPhone}
-            onChange={(e) => setNewClientPhone(e.target.value)}
-            placeholder="Contact phone"
+            type="tel"
+            value={newContactMobile}
+            onChange={(e) => setNewContactMobile(e.target.value)}
+            placeholder="Mobile"
+            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <input
+            type="email"
+            value={newContactEmail}
+            onChange={(e) => setNewContactEmail(e.target.value)}
+            placeholder="Email"
             className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <div className="flex gap-2">
