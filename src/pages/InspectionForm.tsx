@@ -23,7 +23,9 @@ export default function InspectionForm() {
   }, []);
 
   const template = state.templates.find(t => t.id === inspection.templateId)!;
-  const crane = state.selectedSite!.cranes.find(c => c.id === inspection.craneId)!;
+  const crane = state.selectedSite?.cranes?.find(c => c.id === inspection.craneId) 
+    || state.selectedCrane 
+    || { id: inspection.craneId, name: 'Asset', type: 'Unknown' as any, serialNumber: '', capacity: '', manufacturer: '', yearInstalled: 0, siteId: '' };
 
   const sections = template.sections;
   const currentSection = sections[currentSectionIdx];
