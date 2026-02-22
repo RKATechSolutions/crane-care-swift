@@ -141,7 +141,52 @@ export default function Sites() {
         subtitle={state.currentUser?.name}
       />
 
-      <div className="px-4 py-3 border-b border-border">
+      <div className="px-4 py-3 border-b border-border space-y-2">
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              setImportingAroflo(true);
+              try {
+                const { data, error } = await supabase.functions.invoke('import-aroflo-clients');
+                if (error) throw error;
+                if (data?.success) {
+                  toast.success(data.message);
+                  const { data: clients } = await supabase
+                    .from('clients')
+                    .select('id, client_name, location_address, primary_contact_name, primary_contact_mobile, status')
+                    .eq('status', 'Active')
+                    .order('client_name');
+                  if (clients) setDbClients(clients);
+                } else {
+                  toast.error(data?.error || 'Import failed');
+                }
+              } catch (err: any) {
+                toast.error(err.message || 'Failed to import from AroFlo');
+              } finally {
+                setImportingAroflo(false);
+              }
+            }}
+            disabled={importingAroflo}
+            className="flex-1 h-9 bg-primary text-primary-foreground rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${importingAroflo ? 'animate-spin' : ''}`} />
+            {importingAroflo ? 'Importing...' : 'Import Clients'}
+          </button>
+          <button
+            onClick={() => setShowAddClient(true)}
+            className="flex-1 h-9 bg-accent text-accent-foreground rounded-lg font-medium text-xs flex items-center justify-center gap-1.5"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Client
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex-1 h-9 bg-accent text-accent-foreground rounded-lg font-medium text-xs flex items-center justify-center gap-1.5"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Import Assets
+          </button>
+        </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <input
@@ -241,51 +286,7 @@ export default function Sites() {
         </div>
       )}
 
-      <div className="p-4 border-t border-border space-y-2">
-        <button
-          onClick={async () => {
-            setImportingAroflo(true);
-            try {
-              const { data, error } = await supabase.functions.invoke('import-aroflo-clients');
-              if (error) throw error;
-              if (data?.success) {
-                toast.success(data.message);
-                // Refresh clients list
-                const { data: clients } = await supabase
-                  .from('clients')
-                  .select('id, client_name, location_address, primary_contact_name, primary_contact_mobile, status')
-                  .eq('status', 'Active')
-                  .order('client_name');
-                if (clients) setDbClients(clients);
-              } else {
-                toast.error(data?.error || 'Import failed');
-              }
-            } catch (err: any) {
-              toast.error(err.message || 'Failed to import from AroFlo');
-            } finally {
-              setImportingAroflo(false);
-            }
-          }}
-          disabled={importingAroflo}
-          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${importingAroflo ? 'animate-spin' : ''}`} />
-          {importingAroflo ? 'Importing from AroFlo...' : 'Import Clients from AroFlo'}
-        </button>
-        <button
-          onClick={() => setShowAddClient(true)}
-          className="w-full tap-target bg-accent text-accent-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Client
-        </button>
-        <button
-          onClick={() => setShowImport(true)}
-          className="w-full tap-target bg-accent text-accent-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2"
-        >
-          <Upload className="w-4 h-4" />
-          Import Assets
-        </button>
+      <div className="p-4 border-t border-border">
         <button
           onClick={() => dispatch({ type: 'LOGOUT' })}
           className="w-full tap-target bg-muted rounded-xl text-muted-foreground font-medium text-sm flex items-center justify-center gap-2"
