@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { Search, MapPin, ChevronRight, LogOut, Building2, Upload } from 'lucide-react';
+import { Search, MapPin, ChevronRight, LogOut, Building2, Upload, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ImportAssets from './ImportAssets';
 
@@ -20,6 +20,12 @@ export default function Sites() {
   const [dbClients, setDbClients] = useState<DbClient[]>([]);
   const [assetCounts, setAssetCounts] = useState<Record<string, number>>({});
   const [showImport, setShowImport] = useState(false);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientAddress, setNewClientAddress] = useState('');
+  const [newClientContact, setNewClientContact] = useState('');
+  const [newClientPhone, setNewClientPhone] = useState('');
+  const [addingClient, setAddingClient] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,6 +102,32 @@ export default function Sites() {
     s.address.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleAddClient = async () => {
+    if (!newClientName.trim()) return;
+    setAddingClient(true);
+    const { error } = await supabase.from('clients').insert({
+      client_name: newClientName.trim(),
+      location_address: newClientAddress.trim() || null,
+      primary_contact_name: newClientContact.trim() || null,
+      primary_contact_mobile: newClientPhone.trim() || null,
+      status: 'Active',
+    });
+    if (!error) {
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('id, client_name, location_address, primary_contact_name, primary_contact_mobile, status')
+        .eq('status', 'Active')
+        .order('client_name');
+      if (clients) setDbClients(clients);
+      setNewClientName('');
+      setNewClientAddress('');
+      setNewClientContact('');
+      setNewClientPhone('');
+      setShowAddClient(false);
+    }
+    setAddingClient(false);
+  };
+
   if (showImport) {
     return <ImportAssets onBack={() => setShowImport(false)} />;
   }
@@ -158,7 +190,63 @@ export default function Sites() {
         )}
       </div>
 
+      {showAddClient && (
+        <div className="p-4 border-t border-border bg-muted/30 space-y-3">
+          <p className="font-semibold text-sm">New Client</p>
+          <input
+            type="text"
+            value={newClientName}
+            onChange={(e) => setNewClientName(e.target.value)}
+            placeholder="Client name *"
+            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <input
+            type="text"
+            value={newClientAddress}
+            onChange={(e) => setNewClientAddress(e.target.value)}
+            placeholder="Address"
+            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <input
+            type="text"
+            value={newClientContact}
+            onChange={(e) => setNewClientContact(e.target.value)}
+            placeholder="Contact name"
+            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <input
+            type="text"
+            value={newClientPhone}
+            onChange={(e) => setNewClientPhone(e.target.value)}
+            placeholder="Contact phone"
+            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={handleAddClient}
+              disabled={!newClientName.trim() || addingClient}
+              className="flex-1 h-10 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-50"
+            >
+              {addingClient ? 'Saving...' : 'Save Client'}
+            </button>
+            <button
+              onClick={() => setShowAddClient(false)}
+              className="flex-1 h-10 bg-muted rounded-lg text-muted-foreground font-medium text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="p-4 border-t border-border space-y-2">
+        <button
+          onClick={() => setShowAddClient(true)}
+          className="w-full tap-target bg-accent text-accent-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Add Client
+        </button>
         <button
           onClick={() => setShowImport(true)}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-medium text-sm flex items-center justify-center gap-2"
