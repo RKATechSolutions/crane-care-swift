@@ -29,6 +29,8 @@ export default function Sites() {
   const [newContactPosition, setNewContactPosition] = useState('');
   const [newContactMobile, setNewContactMobile] = useState('');
   const [newContactEmail, setNewContactEmail] = useState('');
+  const [newSiteInduction, setNewSiteInduction] = useState('');
+  const [newScheduleReminders, setNewScheduleReminders] = useState('');
   const [addingClient, setAddingClient] = useState(false);
   const [importingAroflo, setImportingAroflo] = useState(false);
 
@@ -120,9 +122,16 @@ export default function Sites() {
       primary_contact_position: newContactPosition.trim() || null,
       primary_contact_mobile: newContactMobile.trim() || null,
       primary_contact_email: newContactEmail.trim() || null,
+      site_induction_details: newSiteInduction.trim() || null,
+      send_schedule_reminders: newScheduleReminders || null,
       status: 'Active',
     });
-    if (!error) {
+    if (error) {
+      toast.error(error.message || 'Failed to save client');
+      setAddingClient(false);
+      return;
+    }
+    {
       const { data: clients } = await supabase
         .from('clients')
         .select('id, client_name, location_address, primary_contact_name, primary_contact_mobile, status')
@@ -136,7 +145,10 @@ export default function Sites() {
       setNewContactPosition('');
       setNewContactMobile('');
       setNewContactEmail('');
+      setNewSiteInduction('');
+      setNewScheduleReminders('');
       setShowAddClient(false);
+      toast.success('Client added successfully');
     }
     setAddingClient(false);
   };
@@ -302,6 +314,22 @@ export default function Sites() {
             placeholder="Email"
             className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
+          <textarea
+            value={newSiteInduction}
+            onChange={(e) => setNewSiteInduction(e.target.value)}
+            placeholder="Site induction details"
+            rows={2}
+            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+          />
+          <select
+            value={newScheduleReminders}
+            onChange={(e) => setNewScheduleReminders(e.target.value)}
+            className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">Schedule reminders...</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
           <div className="flex gap-2">
             <button
               onClick={handleAddClient}

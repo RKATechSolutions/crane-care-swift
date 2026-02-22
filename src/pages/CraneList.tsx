@@ -2,9 +2,10 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package } from 'lucide-react';
+import { PlayCircle, Info, Package, Plus } from 'lucide-react';
 import { Crane, InspectionItemResult } from '@/types/inspection';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface DbAsset {
   id: string;
@@ -30,6 +31,41 @@ export default function CraneList() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddAsset, setShowAddAsset] = useState(false);
+  const [addingAsset, setAddingAsset] = useState(false);
+  const [newAsset, setNewAsset] = useState({
+    class_name: 'Overhead Crane',
+    asset_id1: '',
+    asset_id2: '',
+    description: '',
+    asset_type: '',
+    capacity: '',
+    manufacturer: '',
+    crane_manufacturer: '',
+    model_number: '',
+    serial_number: '',
+    length_lift: '',
+    configuration: '',
+    hoist_configuration: '',
+    control_type: '',
+    power: '',
+    pendant_remote: '',
+    pendant_brand: '',
+    hook_type: '',
+    location_name: '',
+    area_name: '',
+    manufacturer_hoist1: '',
+    model_hoist1: '',
+    serial_hoist1: '',
+    lifting_medium_hoist1: '',
+    manufacturer_hoist2: '',
+    model_hoist2: '',
+    serial_hoist2: '',
+    lifting_medium_hoist2: '',
+    trolley_configuration: '',
+    trolley_serial: '',
+    grade_size: '',
+  });
   const site = state.selectedSite;
 
   useEffect(() => {
@@ -180,6 +216,53 @@ export default function CraneList() {
     return state.inspections.find(i => i.craneId === craneId);
   };
 
+  const handleAddAsset = async () => {
+    if (!newAsset.class_name) return;
+    setAddingAsset(true);
+    
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+    
+    const insertData: any = {
+      class_name: newAsset.class_name,
+      account_name: site.name,
+      status: 'In Service',
+    };
+    if (clientId) insertData.client_id = clientId;
+    
+    // Add all non-empty fields
+    const fields = Object.keys(newAsset).filter(k => k !== 'class_name') as (keyof typeof newAsset)[];
+    for (const f of fields) {
+      if (newAsset[f]?.trim()) insertData[f] = newAsset[f].trim();
+    }
+    
+    const { error } = await supabase.from('assets').insert(insertData);
+    if (error) {
+      toast.error(error.message || 'Failed to add asset');
+    } else {
+      toast.success('Asset added successfully');
+      setShowAddAsset(false);
+      setNewAsset({
+        class_name: 'Overhead Crane', asset_id1: '', asset_id2: '', description: '', asset_type: '',
+        capacity: '', manufacturer: '', crane_manufacturer: '', model_number: '', serial_number: '',
+        length_lift: '', configuration: '', hoist_configuration: '', control_type: '', power: '',
+        pendant_remote: '', pendant_brand: '', hook_type: '', location_name: '', area_name: '',
+        manufacturer_hoist1: '', model_hoist1: '', serial_hoist1: '', lifting_medium_hoist1: '',
+        manufacturer_hoist2: '', model_hoist2: '', serial_hoist2: '', lifting_medium_hoist2: '',
+        trolley_configuration: '', trolley_serial: '', grade_size: '',
+      });
+      // Refresh assets
+      const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer';
+      if (clientId) {
+        const { data } = await supabase.from('assets').select(selectFields).eq('client_id', clientId).order('class_name');
+        if (data) setDbAssets(data);
+      } else {
+        const { data } = await supabase.from('assets').select(selectFields).ilike('account_name', `%${site.name}%`).order('class_name');
+        if (data) setDbAssets(data);
+      }
+    }
+    setAddingAsset(false);
+  };
+
   // Group DB assets by class_name
   const groupedAssets = displayAssets.reduce((acc, asset) => {
     const key = asset.class_name;
@@ -197,7 +280,17 @@ export default function CraneList() {
         onNoteToAdmin={() => setNoteOpen(true)}
       />
 
-      <div className="flex-1">
+      <div className="px-4 py-2 border-b border-border">
+        <button
+          onClick={() => setShowAddAsset(!showAddAsset)}
+          className="w-full h-9 bg-primary text-primary-foreground rounded-lg font-medium text-xs flex items-center justify-center gap-1.5"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add Asset
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-auto">
         {loading && (
           <div className="p-8 text-center text-muted-foreground">Loading assets...</div>
         )}
@@ -329,6 +422,72 @@ export default function CraneList() {
           </div>
         )}
       </div>
+
+      {showAddAsset && (
+        <div className="p-4 border-t border-border bg-muted/30 space-y-2 max-h-[60vh] overflow-auto">
+          <p className="font-semibold text-sm">New Asset</p>
+          <select value={newAsset.class_name} onChange={e => setNewAsset({...newAsset, class_name: e.target.value})} className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+            <option>Overhead Crane</option>
+            <option>Hoist</option>
+            <option>Chain Sling</option>
+            <option>Wire Rope Sling</option>
+            <option>Synthetic Sling</option>
+            <option>Below the Hook</option>
+            <option>Jib Crane</option>
+            <option>Gantry Crane</option>
+            <option>Monorail</option>
+          </select>
+          {[
+            { key: 'asset_id1', label: 'Asset ID 1' },
+            { key: 'asset_id2', label: 'Asset ID 2' },
+            { key: 'description', label: 'Description' },
+            { key: 'asset_type', label: 'Asset Type' },
+            { key: 'capacity', label: 'Capacity' },
+            { key: 'serial_number', label: 'Serial Number' },
+            { key: 'manufacturer', label: 'Manufacturer' },
+            { key: 'crane_manufacturer', label: 'Crane Manufacturer' },
+            { key: 'model_number', label: 'Model Number' },
+            { key: 'length_lift', label: 'Length / Lift' },
+            { key: 'configuration', label: 'Configuration' },
+            { key: 'hoist_configuration', label: 'Hoist Configuration' },
+            { key: 'control_type', label: 'Control Type' },
+            { key: 'power', label: 'Power' },
+            { key: 'pendant_remote', label: 'Pendant / Remote' },
+            { key: 'pendant_brand', label: 'Pendant Brand' },
+            { key: 'hook_type', label: 'Hook Type' },
+            { key: 'location_name', label: 'Location' },
+            { key: 'area_name', label: 'Area' },
+            { key: 'manufacturer_hoist1', label: 'Hoist 1 Manufacturer' },
+            { key: 'model_hoist1', label: 'Hoist 1 Model' },
+            { key: 'serial_hoist1', label: 'Hoist 1 Serial' },
+            { key: 'lifting_medium_hoist1', label: 'Hoist 1 Lifting Medium' },
+            { key: 'manufacturer_hoist2', label: 'Hoist 2 Manufacturer' },
+            { key: 'model_hoist2', label: 'Hoist 2 Model' },
+            { key: 'serial_hoist2', label: 'Hoist 2 Serial' },
+            { key: 'lifting_medium_hoist2', label: 'Hoist 2 Lifting Medium' },
+            { key: 'trolley_configuration', label: 'Trolley Configuration' },
+            { key: 'trolley_serial', label: 'Trolley Serial' },
+            { key: 'grade_size', label: 'Grade / Size' },
+          ].map(({ key, label }) => (
+            <input
+              key={key}
+              type="text"
+              value={newAsset[key as keyof typeof newAsset]}
+              onChange={e => setNewAsset({...newAsset, [key]: e.target.value})}
+              placeholder={label}
+              className="w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          ))}
+          <div className="flex gap-2 pt-1">
+            <button onClick={handleAddAsset} disabled={addingAsset} className="flex-1 h-10 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-50">
+              {addingAsset ? 'Saving...' : 'Save Asset'}
+            </button>
+            <button onClick={() => setShowAddAsset(false)} className="flex-1 h-10 bg-muted rounded-lg text-muted-foreground font-medium text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Site Job Summary button */}
       <div className="p-4 border-t border-border">
