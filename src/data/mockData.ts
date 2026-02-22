@@ -190,5 +190,5 @@ export const mockUsers = [
   { id: 'tech-1', name: 'Aaron Harrison', email: 'aaron@rka.com.au', role: 'technician' as const, pin: '1234' },
   { id: 'tech-2', name: 'Vince Fernandez', email: 'vince@rka.com.au', role: 'technician' as const, pin: '5678' },
   { id: 'tech-3', name: 'Ryan Adams', email: 'ryan@rka.com.au', role: 'technician' as const, pin: '9012' },
-  { id: 'tech-4', name: 'Seth Adams', email: 'seth@rka.com.au', role: 'technician' as const, pin: '3456' },
+  { id: 'tech-4', name: 'Seth Adams', email: 'seth@rka.com.au', role: 'technician' as const, pin: '7384' },
 ];
