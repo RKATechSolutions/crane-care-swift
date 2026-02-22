@@ -2,10 +2,11 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package, Plus } from 'lucide-react';
+import { PlayCircle, Info, Package, Plus, Pencil } from 'lucide-react';
 import { Crane, InspectionItemResult } from '@/types/inspection';
 import { supabase } from '@/integrations/supabase/client';
 import { AddAssetForm } from '@/components/AddAssetForm';
+import { AssetDetailModal } from '@/components/AssetDetailModal';
 
 interface DbAsset {
   id: string;
@@ -32,6 +33,7 @@ export default function CraneList() {
   const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddAsset, setShowAddAsset] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
   const site = state.selectedSite;
 
   useEffect(() => {
@@ -241,9 +243,12 @@ export default function CraneList() {
               return (
                 <div key={asset.id} className="border-b border-border">
                   <div className="px-4 py-4">
-                    <div className="flex items-start gap-3">
+                    <div onClick={() => setEditingAsset(asset)} role="button" tabIndex={0} className="flex items-start gap-3 cursor-pointer active:bg-muted/50 rounded-lg -mx-1 px-1 py-1 transition-colors">
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-base">{crane.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-base">{crane.name}</p>
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {asset.asset_type || asset.class_name}
                         </p>
@@ -266,7 +271,7 @@ export default function CraneList() {
                       )}
                     </div>
 
-                    {canInspect ? (
+                    {canInspect && (
                       <button
                         onClick={() => startInspection(crane)}
                         className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
@@ -280,11 +285,6 @@ export default function CraneList() {
                         <PlayCircle className="w-5 h-5" />
                         {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
                       </button>
-                    ) : (
-                      <div className="mt-3 tap-target rounded-xl bg-muted flex items-center justify-center gap-2 text-muted-foreground text-sm">
-                        <Info className="w-4 h-4" />
-                        Inspection form not available yet
-                      </div>
                     )}
                   </div>
                 </div>
@@ -379,6 +379,17 @@ export default function CraneList() {
       </div>
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
+
+      {editingAsset && (
+        <AssetDetailModal
+          asset={editingAsset}
+          onClose={() => setEditingAsset(null)}
+          onSaved={() => {
+            setEditingAsset(null);
+            refreshAssets();
+          }}
+        />
+      )}
     </div>
   );
 }
