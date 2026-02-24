@@ -143,9 +143,63 @@ export default function SiteJobSummary() {
     completedAt: new Date().toISOString(),
   });
 
-  const handleSubmit = () => {
-    dispatch({ type: 'SAVE_SITE_JOB_SUMMARY', payload: buildSummaryPayload() });
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    setSending(true);
+    try {
+      const summaryPayload = buildSummaryPayload();
+      dispatch({ type: 'SAVE_SITE_JOB_SUMMARY', payload: summaryPayload });
+
+      // Generate PDF
+      const template = state.templates[0];
+      const pdf = generateJobPdf({
+        site,
+        clientInfo: clientInfo || undefined,
+        technicianName: state.currentUser?.name || 'Technician',
+        jobType,
+        inspections: completedInspections,
+        template,
+        summary: summaryPayload,
+        customerDefectComments,
+      });
+
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+      const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
+      const dateStr = format(new Date(), 'yyyyMMdd');
+      const filename = `${clientNameSafe}_ServiceReport_${dateStr}.pdf`;
+
+      // Also download a copy locally
+      pdf.save(filename);
+
+      // Send email if we have a recipient
+      const recipientEmail = clientInfo?.primary_contact_email;
+      if (recipientEmail) {
+        const { data, error } = await supabase.functions.invoke('send-report', {
+          body: {
+            to: recipientEmail,
+            clientName: clientInfo?.primary_contact_name || customerName,
+            siteName: clientInfo?.client_name || site.name,
+            pdfBase64,
+            filename,
+          },
+        });
+
+        if (error) {
+          console.error('Email send error:', error);
+          toast.error('Report downloaded but email failed to send. Check the email address.');
+        } else {
+          toast.success(`Report emailed to ${recipientEmail}`);
+        }
+      } else {
+        toast.info('Report downloaded. No client email on file — email not sent.');
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error('Submit error:', err);
+      toast.error('Something went wrong. Report may not have been sent.');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handlePreviewPdf = () => {
