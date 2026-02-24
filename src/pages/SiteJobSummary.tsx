@@ -126,25 +126,42 @@ export default function SiteJobSummary() {
     }, 100);
   };
 
+  const buildSummaryPayload = () => ({
+    siteId: site.id,
+    inspectionIds: completedInspections.map(i => i.id),
+    nextInspectionDate: nextDate,
+    nextInspectionTime: nextTime,
+    bookingConfirmed,
+    customerName,
+    customerSignature: customerSig,
+    technicianSignature: techSig,
+    rating: rating || undefined,
+    feedback: feedback || undefined,
+    publishTestimonial,
+    completedAt: new Date().toISOString(),
+  });
+
   const handleSubmit = () => {
-    dispatch({
-      type: 'SAVE_SITE_JOB_SUMMARY',
-      payload: {
-        siteId: site.id,
-        inspectionIds: completedInspections.map(i => i.id),
-        nextInspectionDate: nextDate,
-        nextInspectionTime: nextTime,
-        bookingConfirmed,
-        customerName,
-        customerSignature: customerSig,
-        technicianSignature: techSig,
-        rating: rating || undefined,
-        feedback: feedback || undefined,
-        publishTestimonial,
-        completedAt: new Date().toISOString(),
-      },
-    });
+    dispatch({ type: 'SAVE_SITE_JOB_SUMMARY', payload: buildSummaryPayload() });
     setSubmitted(true);
+  };
+
+  const handlePreviewPdf = () => {
+    const template = state.templates[0];
+    const pdf = generateJobPdf({
+      site,
+      clientInfo: clientInfo || undefined,
+      technicianName: state.currentUser?.name || 'Technician',
+      jobType,
+      inspections: completedInspections,
+      template,
+      summary: buildSummaryPayload(),
+      customerDefectComments,
+    });
+    // Open in new tab
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
   };
 
   if (submitted) {
