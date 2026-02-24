@@ -212,7 +212,15 @@ export default function CraneList() {
         onNoteToAdmin={() => setNoteOpen(true)}
       />
 
-      <div className="px-4 py-2 border-b border-border">
+      <div className="px-4 py-2 border-b border-border space-y-2">
+        <button
+          onClick={() => {
+            dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
+          }}
+          className="w-full tap-target bg-foreground text-background rounded-xl font-bold text-base"
+        >
+          Complete Site Job Summary
+        </button>
         <button
           onClick={() => setShowAddAsset(!showAddAsset)}
           className="w-full h-9 bg-primary text-primary-foreground rounded-lg font-medium text-xs flex items-center justify-center gap-1.5"
