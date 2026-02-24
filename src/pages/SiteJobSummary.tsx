@@ -5,7 +5,8 @@ import { SignaturePad } from '@/components/SignaturePad';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
 import { supabase } from '@/integrations/supabase/client';
 import { generateJobPdf } from '@/utils/generateJobPdf';
@@ -45,6 +46,7 @@ export default function SiteJobSummary() {
   const [defectsExpanded, setDefectsExpanded] = useState(true);
   const [jobType, setJobType] = useState('Periodic Inspection');
   const [customerDefectComments, setCustomerDefectComments] = useState('');
+  const [sending, setSending] = useState(false);
 
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
@@ -141,9 +143,63 @@ export default function SiteJobSummary() {
     completedAt: new Date().toISOString(),
   });
 
-  const handleSubmit = () => {
-    dispatch({ type: 'SAVE_SITE_JOB_SUMMARY', payload: buildSummaryPayload() });
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    setSending(true);
+    try {
+      const summaryPayload = buildSummaryPayload();
+      dispatch({ type: 'SAVE_SITE_JOB_SUMMARY', payload: summaryPayload });
+
+      // Generate PDF
+      const template = state.templates[0];
+      const pdf = generateJobPdf({
+        site,
+        clientInfo: clientInfo || undefined,
+        technicianName: state.currentUser?.name || 'Technician',
+        jobType,
+        inspections: completedInspections,
+        template,
+        summary: summaryPayload,
+        customerDefectComments,
+      });
+
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+      const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
+      const dateStr = format(new Date(), 'yyyyMMdd');
+      const filename = `${clientNameSafe}_ServiceReport_${dateStr}.pdf`;
+
+      // Also download a copy locally
+      pdf.save(filename);
+
+      // Send email if we have a recipient
+      const recipientEmail = clientInfo?.primary_contact_email;
+      if (recipientEmail) {
+        const { data, error } = await supabase.functions.invoke('send-report', {
+          body: {
+            to: recipientEmail,
+            clientName: clientInfo?.primary_contact_name || customerName,
+            siteName: clientInfo?.client_name || site.name,
+            pdfBase64,
+            filename,
+          },
+        });
+
+        if (error) {
+          console.error('Email send error:', error);
+          toast.error('Report downloaded but email failed to send. Check the email address.');
+        } else {
+          toast.success(`Report emailed to ${recipientEmail}`);
+        }
+      } else {
+        toast.info('Report downloaded. No client email on file — email not sent.');
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error('Submit error:', err);
+      toast.error('Something went wrong. Report may not have been sent.');
+    } finally {
+      setSending(false);
+    }
   };
 
   const handlePreviewPdf = () => {
@@ -653,11 +709,11 @@ export default function SiteJobSummary() {
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!customerSig || !techSig}
+          disabled={!customerSig || !techSig || sending}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base disabled:opacity-40 flex items-center justify-center gap-2"
         >
-          <Send className="w-5 h-5" />
-          Complete Job and Send Report
+          {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          {sending ? 'Sending Report…' : 'Complete Job and Send Report'}
         </button>
         <button
           onClick={() => {/* TODO: generate shareable link */}}
