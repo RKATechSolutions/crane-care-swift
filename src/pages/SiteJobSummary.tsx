@@ -158,10 +158,10 @@ export default function SiteJobSummary() {
       summary: buildSummaryPayload(),
       customerDefectComments,
     });
-    // Open in new tab
-    const blob = pdf.output('blob');
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    // Download PDF directly (avoids Chrome popup blocker)
+    const clientName = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
+    const dateStr = format(new Date(), 'yyyyMMdd');
+    pdf.save(`${clientName}_ServiceReport_${dateStr}.pdf`);
   };
 
   if (submitted) {
