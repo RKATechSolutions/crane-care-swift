@@ -709,11 +709,11 @@ export default function SiteJobSummary() {
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!customerSig || !techSig}
+          disabled={!customerSig || !techSig || sending}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base disabled:opacity-40 flex items-center justify-center gap-2"
         >
-          <Send className="w-5 h-5" />
-          Complete Job and Send Report
+          {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          {sending ? 'Sending Report…' : 'Complete Job and Send Report'}
         </button>
         <button
           onClick={() => {/* TODO: generate shareable link */}}
