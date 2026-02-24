@@ -374,17 +374,6 @@ export default function CraneList() {
         />
       )}
 
-      {/* Site Job Summary button */}
-      <div className="p-4 border-t border-border">
-        <button
-          onClick={() => {
-            dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
-          }}
-          className="w-full tap-target bg-foreground text-background rounded-xl font-bold text-base"
-        >
-          Complete Site Job Summary
-        </button>
-      </div>
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
 
