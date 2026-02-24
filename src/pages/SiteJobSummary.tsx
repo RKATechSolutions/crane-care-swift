@@ -645,6 +645,13 @@ export default function SiteJobSummary() {
 
       <div className="p-4 border-t border-border space-y-2">
         <button
+          onClick={handlePreviewPdf}
+          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+        >
+          <FileText className="w-4 h-4" />
+          Preview PDF Report
+        </button>
+        <button
           onClick={handleSubmit}
           disabled={!customerSig || !techSig}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base disabled:opacity-40 flex items-center justify-center gap-2"
