@@ -46,6 +46,7 @@ export default function SiteJobSummary() {
   const [defectsExpanded, setDefectsExpanded] = useState(true);
   const [jobType, setJobType] = useState('Periodic Inspection');
   const [customerDefectComments, setCustomerDefectComments] = useState('');
+  const [sending, setSending] = useState(false);
 
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
