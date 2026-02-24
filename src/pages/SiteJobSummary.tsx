@@ -8,6 +8,8 @@ import { addDays, format } from 'date-fns';
 import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User } from 'lucide-react';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
 import { supabase } from '@/integrations/supabase/client';
+import { generateJobPdf } from '@/utils/generateJobPdf';
+import { FileText } from 'lucide-react';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
@@ -124,25 +126,42 @@ export default function SiteJobSummary() {
     }, 100);
   };
 
+  const buildSummaryPayload = () => ({
+    siteId: site.id,
+    inspectionIds: completedInspections.map(i => i.id),
+    nextInspectionDate: nextDate,
+    nextInspectionTime: nextTime,
+    bookingConfirmed,
+    customerName,
+    customerSignature: customerSig,
+    technicianSignature: techSig,
+    rating: rating || undefined,
+    feedback: feedback || undefined,
+    publishTestimonial,
+    completedAt: new Date().toISOString(),
+  });
+
   const handleSubmit = () => {
-    dispatch({
-      type: 'SAVE_SITE_JOB_SUMMARY',
-      payload: {
-        siteId: site.id,
-        inspectionIds: completedInspections.map(i => i.id),
-        nextInspectionDate: nextDate,
-        nextInspectionTime: nextTime,
-        bookingConfirmed,
-        customerName,
-        customerSignature: customerSig,
-        technicianSignature: techSig,
-        rating: rating || undefined,
-        feedback: feedback || undefined,
-        publishTestimonial,
-        completedAt: new Date().toISOString(),
-      },
-    });
+    dispatch({ type: 'SAVE_SITE_JOB_SUMMARY', payload: buildSummaryPayload() });
     setSubmitted(true);
+  };
+
+  const handlePreviewPdf = () => {
+    const template = state.templates[0];
+    const pdf = generateJobPdf({
+      site,
+      clientInfo: clientInfo || undefined,
+      technicianName: state.currentUser?.name || 'Technician',
+      jobType,
+      inspections: completedInspections,
+      template,
+      summary: buildSummaryPayload(),
+      customerDefectComments,
+    });
+    // Open in new tab
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
   };
 
   if (submitted) {
@@ -625,6 +644,13 @@ export default function SiteJobSummary() {
       </div>
 
       <div className="p-4 border-t border-border space-y-2">
+        <button
+          onClick={handlePreviewPdf}
+          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+        >
+          <FileText className="w-4 h-4" />
+          Preview PDF Report
+        </button>
         <button
           onClick={handleSubmit}
           disabled={!customerSig || !techSig}
