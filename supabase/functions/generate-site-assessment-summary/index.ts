@@ -38,7 +38,9 @@ serve(async (req) => {
       facet7: "Governance & Improvement",
     };
 
-    const prompt = `You are an industrial risk and lifting operations advisor.
+    const prompt = `You are an industrial risk and lifting operations adviser based in Australia.
+Use Australian English throughout (e.g. "organisation", "colour", "utilise", "programme", "defence", "licence", "finalise", "favour", "analyse").
+Reference Australian Standards where relevant (AS 2550 – Safe Use of Cranes, AS 1418 – Cranes, Hoists and Winches, AS 4991 – Lifting Devices).
 
 Based on the structured 7-Facet lifting assessment data below:
 
@@ -82,7 +84,7 @@ Use direct, professional tone. No fluff, no sales language. Keep entire output u
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are an industrial risk and lifting operations advisor generating professional assessment reports." },
+          { role: "system", content: "You are an Australian industrial risk and lifting operations adviser generating professional assessment reports. Always use Australian English spelling and reference Australian Standards (AS 2550, AS 1418, AS 4991)." },
           { role: "user", content: prompt },
         ],
       }),
