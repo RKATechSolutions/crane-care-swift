@@ -2,7 +2,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package, Plus, Pencil } from 'lucide-react';
+import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw } from 'lucide-react';
 import { Crane, InspectionItemResult } from '@/types/inspection';
 import { supabase } from '@/integrations/supabase/client';
 import { AddAssetForm } from '@/components/AddAssetForm';
@@ -34,6 +34,7 @@ export default function CraneList() {
   const [loading, setLoading] = useState(true);
   const [showAddAsset, setShowAddAsset] = useState(false);
   const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
+  const [initialInspectionComplete, setInitialInspectionComplete] = useState(false);
   const site = state.selectedSite;
 
   useEffect(() => {
@@ -221,6 +222,37 @@ export default function CraneList() {
         >
           Complete Site Job Summary
         </button>
+
+        {/* Initial Site Inspection */}
+        <button
+          onClick={() => {
+            // TODO: Navigate to Initial Site Inspection form once uploaded
+            console.log('Initial Site Inspection clicked');
+          }}
+          className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+            initialInspectionComplete
+              ? 'bg-muted text-foreground border border-border'
+              : 'bg-primary text-primary-foreground shadow-lg'
+          }`}
+        >
+          <ClipboardCheck className="w-4 h-4" />
+          {initialInspectionComplete ? 'View Initial Site Inspection' : 'Initial Site Inspection'}
+        </button>
+
+        {/* Annual Site Review - only visible after initial is complete */}
+        {initialInspectionComplete && (
+          <button
+            onClick={() => {
+              // TODO: Navigate to Annual Site Review form
+              console.log('Annual Site Review clicked');
+            }}
+            className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Annual Site Review
+          </button>
+        )}
+
         <button
           onClick={() => setShowAddAsset(!showAddAsset)}
           className="w-full h-9 bg-primary text-primary-foreground rounded-lg font-medium text-xs flex items-center justify-center gap-1.5"
