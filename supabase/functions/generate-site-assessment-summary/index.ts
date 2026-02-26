@@ -60,22 +60,18 @@ Strongest Facet: ${assessment.strongest_facet}
 Site: ${assessment.site_name}
 Assessment Type: ${assessment.assessment_type}
 
-Generate:
+Generate a CONCISE report for a busy site manager. Keep it scannable with bullet points. No waffle.
 
-1. A professional executive summary (300–400 words) suitable for senior management.
+1. Executive Summary — MAX 100 words. State overall risk level, biggest gap, and strongest area.
 
-2. Identify top 3 operational risks in priority order.
+2. Top 3 Risks — One line each, ranked by urgency.
 
-3. Identify strongest operational area.
+3. 12-Month Action Plan — Bullet points only, max 3 items per phase:
+   - NOW (0–3 months) — most critical
+   - NEXT (3–6 months)
+   - LATER (6–12 months)
 
-4. Provide a prioritised 12-month improvement plan divided into:
-   - Immediate (0–3 months)
-   - Medium Term (3–6 months)
-   - Strategic (6–12 months)
-
-Use advisory, professional tone.
-Do not sound sales-focused.
-Be practical and realistic.`;
+Use direct, professional tone. No fluff, no sales language. Keep entire output under 400 words total.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
