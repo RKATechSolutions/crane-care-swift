@@ -218,8 +218,8 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(7);
   doc.setTextColor(100, 100, 100);
-  doc.text('Australian Standards Reference: AS 2550.1 – Safe Use of Cranes (General Record Requirements)', 18, y + 5);
-  doc.text('This report has been prepared in accordance with applicable Australian Standards for crane inspection.', 18, y + 9);
+  doc.text('Australian Standards Reference: AS 2550 – Safe Use of Cranes | AS 1418 – Cranes, Hoists & Winches | AS 4991 – Lifting Devices', 18, y + 5);
+  doc.text('This report has been prepared in accordance with applicable Australian Standards for crane inspection and lifting operations.', 18, y + 9);
   
   // ═══════════════════════════════════════════
   // PAGE 2: JOB SITE SUMMARY (DEFECTS + SIGN-OFF)

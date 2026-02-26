@@ -259,7 +259,7 @@ export default function SiteJobSummary() {
         {/* Job Report Header */}
         <div className="px-4 py-4 border-b border-border bg-muted/30 space-y-3">
           <p className="text-xs font-semibold text-muted-foreground italic">
-            Australian Standards Reference: AS 2550.1 – Safe Use of Cranes (General Record Requirements)
+            Australian Standards Reference: AS 2550 – Safe Use of Cranes | AS 1418 – Cranes, Hoists &amp; Winches | AS 4991 – Lifting Devices
           </p>
 
           <div className="grid grid-cols-1 gap-2">
