@@ -52,6 +52,25 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
   const [aiSummary, setAiSummary] = useState('');
   const [assessmentId, setAssessmentId] = useState(existingId || '');
   const [status, setStatus] = useState<'in_progress' | 'completed'>('in_progress');
+  const [clientDetails, setClientDetails] = useState<{ address?: string; contactName?: string; phone?: string; email?: string }>({});
+
+  // Fetch client details from DB
+  useEffect(() => {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+    if (!clientId) return;
+    const fetchClient = async () => {
+      const { data } = await supabase.from('clients').select('location_address, primary_contact_name, primary_contact_mobile, primary_contact_email').eq('id', clientId).single();
+      if (data) {
+        setClientDetails({
+          address: data.location_address || undefined,
+          contactName: data.primary_contact_name || undefined,
+          phone: data.primary_contact_mobile || undefined,
+          email: data.primary_contact_email || undefined,
+        });
+      }
+    };
+    fetchClient();
+  }, [site.id]);
 
   // Load existing assessment
   useEffect(() => {
@@ -427,6 +446,10 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
                     strongestFacet: facetNames[scores.strongest] || '',
                     aiSummary,
                     facetNotes,
+                    clientAddress: clientDetails.address || site.address,
+                    clientContactName: clientDetails.contactName || site.contactName,
+                    clientContactPhone: clientDetails.phone || site.contactPhone,
+                    clientContactEmail: clientDetails.email,
                   });
                   const fileName = `${site.name.replace(/[^a-zA-Z0-9]/g, '_')}_Site_Assessment_${new Date().toISOString().slice(0, 10)}.pdf`;
                   pdf.save(fileName);

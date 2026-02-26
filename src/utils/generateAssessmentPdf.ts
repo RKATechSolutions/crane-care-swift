@@ -17,6 +17,10 @@ interface AssessmentPdfData {
   strongestFacet: string;
   aiSummary: string;
   facetNotes: Record<string, string>;
+  clientAddress?: string;
+  clientContactName?: string;
+  clientContactPhone?: string;
+  clientContactEmail?: string;
 }
 
 // RKA brand colors (matching existing report)
@@ -126,6 +130,27 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
   doc.text(`Date: ${data.completedAt ? format(new Date(data.completedAt), 'dd MMM yyyy') : format(new Date(), 'dd MMM yyyy')}`, 20, y);
 
   y += 12;
+
+  // Client details box
+  if (data.clientAddress || data.clientContactName || data.clientContactPhone || data.clientContactEmail) {
+    doc.setFillColor(...LIGHT_GRAY);
+    const boxH = 8 + [data.clientAddress, data.clientContactName, data.clientContactPhone, data.clientContactEmail].filter(Boolean).length * 6;
+    doc.roundedRect(14, y, contentW, boxH, 3, 3, 'F');
+    y += 7;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    doc.text('Client Details', 20, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    if (data.clientAddress) { doc.text(`Address: ${data.clientAddress}`, 20, y); y += 5; }
+    if (data.clientContactName) { doc.text(`Contact: ${data.clientContactName}`, 20, y); y += 5; }
+    if (data.clientContactPhone) { doc.text(`Phone: ${data.clientContactPhone}`, 20, y); y += 5; }
+    if (data.clientContactEmail) { doc.text(`Email: ${data.clientContactEmail}`, 20, y); y += 5; }
+    y += 6;
+  }
 
   // ═══════════════════════════════════
   // FACET SCORE SUMMARY TABLE
