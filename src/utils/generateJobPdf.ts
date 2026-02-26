@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import {
   Inspection, InspectionTemplate, Site, SiteJobSummary, Crane,
 } from '@/types/inspection';
-import rkaLogoUrl from '@/assets/rka-logo.jpg';
+import rkaHeaderUrl from '@/assets/rka-pdf-header.png';
+import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 interface JobPdfData {
   site: Site;
@@ -23,7 +24,7 @@ interface JobPdfData {
   customerDefectComments?: string;
 }
 
-// RKA brand colors (from Brand Guidelines)
+// RKA brand colours (from Brand Guidelines)
 const RKA_GREEN: [number, number, number] = [96, 179, 76];
 const RKA_RED: [number, number, number] = [204, 41, 41];
 const RKA_ORANGE: [number, number, number] = [230, 126, 13];
@@ -32,6 +33,11 @@ const WHITE: [number, number, number] = [255, 255, 255];
 const DARK: [number, number, number] = [40, 32, 39];
 const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
 const BORDER_GRAY: [number, number, number] = [220, 220, 220];
+
+interface PdfImages {
+  headerImg?: HTMLImageElement;
+  footerImg?: HTMLImageElement;
+}
 
 function severityColor(severity: string): [number, number, number] {
   if (severity === 'Critical') return RKA_RED;
@@ -45,38 +51,52 @@ function statusColor(status: string): [number, number, number] {
   return RKA_ORANGE;
 }
 
-function addHeader(doc: jsPDF, pageTitle: string, logoImg?: HTMLImageElement) {
+function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages) {
   const pageW = doc.internal.pageSize.getWidth();
-  
-  // Dark header bar (brand black)
+
+  if (imgs.headerImg) {
+    const imgAspect = imgs.headerImg.width / imgs.headerImg.height;
+    const headerH = pageW / imgAspect;
+    doc.addImage(imgs.headerImg, 'PNG', 0, 0, pageW, headerH);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...DARK);
+    doc.text(pageTitle, pageW - 14, headerH + 8, { align: 'right' });
+    doc.setDrawColor(...BORDER_GRAY);
+    doc.setLineWidth(0.3);
+    doc.line(14, headerH + 11, pageW - 14, headerH + 11);
+    return headerH + 15;
+  }
+
+  // Fallback
   doc.setFillColor(...DARK);
   doc.rect(0, 0, pageW, 28, 'F');
-  
-  // Add logo if available
-  if (logoImg) {
-    const logoH = 14;
-    const logoW = logoH * (logoImg.width / logoImg.height);
-    doc.addImage(logoImg, 'JPEG', 14, 7, logoW, logoH);
-  }
-  
-  // Page title on right
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...WHITE);
   doc.text(pageTitle, pageW - 14, 16, { align: 'right' });
-  
-  // Thin line below
   doc.setDrawColor(...BORDER_GRAY);
   doc.setLineWidth(0.5);
   doc.line(14, 30, pageW - 14, 30);
-  
-  return 34; // y position after header
+  return 34;
 }
 
-function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
+function addFooter(doc: jsPDF, pageNum: number, totalPages: number, imgs: PdfImages) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  
+
+  if (imgs.footerImg) {
+    const imgAspect = imgs.footerImg.width / imgs.footerImg.height;
+    const footerH = pageW / imgAspect;
+    doc.addImage(imgs.footerImg, 'PNG', 0, pageH - footerH, pageW, footerH);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(255, 255, 255);
+    doc.text(`Page ${pageNum} of ${totalPages}`, pageW / 2, pageH - footerH - 3, { align: 'center' });
+    doc.text(`Generated ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, pageH - footerH - 3);
+    return;
+  }
+
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(150, 150, 150);
@@ -130,15 +150,15 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   const pageW = doc.internal.pageSize.getWidth();
   const contentW = pageW - 28;
 
-  let logoImg: HTMLImageElement | undefined;
-  try {
-    logoImg = await loadImage(rkaLogoUrl);
-  } catch { /* proceed without logo */ }
+  // Load header & footer images
+  const imgs: PdfImages = {};
+  try { imgs.headerImg = await loadImage(rkaHeaderUrl); } catch { /* fallback */ }
+  try { imgs.footerImg = await loadImage(rkaFooterUrl); } catch { /* fallback */ }
   
   // ═══════════════════════════════════════════
   // PAGE 1: CLIENT INFO & SERVICE DETAILS
   // ═══════════════════════════════════════════
-  let y = addHeader(doc, 'Service Report', logoImg);
+  let y = addHeader(doc, 'Service Report', imgs);
   
   // Client Information
   y = addSectionTitle(doc, y, 'Client Information');
@@ -192,14 +212,12 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
       5: { halign: 'center' },
     },
     didParseCell(data) {
-      // Color the status column
       if (data.section === 'body' && data.column.index === 6) {
         const val = data.cell.raw as string;
         if (val === 'Safe to Operate') data.cell.styles.textColor = RKA_GREEN;
         else if (val === 'Unsafe to Operate') data.cell.styles.textColor = RKA_RED;
         else if (val.includes('Limitations')) data.cell.styles.textColor = RKA_ORANGE;
       }
-      // Color defect count
       if (data.section === 'body' && data.column.index === 5) {
         const val = parseInt(data.cell.raw as string);
         if (val > 0) {
@@ -225,7 +243,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   // PAGE 2: JOB SITE SUMMARY (DEFECTS + SIGN-OFF)
   // ═══════════════════════════════════════════
   doc.addPage();
-  y = addHeader(doc, 'Job Summary — Defects & Sign-off', logoImg);
+  y = addHeader(doc, 'Job Summary — Defects & Sign-off', imgs);
   
   // Gather all defects
   const allDefects = inspections.flatMap(insp => {
@@ -387,10 +405,9 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   // Sign-off section
   y = addSectionTitle(doc, y, 'Sign-off');
   
-  // Check if we need a new page for signatures
   if (y > 230) {
     doc.addPage();
-    y = addHeader(doc, 'Sign-off', logoImg);
+    y = addHeader(doc, 'Sign-off', imgs);
     y += 4;
   }
   
@@ -410,7 +427,6 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   doc.setTextColor(...DARK);
   doc.text(summary.customerName || '—', 16, y + 9);
   
-  // Draw signature image if available
   if (summary.customerSignature) {
     try {
       doc.addImage(summary.customerSignature, 'PNG', 16, y + 11, sigBoxW - 4, 16, undefined, 'FAST');
@@ -458,7 +474,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   inspections.forEach(insp => {
     doc.addPage();
     const crane = site.cranes.find(c => c.id === insp.craneId);
-    y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'}`, logoImg);
+    y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'}`, imgs);
     
     // Asset info
     y = addSectionTitle(doc, y, 'Asset Details');
@@ -487,10 +503,9 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
       const sectionResults = insp.items.filter(i => i.sectionId === section.id);
       if (sectionResults.length === 0) return;
       
-      // Check if we need a new page
       if (y > 250) {
         doc.addPage();
-        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (cont.)`, logoImg);
+        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (cont.)`, imgs);
       }
       
       y = addSectionTitle(doc, y, section.name);
@@ -548,7 +563,6 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
               data.cell.styles.fontStyle = 'bold';
             }
           }
-          // Alternate row colors
           if (data.section === 'body' && data.row.index % 2 === 0) {
             data.cell.styles.fillColor = LIGHT_GRAY;
           }
@@ -563,7 +577,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
     if (assetDefects.length > 0) {
       if (y > 220) {
         doc.addPage();
-        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects)`, logoImg);
+        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects)`, imgs);
       }
       
       y = addSectionTitle(doc, y, `Defect Details (${assetDefects.length})`);
@@ -571,7 +585,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
       assetDefects.forEach(item => {
         if (y > 250) {
           doc.addPage();
-          y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects cont.)`, logoImg);
+          y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects cont.)`, imgs);
         }
         
         let itemLabel = '';
@@ -610,10 +624,9 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
           y += 10;
         }
         
-        // Photos placeholder text (actual photos are base64 in production)
+        // Photos
         const photos = item.defect?.photos || [];
         if (photos.length > 0) {
-          // Try to embed photos
           let photoX = 18;
           const photoSize = 25;
           photos.slice(0, 3).forEach((photoUrl, idx) => {
@@ -621,7 +634,6 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
               doc.addImage(photoUrl, 'JPEG', photoX, y, photoSize, photoSize, undefined, 'FAST');
               photoX += photoSize + 3;
             } catch {
-              // Photo couldn't be embedded, show placeholder
               doc.setDrawColor(...BORDER_GRAY);
               doc.setFillColor(...LIGHT_GRAY);
               doc.roundedRect(photoX, y, photoSize, photoSize, 1, 1, 'FD');
@@ -640,11 +652,11 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
     }
   });
   
-  // Add page numbers
+  // Add page numbers and footers to all pages
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    addFooter(doc, i, totalPages);
+    addFooter(doc, i, totalPages, imgs);
   }
   
   return doc;
