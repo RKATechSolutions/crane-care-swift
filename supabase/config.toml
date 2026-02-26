@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.send-report]
 verify_jwt = false
+
+[functions.generate-site-assessment-summary]
+verify_jwt = false

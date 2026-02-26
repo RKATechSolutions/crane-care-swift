@@ -339,6 +339,104 @@ export type Database = {
         }
         Relationships: []
       }
+      site_assessments: {
+        Row: {
+          ai_executive_summary: string | null
+          assessment_type: string
+          client_id: string | null
+          completed_at: string | null
+          completion_method: string
+          count_not_yet: number | null
+          count_partial: number | null
+          created_at: string
+          facet_notes: Json
+          facet1_score: number | null
+          facet2_score: number | null
+          facet3_score: number | null
+          facet4_score: number | null
+          facet5_score: number | null
+          facet6_score: number | null
+          facet7_score: number | null
+          highest_risk_facet: string | null
+          id: string
+          part_a_answers: Json
+          part_b_answers: Json
+          site_name: string
+          status: string
+          strongest_facet: string | null
+          technician_id: string | null
+          technician_name: string | null
+          total_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_executive_summary?: string | null
+          assessment_type: string
+          client_id?: string | null
+          completed_at?: string | null
+          completion_method: string
+          count_not_yet?: number | null
+          count_partial?: number | null
+          created_at?: string
+          facet_notes?: Json
+          facet1_score?: number | null
+          facet2_score?: number | null
+          facet3_score?: number | null
+          facet4_score?: number | null
+          facet5_score?: number | null
+          facet6_score?: number | null
+          facet7_score?: number | null
+          highest_risk_facet?: string | null
+          id?: string
+          part_a_answers?: Json
+          part_b_answers?: Json
+          site_name: string
+          status?: string
+          strongest_facet?: string | null
+          technician_id?: string | null
+          technician_name?: string | null
+          total_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_executive_summary?: string | null
+          assessment_type?: string
+          client_id?: string | null
+          completed_at?: string | null
+          completion_method?: string
+          count_not_yet?: number | null
+          count_partial?: number | null
+          created_at?: string
+          facet_notes?: Json
+          facet1_score?: number | null
+          facet2_score?: number | null
+          facet3_score?: number | null
+          facet4_score?: number | null
+          facet5_score?: number | null
+          facet6_score?: number | null
+          facet7_score?: number | null
+          highest_risk_facet?: string | null
+          id?: string
+          part_a_answers?: Json
+          part_b_answers?: Json
+          site_name?: string
+          status?: string
+          strongest_facet?: string | null
+          technician_id?: string | null
+          technician_name?: string | null
+          total_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_assessments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

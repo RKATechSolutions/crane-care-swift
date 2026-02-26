@@ -3,8 +3,9 @@ import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
 import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw } from 'lucide-react';
-import { Crane, InspectionItemResult } from '@/types/inspection';
 import { supabase } from '@/integrations/supabase/client';
+import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
+import { Crane, InspectionItemResult } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
 
@@ -34,8 +35,30 @@ export default function CraneList() {
   const [loading, setLoading] = useState(true);
   const [showAddAsset, setShowAddAsset] = useState(false);
   const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
-  const [initialInspectionComplete, setInitialInspectionComplete] = useState(false);
+  const [showAssessment, setShowAssessment] = useState<null | { type: 'Initial Site Baseline' | '12-Month Review'; existingId?: string }>(null);
+  const [initialAssessment, setInitialAssessment] = useState<{ id: string; status: string } | null>(null);
   const site = state.selectedSite;
+
+  // Fetch existing site assessments
+  useEffect(() => {
+    if (!site) return;
+    const fetchAssessment = async () => {
+      const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+      let query = supabase.from('site_assessments').select('id, status, assessment_type').eq('assessment_type', 'Initial Site Baseline');
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      } else {
+        query = query.eq('site_name', site.name);
+      }
+      const { data } = await query.order('created_at', { ascending: false }).limit(1);
+      if (data && data.length > 0) {
+        setInitialAssessment({ id: data[0].id, status: data[0].status });
+      } else {
+        setInitialAssessment(null);
+      }
+    };
+    fetchAssessment();
+  }, [site?.id, site?.name]);
 
   useEffect(() => {
     if (!site) {
@@ -204,6 +227,25 @@ export default function CraneList() {
     return acc;
   }, {} as Record<string, DbAsset[]>);
 
+  // Show assessment form if selected
+  if (showAssessment) {
+    const refreshAssessment = async () => {
+      const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+      let query = supabase.from('site_assessments').select('id, status, assessment_type').eq('assessment_type', 'Initial Site Baseline');
+      if (clientId) query = query.eq('client_id', clientId);
+      else query = query.eq('site_name', site.name);
+      const { data } = await query.order('created_at', { ascending: false }).limit(1);
+      if (data && data.length > 0) setInitialAssessment({ id: data[0].id, status: data[0].status });
+    };
+    return (
+      <SiteAssessmentForm
+        assessmentType={showAssessment.type}
+        existingId={showAssessment.existingId}
+        onBack={() => { setShowAssessment(null); refreshAssessment(); }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader
@@ -226,25 +268,26 @@ export default function CraneList() {
         {/* Initial Site Inspection */}
         <button
           onClick={() => {
-            // TODO: Navigate to Initial Site Inspection form once uploaded
-            console.log('Initial Site Inspection clicked');
+            setShowAssessment({
+              type: 'Initial Site Baseline',
+              existingId: initialAssessment?.id,
+            });
           }}
           className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-            initialInspectionComplete
+            initialAssessment?.status === 'completed'
               ? 'bg-muted text-foreground border border-border'
               : 'bg-primary text-primary-foreground shadow-lg'
           }`}
         >
           <ClipboardCheck className="w-4 h-4" />
-          {initialInspectionComplete ? 'View Initial Site Inspection' : 'Initial Site Inspection'}
+          {initialAssessment?.status === 'completed' ? 'View Initial Site Inspection' : 'Initial Site Inspection'}
         </button>
 
         {/* Annual Site Review - only visible after initial is complete */}
-        {initialInspectionComplete && (
+        {initialAssessment?.status === 'completed' && (
           <button
             onClick={() => {
-              // TODO: Navigate to Annual Site Review form
-              console.log('Annual Site Review clicked');
+              setShowAssessment({ type: '12-Month Review' });
             }}
             className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all"
           >
