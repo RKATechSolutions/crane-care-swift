@@ -87,8 +87,8 @@ export default {
           to: { transform: "translateX(0)", opacity: "1" },
         },
         "flash-green": {
-          "0%": { backgroundColor: "hsl(145 70% 36% / 0.3)" },
-          "100%": { backgroundColor: "hsl(145 50% 94%)" },
+          "0%": { backgroundColor: "hsl(107 41% 50% / 0.3)" },
+          "100%": { backgroundColor: "hsl(107 30% 94%)" },
         },
       },
       animation: {

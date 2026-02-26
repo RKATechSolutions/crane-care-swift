@@ -432,8 +432,8 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
             {/* Download Report */}
             {aiSummary && (
               <button
-                onClick={() => {
-                  const pdf = generateAssessmentPdf({
+                onClick={async () => {
+                  const pdf = await generateAssessmentPdf({
                     siteName: site.name,
                     assessmentType,
                     completionMethod,

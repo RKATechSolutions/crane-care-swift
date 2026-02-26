@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import {
   Inspection, InspectionTemplate, Site, SiteJobSummary, Crane,
 } from '@/types/inspection';
+import rkaLogoUrl from '@/assets/rka-logo.jpg';
 
 interface JobPdfData {
   site: Site;
@@ -22,13 +23,13 @@ interface JobPdfData {
   customerDefectComments?: string;
 }
 
-// RKA brand colors
-const RKA_GREEN: [number, number, number] = [34, 139, 69];
+// RKA brand colors (from Brand Guidelines)
+const RKA_GREEN: [number, number, number] = [96, 179, 76];
 const RKA_RED: [number, number, number] = [204, 41, 41];
 const RKA_ORANGE: [number, number, number] = [230, 126, 13];
 const RKA_YELLOW: [number, number, number] = [230, 184, 13];
 const WHITE: [number, number, number] = [255, 255, 255];
-const DARK: [number, number, number] = [13, 13, 13];
+const DARK: [number, number, number] = [40, 32, 39];
 const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
 const BORDER_GRAY: [number, number, number] = [220, 220, 220];
 
@@ -44,28 +45,24 @@ function statusColor(status: string): [number, number, number] {
   return RKA_ORANGE;
 }
 
-function addHeader(doc: jsPDF, pageTitle: string) {
+function addHeader(doc: jsPDF, pageTitle: string, logoImg?: HTMLImageElement) {
   const pageW = doc.internal.pageSize.getWidth();
   
-  // Green header bar
-  doc.setFillColor(...RKA_GREEN);
+  // Dark header bar (brand black)
+  doc.setFillColor(...DARK);
   doc.rect(0, 0, pageW, 28, 'F');
   
-  // Company name
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(...WHITE);
-  doc.text('RKA Crane Services', 14, 12);
-  
-  // Sub text
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Crane Inspection & Maintenance', 14, 18);
-  doc.text('ABN: XX XXX XXX XXX', 14, 23);
+  // Add logo if available
+  if (logoImg) {
+    const logoH = 14;
+    const logoW = logoH * (logoImg.width / logoImg.height);
+    doc.addImage(logoImg, 'JPEG', 14, 7, logoW, logoH);
+  }
   
   // Page title on right
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...WHITE);
   doc.text(pageTitle, pageW - 14, 16, { align: 'right' });
   
   // Thin line below
@@ -117,17 +114,31 @@ function addInfoRow(doc: jsPDF, y: number, label: string, value: string, maxWidt
   return y + 6;
 }
 
-export function generateJobPdf(data: JobPdfData): jsPDF {
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   const { site, clientInfo, technicianName, jobType, inspections, template, summary, customerDefectComments } = data;
   
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const contentW = pageW - 28;
+
+  let logoImg: HTMLImageElement | undefined;
+  try {
+    logoImg = await loadImage(rkaLogoUrl);
+  } catch { /* proceed without logo */ }
   
   // ═══════════════════════════════════════════
   // PAGE 1: CLIENT INFO & SERVICE DETAILS
   // ═══════════════════════════════════════════
-  let y = addHeader(doc, 'Service Report');
+  let y = addHeader(doc, 'Service Report', logoImg);
   
   // Client Information
   y = addSectionTitle(doc, y, 'Client Information');
@@ -214,7 +225,7 @@ export function generateJobPdf(data: JobPdfData): jsPDF {
   // PAGE 2: JOB SITE SUMMARY (DEFECTS + SIGN-OFF)
   // ═══════════════════════════════════════════
   doc.addPage();
-  y = addHeader(doc, 'Job Summary — Defects & Sign-off');
+  y = addHeader(doc, 'Job Summary — Defects & Sign-off', logoImg);
   
   // Gather all defects
   const allDefects = inspections.flatMap(insp => {
@@ -379,7 +390,7 @@ export function generateJobPdf(data: JobPdfData): jsPDF {
   // Check if we need a new page for signatures
   if (y > 230) {
     doc.addPage();
-    y = addHeader(doc, 'Sign-off');
+    y = addHeader(doc, 'Sign-off', logoImg);
     y += 4;
   }
   
@@ -447,7 +458,7 @@ export function generateJobPdf(data: JobPdfData): jsPDF {
   inspections.forEach(insp => {
     doc.addPage();
     const crane = site.cranes.find(c => c.id === insp.craneId);
-    y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'}`);
+    y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'}`, logoImg);
     
     // Asset info
     y = addSectionTitle(doc, y, 'Asset Details');
@@ -479,7 +490,7 @@ export function generateJobPdf(data: JobPdfData): jsPDF {
       // Check if we need a new page
       if (y > 250) {
         doc.addPage();
-        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (cont.)`);
+        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (cont.)`, logoImg);
       }
       
       y = addSectionTitle(doc, y, section.name);
@@ -552,7 +563,7 @@ export function generateJobPdf(data: JobPdfData): jsPDF {
     if (assetDefects.length > 0) {
       if (y > 220) {
         doc.addPage();
-        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects)`);
+        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects)`, logoImg);
       }
       
       y = addSectionTitle(doc, y, `Defect Details (${assetDefects.length})`);
@@ -560,7 +571,7 @@ export function generateJobPdf(data: JobPdfData): jsPDF {
       assetDefects.forEach(item => {
         if (y > 250) {
           doc.addPage();
-          y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects cont.)`);
+          y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects cont.)`, logoImg);
         }
         
         let itemLabel = '';
