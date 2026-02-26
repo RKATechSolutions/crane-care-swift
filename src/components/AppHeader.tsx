@@ -1,4 +1,5 @@
 import { ArrowLeft, MessageSquarePlus } from 'lucide-react';
+import rkaLogo from '@/assets/rka-logo.jpg';
 
 interface AppHeaderProps {
   title: string;
@@ -28,9 +29,7 @@ export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded bg-primary flex items-center justify-center flex-shrink-0">
-              <span className="text-primary-foreground font-black text-xs">RKA</span>
-            </div>
+            <img src={rkaLogo} alt="RKA Logo" className="w-8 h-8 rounded object-contain flex-shrink-0" />
             <div className="min-w-0">
               <h1 className="text-lg font-bold leading-tight truncate">{title}</h1>
               {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
