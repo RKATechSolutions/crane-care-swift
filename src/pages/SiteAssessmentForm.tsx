@@ -3,12 +3,14 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import ReactMarkdown from 'react-markdown';
 import {
   partAGroups,
   partBFacets,
   scoreLabels,
   facetNames,
 } from '@/data/siteAssessmentQuestions';
+import { generateAssessmentPdf } from '@/utils/generateAssessmentPdf';
 import {
   ChevronRight,
   ChevronLeft,
@@ -16,6 +18,7 @@ import {
   Loader2,
   FileText,
   Sparkles,
+  Download,
 } from 'lucide-react';
 
 type Answers = Record<string, number>;
@@ -397,12 +400,42 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
 
             {aiSummary && (
               <div className="bg-muted/50 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-3">
                   <FileText className="w-4 h-4" />
                   <h3 className="font-bold text-sm">AI Executive Summary & 12-Month Plan</h3>
                 </div>
-                <div className="text-sm whitespace-pre-wrap leading-relaxed">{aiSummary}</div>
+                <div className="prose prose-sm max-w-none text-foreground prose-headings:text-foreground prose-strong:text-foreground prose-li:text-foreground">
+                  <ReactMarkdown>{aiSummary}</ReactMarkdown>
+                </div>
               </div>
+            )}
+
+            {/* Download Report */}
+            {aiSummary && (
+              <button
+                onClick={() => {
+                  const pdf = generateAssessmentPdf({
+                    siteName: site.name,
+                    assessmentType,
+                    completionMethod,
+                    technicianName: state.currentUser?.name || '',
+                    facetScores: scores.facetScores,
+                    totalScore: scores.totalScore,
+                    countNotYet: scores.countNotYet,
+                    countPartial: scores.countPartial,
+                    highestRiskFacet: facetNames[scores.highestRisk] || '',
+                    strongestFacet: facetNames[scores.strongest] || '',
+                    aiSummary,
+                    facetNotes,
+                  });
+                  const fileName = `${site.name.replace(/[^a-zA-Z0-9]/g, '_')}_Site_Assessment_${new Date().toISOString().slice(0, 10)}.pdf`;
+                  pdf.save(fileName);
+                }}
+                className="w-full h-11 bg-foreground text-background rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Report PDF
+              </button>
             )}
           </div>
         )}
