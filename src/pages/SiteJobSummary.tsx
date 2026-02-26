@@ -151,7 +151,7 @@ export default function SiteJobSummary() {
 
       // Generate PDF
       const template = state.templates[0];
-      const pdf = generateJobPdf({
+      const pdf = await generateJobPdf({
         site,
         clientInfo: clientInfo || undefined,
         technicianName: state.currentUser?.name || 'Technician',
@@ -202,9 +202,9 @@ export default function SiteJobSummary() {
     }
   };
 
-  const handlePreviewPdf = () => {
+  const handlePreviewPdf = async () => {
     const template = state.templates[0];
-    const pdf = generateJobPdf({
+    const pdf = await generateJobPdf({
       site,
       clientInfo: clientInfo || undefined,
       technicianName: state.currentUser?.name || 'Technician',

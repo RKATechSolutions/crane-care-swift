@@ -13,7 +13,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 5%;
 
-    --primary: 145 70% 36%;
+    --primary: 107 41% 50%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 96%;
@@ -30,14 +30,14 @@
 
     --border: 0 0% 88%;
     --input: 0 0% 88%;
-    --ring: 145 70% 36%;
+    --ring: 107 41% 50%;
 
     --radius: 0.75rem;
 
     /* RKA Custom Tokens */
-    --rka-green: 145 70% 36%;
-    --rka-green-light: 145 50% 94%;
-    --rka-green-dark: 145 70% 28%;
+    --rka-green: 107 41% 50%;
+    --rka-green-light: 107 30% 94%;
+    --rka-green-dark: 107 41% 40%;
     --rka-red: 0 80% 50%;
     --rka-red-light: 0 70% 95%;
     --rka-orange: 30 95% 50%;
@@ -46,12 +46,12 @@
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 145 70% 36%;
+    --sidebar-primary: 107 41% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 96%;
     --sidebar-accent-foreground: 0 0% 10%;
     --sidebar-border: 0 0% 88%;
-    --sidebar-ring: 145 70% 36%;
+    --sidebar-ring: 107 41% 50%;
   }
 }
 

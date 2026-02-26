@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { partBFacets, facetNames } from '@/data/siteAssessmentQuestions';
+import rkaLogoUrl from '@/assets/rka-logo.jpg';
 
 interface AssessmentPdfData {
   siteName: string;
@@ -23,29 +24,30 @@ interface AssessmentPdfData {
   clientContactEmail?: string;
 }
 
-// RKA brand colors (matching existing report)
-const RKA_GREEN: [number, number, number] = [34, 139, 69];
+// RKA brand colors (from Brand Guidelines)
+const RKA_GREEN: [number, number, number] = [96, 179, 76];
 const WHITE: [number, number, number] = [255, 255, 255];
-const DARK: [number, number, number] = [13, 13, 13];
+const DARK: [number, number, number] = [40, 32, 39];
 const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
 const BORDER_GRAY: [number, number, number] = [220, 220, 220];
 const RKA_RED: [number, number, number] = [204, 41, 41];
 const RKA_ORANGE: [number, number, number] = [230, 126, 13];
 
-function addHeader(doc: jsPDF, pageTitle: string): number {
+function addHeader(doc: jsPDF, pageTitle: string, logoImg?: HTMLImageElement): number {
   const pageW = doc.internal.pageSize.getWidth();
-  doc.setFillColor(...RKA_GREEN);
+  doc.setFillColor(...DARK);
   doc.rect(0, 0, pageW, 28, 'F');
+
+  // Add logo if available
+  if (logoImg) {
+    const logoH = 14;
+    const logoW = logoH * (logoImg.width / logoImg.height);
+    doc.addImage(logoImg, 'JPEG', 14, 7, logoW, logoH);
+  }
+
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(...WHITE);
-  doc.text('RKA Crane Services', 14, 12);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Crane Inspection & Maintenance', 14, 18);
-  doc.text('ABN: XX XXX XXX XXX', 14, 23);
   doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...WHITE);
   doc.text(pageTitle, pageW - 14, 16, { align: 'right' });
   doc.setDrawColor(...BORDER_GRAY);
   doc.setLineWidth(0.5);
@@ -75,34 +77,49 @@ function addSectionTitle(doc: jsPDF, y: number, title: string): number {
   return y + 12;
 }
 
-function checkPageBreak(doc: jsPDF, y: number, needed: number): number {
+function checkPageBreak(doc: jsPDF, y: number, needed: number, logoImg?: HTMLImageElement): number {
   const pageH = doc.internal.pageSize.getHeight();
   if (y + needed > pageH - 20) {
     doc.addPage();
-    return addHeader(doc, 'Site Assessment Report');
+    return addHeader(doc, 'Site Assessment Report', logoImg);
   }
   return y;
 }
 
-function addWrappedText(doc: jsPDF, text: string, x: number, y: number, maxWidth: number, lineHeight: number): number {
+function addWrappedText(doc: jsPDF, text: string, x: number, y: number, maxWidth: number, lineHeight: number, logoImg?: HTMLImageElement): number {
   const lines = doc.splitTextToSize(text, maxWidth);
   for (const line of lines) {
-    y = checkPageBreak(doc, y, lineHeight + 2);
+    y = checkPageBreak(doc, y, lineHeight + 2, logoImg);
     doc.text(line, x, y);
     y += lineHeight;
   }
   return y;
 }
 
-export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+export async function generateAssessmentPdf(data: AssessmentPdfData): Promise<jsPDF> {
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const contentW = pageW - 28;
 
+  // Load logo
+  let logoImg: HTMLImageElement | undefined;
+  try {
+    logoImg = await loadImage(rkaLogoUrl);
+  } catch { /* proceed without logo */ }
+
   // ═══════════════════════════════════
   // PAGE 1: COVER PAGE
   // ═══════════════════════════════════
-  let y = addHeader(doc, 'Site Assessment Report');
+  let y = addHeader(doc, 'Site Assessment Report', logoImg);
 
   // Site info box
   doc.setFillColor(...LIGHT_GRAY);
@@ -197,7 +214,7 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
   y = (doc as any).lastAutoTable.finalY + 6;
 
   // Risk summary
-  y = checkPageBreak(doc, y, 20);
+  y = checkPageBreak(doc, y, 20, logoImg);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(...RKA_RED);
@@ -215,7 +232,7 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
   // PAGE 2: AI EXECUTIVE SUMMARY
   // ═══════════════════════════════════
   doc.addPage();
-  y = addHeader(doc, 'Site Assessment Report');
+  y = addHeader(doc, 'Site Assessment Report', logoImg);
   y = addSectionTitle(doc, y, 'Executive Summary & 12-Month Plan');
 
   if (data.aiSummary) {
@@ -225,7 +242,7 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
       const trimmed = line.trim();
       if (!trimmed) { y += 3; continue; }
 
-      y = checkPageBreak(doc, y, 6);
+      y = checkPageBreak(doc, y, 6, logoImg);
 
       // Headers
       if (trimmed.startsWith('## ')) {
@@ -243,7 +260,7 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
         doc.setFontSize(9);
         doc.setTextColor(...DARK);
         const cleanText = trimmed.replace(/^#+\s*/, '').replace(/\*\*/g, '');
-        y = addWrappedText(doc, cleanText, 18, y, contentW - 8, 4.5);
+        y = addWrappedText(doc, cleanText, 18, y, contentW - 8, 4.5, logoImg);
         y += 2;
         continue;
       }
@@ -261,7 +278,7 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
         doc.setTextColor(...DARK);
         const bulletText = trimmed.replace(/^\*\s+/, '').replace(/^-\s+/, '').replace(/\*\*/g, '');
         doc.text('•', 20, y);
-        y = addWrappedText(doc, bulletText, 25, y, contentW - 18, 4);
+        y = addWrappedText(doc, bulletText, 25, y, contentW - 18, 4, logoImg);
         y += 1;
         continue;
       }
@@ -272,7 +289,7 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
         doc.setFontSize(8);
         doc.setTextColor(...DARK);
         const cleanText = trimmed.replace(/\*\*/g, '');
-        y = addWrappedText(doc, cleanText, 18, y, contentW - 8, 4.5);
+        y = addWrappedText(doc, cleanText, 18, y, contentW - 8, 4.5, logoImg);
         y += 1;
         continue;
       }
@@ -282,7 +299,7 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
       doc.setFontSize(8);
       doc.setTextColor(...DARK);
       const cleanText = trimmed.replace(/\*\*/g, '');
-      y = addWrappedText(doc, cleanText, 18, y, contentW - 8, 4);
+      y = addWrappedText(doc, cleanText, 18, y, contentW - 8, 4, logoImg);
       y += 1;
     }
   } else {
@@ -298,14 +315,14 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
   const notesEntries = Object.entries(data.facetNotes).filter(([, v]) => v?.trim());
   if (notesEntries.length > 0) {
     doc.addPage();
-    y = addHeader(doc, 'Site Assessment Report');
+    y = addHeader(doc, 'Site Assessment Report', logoImg);
     y = addSectionTitle(doc, y, 'Technician Notes by Facet');
 
     for (const [facetId, note] of notesEntries) {
       const facet = partBFacets.find(f => f.id === facetId);
       if (!facet) continue;
 
-      y = checkPageBreak(doc, y, 15);
+      y = checkPageBreak(doc, y, 15, logoImg);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(...DARK);
@@ -315,7 +332,7 @@ export function generateAssessmentPdf(data: AssessmentPdfData): jsPDF {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(80, 80, 80);
-      y = addWrappedText(doc, note, 18, y, contentW - 8, 4);
+      y = addWrappedText(doc, note, 18, y, contentW - 8, 4, logoImg);
       y += 4;
     }
   }
