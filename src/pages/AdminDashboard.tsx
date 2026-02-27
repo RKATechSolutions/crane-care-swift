@@ -1,7 +1,8 @@
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import FormBuilder from '@/components/FormBuilder';
-import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench } from 'lucide-react';
+import AdminCustomisation from '@/components/AdminCustomisation';
+import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings } from 'lucide-react';
 import { SuggestedQuestion, SentReport } from '@/types/inspection';
 import { useState } from 'react';
 
