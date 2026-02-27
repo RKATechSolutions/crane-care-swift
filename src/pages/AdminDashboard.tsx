@@ -57,8 +57,16 @@ export default function AdminDashboard() {
         onBack={() => dispatch({ type: 'LOGOUT' })}
       />
 
-      {/* Tabs */}
       <div className="flex border-b border-border bg-background sticky top-[56px] z-20 overflow-x-auto no-scrollbar">
+        <button
+          onClick={() => setTab('schedule')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
+            tab === 'schedule' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Calendar className="w-4 h-4 inline mr-1" />
+          Schedule
+        </button>
         <button
           onClick={() => setTab('suggestions')}
           className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
