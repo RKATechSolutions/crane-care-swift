@@ -222,6 +222,39 @@ export default function InspectionForm() {
             );
           }
 
+          if (itemType === 'date') {
+            return (
+              <DateInputItem
+                key={item.id}
+                item={item}
+                result={result}
+                onUpdate={(r) => handleItemUpdate(item.id, r)}
+              />
+            );
+          }
+
+          if (itemType === 'text') {
+            return (
+              <TextInputItem
+                key={item.id}
+                item={item}
+                result={result}
+                onUpdate={(r) => handleItemUpdate(item.id, r)}
+              />
+            );
+          }
+
+          if (itemType === 'photo_required') {
+            return (
+              <PhotoRequiredItem
+                key={item.id}
+                item={item}
+                result={result}
+                onUpdate={(r) => handleItemUpdate(item.id, r)}
+              />
+            );
+          }
+
           return (
             <ChecklistItem
               key={item.id}
