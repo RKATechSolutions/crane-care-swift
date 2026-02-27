@@ -202,7 +202,7 @@ export default function FormBuilder() {
             {/* Question type */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground block mb-1">Question Type</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {typeConfig.map(tc => (
                   <button
                     key={tc.value}
