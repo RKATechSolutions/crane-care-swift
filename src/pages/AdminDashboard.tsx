@@ -71,13 +71,22 @@ export default function AdminDashboard() {
           )}
         </button>
         <button
+          onClick={() => setTab('forms')}
+          className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+            tab === 'forms' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Wrench className="w-4 h-4 inline mr-1" />
+          Form Builder
+        </button>
+        <button
           onClick={() => setTab('reports')}
           className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
             tab === 'reports' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
           }`}
         >
           <FileText className="w-4 h-4 inline mr-1" />
-          Sent Reports
+          Reports
         </button>
       </div>
 
