@@ -232,6 +232,22 @@ function reducer(state: AppState, action: Action): AppState {
       });
       return { ...state, templates: templates2 };
     }
+    case 'UPDATE_TEMPLATE_ITEM': {
+      const templates3 = state.templates.map(t => {
+        if (t.id !== action.payload.templateId) return t;
+        return {
+          ...t,
+          sections: t.sections.map(s => {
+            if (s.id !== action.payload.sectionId) return s;
+            return {
+              ...s,
+              items: s.items.map(i => i.id === action.payload.item.id ? action.payload.item : i),
+            };
+          }),
+        };
+      });
+      return { ...state, templates: templates3 };
+    }
     case 'UPDATE_ADMIN_CONFIG':
       return { ...state, adminConfig: { ...state.adminConfig, ...action.payload } };
     default:
