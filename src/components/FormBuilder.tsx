@@ -20,7 +20,7 @@ export default function FormBuilder() {
 
   const typeConfig: { value: TemplateItemType; label: string; icon: React.ReactNode; desc: string }[] = [
     { value: 'checklist', label: 'Checklist', icon: <CheckSquare className="w-5 h-5" />, desc: 'Pass / Defect toggle' },
-    { value: 'single_select', label: 'Single Select', icon: <List className="w-5 h-5" />, desc: 'Dropdown with options' },
+    { value: 'single_select', label: 'Single Select', icon: <List className="w-5 h-5" />, desc: 'Tap-to-select buttons' },
     { value: 'numeric', label: 'Numeric', icon: <Hash className="w-5 h-5" />, desc: 'Number input field' },
   ];
 
