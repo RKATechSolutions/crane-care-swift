@@ -339,6 +339,66 @@ export type Database = {
         }
         Relationships: []
       }
+      leave_requests: {
+        Row: {
+          created_at: string
+          end_date: string
+          end_time: string | null
+          id: string
+          is_all_day: boolean
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          reason: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          start_date: string
+          start_time: string | null
+          status: Database["public"]["Enums"]["leave_status"]
+          technician_id: string
+          technician_name: string
+          updated_at: string
+          xero_synced: boolean
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          end_time?: string | null
+          id?: string
+          is_all_day?: boolean
+          leave_type: Database["public"]["Enums"]["leave_type"]
+          reason?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["leave_status"]
+          technician_id: string
+          technician_name: string
+          updated_at?: string
+          xero_synced?: boolean
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          end_time?: string | null
+          id?: string
+          is_all_day?: boolean
+          leave_type?: Database["public"]["Enums"]["leave_type"]
+          reason?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          start_date?: string
+          start_time?: string | null
+          status?: Database["public"]["Enums"]["leave_status"]
+          technician_id?: string
+          technician_name?: string
+          updated_at?: string
+          xero_synced?: boolean
+        }
+        Relationships: []
+      }
       site_assessments: {
         Row: {
           ai_executive_summary: string | null
@@ -445,7 +505,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      leave_status: "pending" | "approved" | "rejected"
+      leave_type: "annual_leave" | "time_in_lieu" | "sick_leave" | "personal"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -572,6 +633,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      leave_status: ["pending", "approved", "rejected"],
+      leave_type: ["annual_leave", "time_in_lieu", "sick_leave", "personal"],
+    },
   },
 } as const
