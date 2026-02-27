@@ -201,6 +201,32 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'ADD_SENT_REPORT':
       return { ...state, sentReports: [action.payload, ...state.sentReports] };
+    case 'ADD_TEMPLATE_ITEM': {
+      const templates = state.templates.map(t => {
+        if (t.id !== action.payload.templateId) return t;
+        return {
+          ...t,
+          sections: t.sections.map(s => {
+            if (s.id !== action.payload.sectionId) return s;
+            return { ...s, items: [...s.items, action.payload.item] };
+          }),
+        };
+      });
+      return { ...state, templates };
+    }
+    case 'REMOVE_TEMPLATE_ITEM': {
+      const templates2 = state.templates.map(t => {
+        if (t.id !== action.payload.templateId) return t;
+        return {
+          ...t,
+          sections: t.sections.map(s => {
+            if (s.id !== action.payload.sectionId) return s;
+            return { ...s, items: s.items.filter(i => i.id !== action.payload.itemId) };
+          }),
+        };
+      });
+      return { ...state, templates: templates2 };
+    }
     default:
       return state;
   }

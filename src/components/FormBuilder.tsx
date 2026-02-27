@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { TemplateItemType, InspectionTemplate, TemplateSection } from '@/types/inspection';
+import { TemplateItemType } from '@/types/inspection';
 import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2 } from 'lucide-react';
 
 export default function FormBuilder() {
