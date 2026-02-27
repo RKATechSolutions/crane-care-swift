@@ -34,7 +34,8 @@ type Action =
   | { type: 'ADD_ADMIN_NOTE'; payload: AdminNote }
   | { type: 'BACK_TO_SITES' }
   | { type: 'BACK_TO_CRANES' }
-  | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } };
+  | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } }
+  | { type: 'UPDATE_INSPECTION_META'; payload: Partial<Pick<Inspection, 'suggestedQuestions' | 'nextInspectionDate'>> };
 
 const initialState: AppState = {
   currentUser: null,
