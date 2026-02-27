@@ -79,6 +79,15 @@ export default function AdminDashboard() {
           Leave
         </button>
         <button
+          onClick={() => setTab('timesheets')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
+            tab === 'timesheets' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Clock className="w-4 h-4 inline mr-1" />
+          Timesheets
+        </button>
+        <button
           onClick={() => setTab('suggestions')}
           className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
             tab === 'suggestions' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
@@ -123,6 +132,7 @@ export default function AdminDashboard() {
       <div className="flex-1 overflow-y-auto">
         {tab === 'schedule' && <AdminSchedule />}
         {tab === 'leave' && <AdminLeaveApproval />}
+        {tab === 'timesheets' && <AdminTimesheetReview />}
 
         {tab === 'suggestions' && (
           <div className="p-4 space-y-3">
