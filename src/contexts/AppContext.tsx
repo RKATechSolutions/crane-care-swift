@@ -231,6 +231,8 @@ function reducer(state: AppState, action: Action): AppState {
       });
       return { ...state, templates: templates2 };
     }
+    case 'UPDATE_ADMIN_CONFIG':
+      return { ...state, adminConfig: { ...state.adminConfig, ...action.payload } };
     default:
       return state;
   }
