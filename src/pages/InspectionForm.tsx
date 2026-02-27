@@ -5,6 +5,9 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { ChecklistItem } from '@/components/ChecklistItem';
 import { SingleSelectItem } from '@/components/SingleSelectItem';
 import { NumericInputItem } from '@/components/NumericInputItem';
+import { DateInputItem } from '@/components/DateInputItem';
+import { TextInputItem } from '@/components/TextInputItem';
+import { PhotoRequiredItem } from '@/components/PhotoRequiredItem';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { SuggestQuestionInput } from '@/components/SuggestQuestionInput';
 import { CraneOperationalStatus, InspectionItemResult, SuggestedQuestion } from '@/types/inspection';
@@ -211,6 +214,39 @@ export default function InspectionForm() {
           if (itemType === 'numeric') {
             return (
               <NumericInputItem
+                key={item.id}
+                item={item}
+                result={result}
+                onUpdate={(r) => handleItemUpdate(item.id, r)}
+              />
+            );
+          }
+
+          if (itemType === 'date') {
+            return (
+              <DateInputItem
+                key={item.id}
+                item={item}
+                result={result}
+                onUpdate={(r) => handleItemUpdate(item.id, r)}
+              />
+            );
+          }
+
+          if (itemType === 'text') {
+            return (
+              <TextInputItem
+                key={item.id}
+                item={item}
+                result={result}
+                onUpdate={(r) => handleItemUpdate(item.id, r)}
+              />
+            );
+          }
+
+          if (itemType === 'photo_required') {
+            return (
+              <PhotoRequiredItem
                 key={item.id}
                 item={item}
                 result={result}

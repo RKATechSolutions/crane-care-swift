@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { TemplateItemType } from '@/types/inspection';
-import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2 } from 'lucide-react';
+import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2, Calendar, Type, Camera, ToggleLeft } from 'lucide-react';
 
 export default function FormBuilder() {
   const { state, dispatch } = useApp();
@@ -21,7 +21,11 @@ export default function FormBuilder() {
   const typeConfig: { value: TemplateItemType; label: string; icon: React.ReactNode; desc: string }[] = [
     { value: 'checklist', label: 'Checklist', icon: <CheckSquare className="w-5 h-5" />, desc: 'Pass / Defect toggle' },
     { value: 'single_select', label: 'Single Select', icon: <List className="w-5 h-5" />, desc: 'Tap-to-select buttons' },
+    { value: 'yes_no_na', label: 'Yes / No / N/A', icon: <ToggleLeft className="w-5 h-5" />, desc: 'Quick 3-option select' },
     { value: 'numeric', label: 'Numeric', icon: <Hash className="w-5 h-5" />, desc: 'Number input field' },
+    { value: 'date', label: 'Date', icon: <Calendar className="w-5 h-5" />, desc: 'Date picker' },
+    { value: 'text', label: 'Text / Notes', icon: <Type className="w-5 h-5" />, desc: 'Free-text input' },
+    { value: 'photo_required', label: 'Photo Required', icon: <Camera className="w-5 h-5" />, desc: 'Mandatory photo capture' },
   ];
 
   const handleAddItem = () => {
@@ -29,7 +33,11 @@ export default function FormBuilder() {
 
     const options = newType === 'single_select' && newOptions.trim()
       ? newOptions.split(',').map(o => o.trim()).filter(Boolean)
+      : newType === 'yes_no_na'
+      ? ['Yes', 'No', 'N/A']
       : undefined;
+
+    const effectiveType = newType === 'yes_no_na' ? 'single_select' : newType;
 
     dispatch({
       type: 'ADD_TEMPLATE_ITEM',
@@ -40,10 +48,10 @@ export default function FormBuilder() {
           id: `item-custom-${Date.now()}`,
           label: newLabel.trim(),
           sortOrder: (selectedSection?.items.length || 0) + 1,
-          type: newType === 'checklist' ? undefined : newType,
+          type: effectiveType === 'checklist' ? undefined : effectiveType,
           options,
           conditionalCommentOn: newConditionalOn || undefined,
-          required: newType === 'single_select' ? true : undefined,
+          required: (newType === 'single_select' || newType === 'yes_no_na' || newType === 'photo_required') ? true : undefined,
         },
       },
     });
@@ -147,7 +155,11 @@ export default function FormBuilder() {
                 <p className="text-sm font-medium truncate">{item.label}</p>
                 <p className="text-[10px] text-muted-foreground">
                   {item.type === 'single_select' ? `Select: ${item.options?.join(', ')}` :
-                   item.type === 'numeric' ? 'Numeric input' : 'Checklist (Pass/Defect)'}
+                   item.type === 'numeric' ? 'Numeric input' :
+                   item.type === 'date' ? 'Date picker' :
+                   item.type === 'text' ? 'Text / Notes' :
+                   item.type === 'photo_required' ? 'Photo required' :
+                   'Checklist (Pass/Defect)'}
                 </p>
               </div>
               <button
@@ -189,7 +201,7 @@ export default function FormBuilder() {
             {/* Question type */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground block mb-1">Question Type</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {typeConfig.map(tc => (
                   <button
                     key={tc.value}
@@ -229,6 +241,21 @@ export default function FormBuilder() {
                     className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Conditional comment for yes_no_na */}
+            {newType === 'yes_no_na' && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Options: <strong>Yes, No, N/A</strong></p>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Require comment when answer is (optional)</label>
+                <input
+                  type="text"
+                  value={newConditionalOn}
+                  onChange={e => setNewConditionalOn(e.target.value)}
+                  placeholder="e.g. No"
+                  className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                />
               </div>
             )}
 

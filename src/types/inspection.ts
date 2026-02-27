@@ -54,7 +54,7 @@ export interface TemplateSection {
   items: TemplateItem[];
 }
 
-export type TemplateItemType = 'checklist' | 'single_select' | 'numeric';
+export type TemplateItemType = 'checklist' | 'single_select' | 'numeric' | 'date' | 'text' | 'photo_required' | 'yes_no_na';
 
 export interface TemplateItem {
   id: string;
@@ -131,6 +131,9 @@ export interface InspectionItemResult {
   conditionalComment?: string; // comment when conditional trigger met
   numericValue?: number; // for numeric items
   suggestedValue?: string; // technician-suggested option pending admin approval
+  dateValue?: string; // for date items
+  textValue?: string; // for text items
+  photoRequired?: boolean; // for photo_required items - tracks if photo was taken
 }
 
 export interface DefectDetail {
