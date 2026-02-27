@@ -41,6 +41,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       desc: 'View sent reports & PDFs',
       color: 'bg-purple-500/10 text-purple-600',
     },
+    {
+      id: 'timesheet',
+      icon: <Clock className="w-8 h-8" />,
+      title: 'Timesheet',
+      desc: 'Log hours & submit for approval',
+      color: 'bg-rose-500/10 text-rose-600',
+    },
   ];
 
   return (
