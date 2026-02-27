@@ -313,6 +313,48 @@ export default function SchedulePage({ onBack }: SchedulePageProps) {
         )}
       </div>
 
+      {/* Leave Request Section */}
+      <div className="px-4 py-2 border-t border-border space-y-2">
+        {!showLeaveForm ? (
+          <button
+            onClick={() => setShowLeaveForm(true)}
+            className="w-full tap-target bg-muted rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+          >
+            <Palmtree className="w-4 h-4" />
+            Request Leave
+          </button>
+        ) : (
+          <LeaveRequestForm
+            defaultDate={format(selectedDate, 'yyyy-MM-dd')}
+            onClose={() => setShowLeaveForm(false)}
+            onSubmitted={() => { setShowLeaveForm(false); loadLeave(); }}
+          />
+        )}
+
+        {/* Pending leave requests */}
+        {leaveRequests.filter(r => r.status === 'pending').length > 0 && (
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Pending Leave Requests</p>
+            {leaveRequests.filter(r => r.status === 'pending').map(r => {
+              const cfg = LEAVE_TYPE_CONFIG[r.leave_type];
+              return (
+                <div key={r.id} className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-2.5 flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${cfg.color}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{cfg.emoji} {cfg.label}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {format(parseISO(r.start_date), 'd MMM')}
+                      {r.start_date !== r.end_date && ` — ${format(parseISO(r.end_date), 'd MMM')}`}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-600">⏳ Pending</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Google Calendar placeholder */}
       <div className="p-4 border-t border-border">
         <div className="bg-muted/50 rounded-xl p-3 text-center border border-dashed border-border">
