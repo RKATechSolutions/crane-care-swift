@@ -245,6 +245,21 @@ export default function FormBuilder() {
               </div>
             )}
 
+            {/* Conditional comment for yes_no_na */}
+            {newType === 'yes_no_na' && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Options: <strong>Yes, No, N/A</strong></p>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Require comment when answer is (optional)</label>
+                <input
+                  type="text"
+                  value={newConditionalOn}
+                  onChange={e => setNewConditionalOn(e.target.value)}
+                  placeholder="e.g. No"
+                  className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                />
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={handleAddItem}
