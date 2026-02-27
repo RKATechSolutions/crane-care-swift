@@ -437,16 +437,24 @@ export default function CraneList() {
       </div>
 
       {showAddAsset && (
-        <AddAssetForm
-          siteId={site.id}
-          siteName={site.name}
-          clientId={site.id.startsWith('db-') ? site.id.replace('db-', '') : null}
-          onSaved={() => {
-            setShowAddAsset(false);
-            refreshAssets();
-          }}
-          onCancel={() => setShowAddAsset(false)}
-        />
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <p className="font-bold text-base">New Asset</p>
+            <button onClick={() => setShowAddAsset(false)} className="text-sm font-medium text-muted-foreground">Cancel</button>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <AddAssetForm
+              siteId={site.id}
+              siteName={site.name}
+              clientId={site.id.startsWith('db-') ? site.id.replace('db-', '') : null}
+              onSaved={() => {
+                setShowAddAsset(false);
+                refreshAssets();
+              }}
+              onCancel={() => setShowAddAsset(false)}
+            />
+          </div>
+        </div>
       )}
 
 
