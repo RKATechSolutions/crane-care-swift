@@ -497,6 +497,114 @@ export type Database = {
           },
         ]
       }
+      time_entries: {
+        Row: {
+          client_name: string | null
+          created_at: string
+          description: string | null
+          end_time: string | null
+          entry_date: string
+          entry_type: Database["public"]["Enums"]["time_entry_type"]
+          hours: number
+          id: string
+          inspection_id: string | null
+          is_auto_logged: boolean
+          site_id: string | null
+          start_time: string | null
+          technician_id: string
+          technician_name: string
+          updated_at: string
+          xero_synced: boolean
+        }
+        Insert: {
+          client_name?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          entry_date: string
+          entry_type: Database["public"]["Enums"]["time_entry_type"]
+          hours: number
+          id?: string
+          inspection_id?: string | null
+          is_auto_logged?: boolean
+          site_id?: string | null
+          start_time?: string | null
+          technician_id: string
+          technician_name: string
+          updated_at?: string
+          xero_synced?: boolean
+        }
+        Update: {
+          client_name?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          entry_date?: string
+          entry_type?: Database["public"]["Enums"]["time_entry_type"]
+          hours?: number
+          id?: string
+          inspection_id?: string | null
+          is_auto_logged?: boolean
+          site_id?: string | null
+          start_time?: string | null
+          technician_id?: string
+          technician_name?: string
+          updated_at?: string
+          xero_synced?: boolean
+        }
+        Relationships: []
+      }
+      timesheets: {
+        Row: {
+          created_at: string
+          id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["timesheet_status"]
+          submitted_at: string | null
+          technician_id: string
+          technician_name: string
+          total_hours: number
+          updated_at: string
+          week_end: string
+          week_start: string
+          xero_synced: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["timesheet_status"]
+          submitted_at?: string | null
+          technician_id: string
+          technician_name: string
+          total_hours?: number
+          updated_at?: string
+          week_end: string
+          week_start: string
+          xero_synced?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["timesheet_status"]
+          submitted_at?: string | null
+          technician_id?: string
+          technician_name?: string
+          total_hours?: number
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+          xero_synced?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -507,6 +615,14 @@ export type Database = {
     Enums: {
       leave_status: "pending" | "approved" | "rejected"
       leave_type: "annual_leave" | "time_in_lieu" | "sick_leave" | "personal"
+      time_entry_type:
+        | "inspection"
+        | "travel"
+        | "repair"
+        | "admin"
+        | "training"
+        | "other"
+      timesheet_status: "draft" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -636,6 +752,15 @@ export const Constants = {
     Enums: {
       leave_status: ["pending", "approved", "rejected"],
       leave_type: ["annual_leave", "time_in_lieu", "sick_leave", "personal"],
+      time_entry_type: [
+        "inspection",
+        "travel",
+        "repair",
+        "admin",
+        "training",
+        "other",
+      ],
+      timesheet_status: ["draft", "submitted", "approved", "rejected"],
     },
   },
 } as const
