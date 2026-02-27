@@ -1,12 +1,13 @@
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { Lightbulb, Check, X, FileText, Mail, LogOut } from 'lucide-react';
+import FormBuilder from '@/components/FormBuilder';
+import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench } from 'lucide-react';
 import { SuggestedQuestion, SentReport } from '@/types/inspection';
 import { useState } from 'react';
 
 export default function AdminDashboard() {
   const { state, dispatch } = useApp();
-  const [tab, setTab] = useState<'suggestions' | 'reports'>('suggestions');
+  const [tab, setTab] = useState<'suggestions' | 'forms' | 'reports'>('suggestions');
 
   // Gather all suggestions across all inspections
   const allSuggestions: (SuggestedQuestion & { inspectionId: string })[] = [];
