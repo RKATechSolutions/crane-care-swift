@@ -56,6 +56,7 @@ const initialState: AppState = {
   siteJobSummaries: [],
   adminNotes: [],
   sentReports: [],
+  adminConfig: DEFAULT_ADMIN_CONFIG,
 };
 
 function computeCraneStatus(items: InspectionItemResult[]): CraneOperationalStatus | undefined {
