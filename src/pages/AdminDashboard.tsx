@@ -110,6 +110,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {tab === 'schedule' && <AdminSchedule />}
+
         {tab === 'suggestions' && (
           <div className="p-4 space-y-3">
             {pendingSuggestions.length === 0 && (
