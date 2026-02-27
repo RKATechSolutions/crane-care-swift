@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { TemplateItem, InspectionItemResult } from '@/types/inspection';
-import { Check, Camera, X } from 'lucide-react';
+import { Check, Camera, X, Lightbulb } from 'lucide-react';
 
 interface SingleSelectItemProps {
   item: TemplateItem;
@@ -11,8 +11,11 @@ interface SingleSelectItemProps {
 export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemProps) {
   const [comment, setComment] = useState(result.conditionalComment || '');
   const [optComment, setOptComment] = useState(result.comment || '');
+  const [showSuggest, setShowSuggest] = useState(false);
+  const [suggestInput, setSuggestInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedValue = result.selectedValue;
+  const isSuggested = !!result.suggestedValue && selectedValue === result.suggestedValue;
   const needsComment = item.conditionalCommentOn && selectedValue === item.conditionalCommentOn;
   const isYesNo = item.options?.length === 2 && item.options.includes('Yes') && item.options.includes('No');
   const isComplete = selectedValue && (!needsComment || comment.trim().length > 0);
