@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TemplateItem, InspectionItemResult } from '@/types/inspection';
-import { Calendar } from 'lucide-react';
+
 
 interface DateInputItemProps {
   item: TemplateItem;

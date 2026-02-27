@@ -36,7 +36,6 @@ export default function FormBuilder() {
       : newType === 'yes_no_na'
       ? ['Yes', 'No', 'N/A']
       : undefined;
-      : undefined;
 
     const effectiveType = newType === 'yes_no_na' ? 'single_select' : newType;
 
