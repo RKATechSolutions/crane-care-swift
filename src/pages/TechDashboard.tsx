@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { Calendar, Users, Package, FileText, LogOut } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock } from 'lucide-react';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
