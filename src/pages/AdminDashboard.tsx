@@ -160,6 +160,8 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {tab === 'forms' && <FormBuilder />}
+
         {tab === 'reports' && (
           <div className="p-4 space-y-3">
             {sentReports.length === 0 && (
