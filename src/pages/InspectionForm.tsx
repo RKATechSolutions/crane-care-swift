@@ -228,6 +228,20 @@ export default function InspectionForm() {
             />
           );
         })}
+
+        {/* Suggest Question for this section */}
+        {inspection.status !== 'completed' && (
+          <SuggestQuestionInput
+            sectionId={currentSection.id}
+            sectionName={currentSection.name}
+            onSubmit={handleSuggestQuestion}
+            existingSuggestions={
+              (inspection.suggestedQuestions || [])
+                .filter(sq => sq.sectionId === currentSection.id)
+                .map(sq => ({ question: sq.question, status: sq.status }))
+            }
+          />
+        )}
       </div>
 
       {/* Section Navigation */}
