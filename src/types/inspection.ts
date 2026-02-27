@@ -131,6 +131,9 @@ export interface InspectionItemResult {
   conditionalComment?: string; // comment when conditional trigger met
   numericValue?: number; // for numeric items
   suggestedValue?: string; // technician-suggested option pending admin approval
+  dateValue?: string; // for date items
+  textValue?: string; // for text items
+  photoRequired?: boolean; // for photo_required items - tracks if photo was taken
 }
 
 export interface DefectDetail {
