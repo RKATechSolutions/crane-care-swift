@@ -57,10 +57,10 @@ export default function AdminDashboard() {
       />
 
       {/* Tabs */}
-      <div className="flex border-b border-border bg-background sticky top-[56px] z-20">
+      <div className="flex border-b border-border bg-background sticky top-[56px] z-20 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setTab('suggestions')}
-          className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
             tab === 'suggestions' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
           }`}
         >
@@ -73,16 +73,25 @@ export default function AdminDashboard() {
         </button>
         <button
           onClick={() => setTab('forms')}
-          className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
             tab === 'forms' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
           }`}
         >
           <Wrench className="w-4 h-4 inline mr-1" />
-          Form Builder
+          Forms
+        </button>
+        <button
+          onClick={() => setTab('customise')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
+            tab === 'customise' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Settings className="w-4 h-4 inline mr-1" />
+          Customise
         </button>
         <button
           onClick={() => setTab('reports')}
-          className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
             tab === 'reports' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
           }`}
         >
