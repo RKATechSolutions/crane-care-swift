@@ -36,7 +36,9 @@ type Action =
   | { type: 'BACK_TO_SITES' }
   | { type: 'BACK_TO_CRANES' }
   | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } }
-  | { type: 'UPDATE_INSPECTION_META'; payload: Partial<Pick<Inspection, 'suggestedQuestions' | 'nextInspectionDate'>> };
+  | { type: 'UPDATE_INSPECTION_META'; payload: Partial<Pick<Inspection, 'suggestedQuestions' | 'nextInspectionDate'>> }
+  | { type: 'UPDATE_SUGGESTION_STATUS'; payload: { inspectionId: string; suggestionId: string; status: 'approved' | 'rejected' } }
+  | { type: 'ADD_SENT_REPORT'; payload: SentReport };
 
 const initialState: AppState = {
   currentUser: null,
