@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import {
   User, Site, Crane, Inspection, InspectionItemResult,
   InspectionTemplate, CraneOperationalStatus, SiteJobSummary, AdminNote,
-  DefectSeverity, RectificationTimeframe, SuggestedQuestion,
+  DefectSeverity, RectificationTimeframe, SuggestedQuestion, SentReport,
 } from '@/types/inspection';
 import { mockSites, mockTemplate, mockUsers } from '@/data/mockData';
 import { addDays, format } from 'date-fns';
