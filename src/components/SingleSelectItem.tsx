@@ -35,6 +35,19 @@ export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemPro
     onUpdate(newResult);
   };
 
+  const handleSuggestSubmit = () => {
+    const val = suggestInput.trim();
+    if (!val) return;
+    onUpdate({
+      ...result,
+      selectedValue: val,
+      suggestedValue: val,
+      result: 'pass',
+    });
+    setShowSuggest(false);
+    setSuggestInput('');
+  };
+
   const handleCommentChange = (value: string) => {
     setComment(value);
     onUpdate({
