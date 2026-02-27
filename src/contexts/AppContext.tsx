@@ -19,6 +19,7 @@ interface AppState {
   siteJobSummaries: SiteJobSummary[];
   adminNotes: AdminNote[];
   sentReports: SentReport[];
+  adminConfig: AdminFormConfig;
 }
 
 type Action =
