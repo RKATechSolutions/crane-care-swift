@@ -17,6 +17,7 @@ interface AppState {
   currentInspection: Inspection | null;
   siteJobSummaries: SiteJobSummary[];
   adminNotes: AdminNote[];
+  sentReports: SentReport[];
 }
 
 type Action =
