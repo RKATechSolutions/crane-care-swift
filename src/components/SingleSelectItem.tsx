@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { TemplateItem, InspectionItemResult } from '@/types/inspection';
-import { Check, Camera, X } from 'lucide-react';
+import { Check, Camera, X, Lightbulb } from 'lucide-react';
 
 interface SingleSelectItemProps {
   item: TemplateItem;
@@ -11,8 +11,11 @@ interface SingleSelectItemProps {
 export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemProps) {
   const [comment, setComment] = useState(result.conditionalComment || '');
   const [optComment, setOptComment] = useState(result.comment || '');
+  const [showSuggest, setShowSuggest] = useState(false);
+  const [suggestInput, setSuggestInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedValue = result.selectedValue;
+  const isSuggested = !!result.suggestedValue && selectedValue === result.suggestedValue;
   const needsComment = item.conditionalCommentOn && selectedValue === item.conditionalCommentOn;
   const isYesNo = item.options?.length === 2 && item.options.includes('Yes') && item.options.includes('No');
   const isComplete = selectedValue && (!needsComment || comment.trim().length > 0);
@@ -30,6 +33,19 @@ export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemPro
       newResult.conditionalComment = undefined;
     }
     onUpdate(newResult);
+  };
+
+  const handleSuggestSubmit = () => {
+    const val = suggestInput.trim();
+    if (!val) return;
+    onUpdate({
+      ...result,
+      selectedValue: val,
+      suggestedValue: val,
+      result: 'pass',
+    });
+    setShowSuggest(false);
+    setSuggestInput('');
   };
 
   const handleCommentChange = (value: string) => {
@@ -100,6 +116,52 @@ export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemPro
             </button>
           ))}
         </div>
+
+        {/* Suggested value badge */}
+        {isSuggested && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-rka-orange">
+            <Lightbulb className="w-3.5 h-3.5" />
+            Suggested option — pending admin approval
+          </div>
+        )}
+
+        {/* Suggest Option toggle */}
+        {!showSuggest && !isSuggested && (
+          <button
+            onClick={() => setShowSuggest(true)}
+            className="mt-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground active:text-foreground"
+          >
+            <Lightbulb className="w-3.5 h-3.5" />
+            Suggest an option
+          </button>
+        )}
+
+        {showSuggest && (
+          <div className="mt-3 flex gap-2">
+            <input
+              type="text"
+              value={suggestInput}
+              onChange={(e) => setSuggestInput(e.target.value)}
+              placeholder="Type your suggested option..."
+              className="flex-1 p-2 border border-border rounded-lg bg-background text-sm"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleSuggestSubmit()}
+            />
+            <button
+              onClick={handleSuggestSubmit}
+              disabled={!suggestInput.trim()}
+              className="px-3 py-2 bg-rka-orange text-destructive-foreground rounded-lg text-sm font-bold disabled:opacity-40"
+            >
+              Use
+            </button>
+            <button
+              onClick={() => { setShowSuggest(false); setSuggestInput(''); }}
+              className="px-2 py-2 text-muted-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Conditional required comment */}
         {needsComment && (

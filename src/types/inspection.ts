@@ -106,6 +106,7 @@ export interface InspectionItemResult {
   selectedValue?: string; // for single_select items
   conditionalComment?: string; // comment when conditional trigger met
   numericValue?: number; // for numeric items
+  suggestedValue?: string; // technician-suggested option pending admin approval
 }
 
 export interface DefectDetail {
