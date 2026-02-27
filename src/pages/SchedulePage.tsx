@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { ScheduleEvent, ScheduleEventType, EVENT_TYPE_CONFIG } from '@/types/schedule';
 import { mockScheduleEvents } from '@/data/mockSchedule';
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Plus, X } from 'lucide-react';
+import { fetchLeaveRequests, LeaveRequest, LEAVE_TYPE_CONFIG } from '@/services/leaveService';
+import LeaveRequestForm from '@/components/LeaveRequestForm';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Plus, X, Palmtree } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
 
 interface SchedulePageProps {
@@ -18,6 +20,17 @@ export default function SchedulePage({ onBack }: SchedulePageProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<ScheduleEvent[]>(mockScheduleEvents);
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+
+  const loadLeave = async () => {
+    try {
+      const data = await fetchLeaveRequests(techId);
+      setLeaveRequests(data);
+    } catch {}
+  };
+
+  useEffect(() => { loadLeave(); }, [techId]);
 
   // Add event form state
   const [newTitle, setNewTitle] = useState('');
@@ -296,6 +309,48 @@ export default function SchedulePage({ onBack }: SchedulePageProps) {
             >
               Add Event
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Leave Request Section */}
+      <div className="px-4 py-2 border-t border-border space-y-2">
+        {!showLeaveForm ? (
+          <button
+            onClick={() => setShowLeaveForm(true)}
+            className="w-full tap-target bg-muted rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+          >
+            <Palmtree className="w-4 h-4" />
+            Request Leave
+          </button>
+        ) : (
+          <LeaveRequestForm
+            defaultDate={format(selectedDate, 'yyyy-MM-dd')}
+            onClose={() => setShowLeaveForm(false)}
+            onSubmitted={() => { setShowLeaveForm(false); loadLeave(); }}
+          />
+        )}
+
+        {/* Pending leave requests */}
+        {leaveRequests.filter(r => r.status === 'pending').length > 0 && (
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Pending Leave Requests</p>
+            {leaveRequests.filter(r => r.status === 'pending').map(r => {
+              const cfg = LEAVE_TYPE_CONFIG[r.leave_type];
+              return (
+                <div key={r.id} className="bg-amber-50 dark:bg-amber-950/20 rounded-lg p-2.5 flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${cfg.color}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{cfg.emoji} {cfg.label}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {format(parseISO(r.start_date), 'd MMM')}
+                      {r.start_date !== r.end_date && ` — ${format(parseISO(r.end_date), 'd MMM')}`}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold text-amber-600">⏳ Pending</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
