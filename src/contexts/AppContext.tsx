@@ -38,7 +38,9 @@ type Action =
   | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } }
   | { type: 'UPDATE_INSPECTION_META'; payload: Partial<Pick<Inspection, 'suggestedQuestions' | 'nextInspectionDate'>> }
   | { type: 'UPDATE_SUGGESTION_STATUS'; payload: { inspectionId: string; suggestionId: string; status: 'approved' | 'rejected' } }
-  | { type: 'ADD_SENT_REPORT'; payload: SentReport };
+  | { type: 'ADD_SENT_REPORT'; payload: SentReport }
+  | { type: 'ADD_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
+  | { type: 'REMOVE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; itemId: string } };
 
 const initialState: AppState = {
   currentUser: null,
