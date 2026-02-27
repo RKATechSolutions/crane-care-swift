@@ -5,18 +5,15 @@ import { User } from '@/types/inspection';
 
 export default function Login() {
   const { dispatch } = useApp();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showAdminPin, setShowAdminPin] = useState(false);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = () => {
-    if (!selectedUser) return;
-    if (pin === selectedUser.pin) {
-      dispatch({ type: 'LOGIN', payload: selectedUser });
-    } else {
-      setError('Incorrect PIN');
-      setPin('');
-    }
+  const technicians = mockUsers.filter(u => u.role === 'technician');
+  const admin = mockUsers.find(u => u.role === 'admin');
+
+  const handleTechnicianSelect = (user: typeof mockUsers[0]) => {
+    dispatch({ type: 'LOGIN', payload: user as User });
   };
 
   const handlePinDigit = (digit: string) => {
@@ -24,9 +21,9 @@ export default function Login() {
       const newPin = pin + digit;
       setPin(newPin);
       setError('');
-      if (newPin.length === 4 && selectedUser) {
-        if (newPin === selectedUser.pin) {
-          dispatch({ type: 'LOGIN', payload: selectedUser });
+      if (newPin.length === 4 && admin) {
+        if (newPin === admin.pin) {
+          dispatch({ type: 'LOGIN', payload: admin as User });
         } else {
           setError('Incorrect PIN');
           setTimeout(() => setPin(''), 300);
@@ -49,29 +46,36 @@ export default function Login() {
         <h1 className="text-2xl font-black mb-1">RKA Inspections</h1>
         <p className="text-muted-foreground text-sm mb-8">Internal Crane Inspection System</p>
 
-        {!selectedUser ? (
+        {!showAdminPin ? (
           <div className="w-full max-w-sm space-y-3">
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Select Technician</p>
-            {mockUsers.map(user => (
+            {technicians.map(user => (
               <button
                 key={user.id}
-                onClick={() => setSelectedUser(user as User)}
+                onClick={() => handleTechnicianSelect(user)}
                 className="w-full tap-target bg-muted rounded-xl px-5 text-left font-semibold text-base active:bg-foreground/10 transition-colors"
               >
                 {user.name}
-                <span className="text-muted-foreground text-sm ml-2">({user.role})</span>
               </button>
             ))}
+            <div className="pt-4 border-t border-border">
+              <button
+                onClick={() => setShowAdminPin(true)}
+                className="w-full tap-target bg-primary/10 text-primary rounded-xl px-5 font-semibold text-sm"
+              >
+                Admin Login
+              </button>
+            </div>
           </div>
         ) : (
           <div className="w-full max-w-xs">
             <button
-              onClick={() => { setSelectedUser(null); setPin(''); setError(''); }}
+              onClick={() => { setShowAdminPin(false); setPin(''); setError(''); }}
               className="text-sm text-primary font-medium mb-6 block"
             >
-              ← {selectedUser.name}
+              ← Back
             </button>
-            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide text-center mb-4">Enter PIN</p>
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide text-center mb-4">Admin PIN</p>
             
             <div className="flex justify-center gap-3 mb-4">
               {[0, 1, 2, 3].map(i => (

@@ -103,14 +103,17 @@ export default function InspectionForm() {
     setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
   }, [dispatch]);
 
-  const handleSuggestQuestion = useCallback((sectionId: string, question: string) => {
+  const handleSuggestQuestion = useCallback((sectionId: string, question: string, answer: string) => {
     const newQ: SuggestedQuestion = {
       id: `sq-${Date.now()}`,
       sectionId,
       question,
+      answer,
       suggestedBy: state.currentUser?.name || 'Technician',
       timestamp: new Date().toISOString(),
       status: 'pending',
+      craneName: crane.name,
+      siteName: state.selectedSite?.name || '',
     };
     const existing = inspection.suggestedQuestions || [];
     dispatch({
@@ -118,7 +121,7 @@ export default function InspectionForm() {
       payload: { suggestedQuestions: [...existing, newQ] },
     });
     setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
-  }, [dispatch, inspection.suggestedQuestions, state.currentUser]);
+  }, [dispatch, inspection.suggestedQuestions, state.currentUser, crane.name, state.selectedSite?.name]);
 
   const handleComplete = () => {
     if (defects.length > 0 && !inspection.craneStatus) {
@@ -238,7 +241,7 @@ export default function InspectionForm() {
             existingSuggestions={
               (inspection.suggestedQuestions || [])
                 .filter(sq => sq.sectionId === currentSection.id)
-                .map(sq => ({ question: sq.question, status: sq.status }))
+                .map(sq => ({ question: sq.question, answer: sq.answer, status: sq.status }))
             }
           />
         )}

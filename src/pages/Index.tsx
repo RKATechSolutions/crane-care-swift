@@ -5,12 +5,16 @@ import CraneList from './CraneList';
 import InspectionForm from './InspectionForm';
 import DefectSummary from './DefectSummary';
 import SiteJobSummary from './SiteJobSummary';
+import AdminDashboard from './AdminDashboard';
 
 const Index = () => {
   const { state } = useApp();
 
   // Not logged in
   if (!state.currentUser) return <Login />;
+
+  // Admin goes to dashboard
+  if (state.currentUser.role === 'admin') return <AdminDashboard />;
 
   // No site selected
   if (!state.selectedSite) return <Sites />;
@@ -20,10 +24,7 @@ const Index = () => {
 
   // Active inspection
   if (state.currentInspection) {
-    // If completed, show defect summary
     if (state.currentInspection.status === 'completed') {
-      const hasDefects = state.currentInspection.items.some(i => i.result === 'defect');
-      if (hasDefects) return <DefectSummary />;
       return <DefectSummary />;
     }
     return <InspectionForm />;

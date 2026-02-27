@@ -99,9 +99,23 @@ export interface SuggestedQuestion {
   id: string;
   sectionId: string;
   question: string;
+  answer?: string;
   suggestedBy: string;
   timestamp: string;
   status: 'pending' | 'approved' | 'rejected';
+  inspectionId?: string;
+  craneName?: string;
+  siteName?: string;
+}
+
+export interface SentReport {
+  id: string;
+  type: 'inspection_pdf' | 'job_summary_pdf' | 'site_assessment_pdf' | 'email';
+  title: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  sentAt: string;
+  sentBy: string;
 }
 
 export interface InspectionItemResult {
