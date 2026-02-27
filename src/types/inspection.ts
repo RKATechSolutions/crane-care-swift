@@ -92,6 +92,16 @@ export interface Inspection {
   lastEditedAt?: string;
   items: InspectionItemResult[];
   nextInspectionDate?: string;
+  suggestedQuestions?: SuggestedQuestion[];
+}
+
+export interface SuggestedQuestion {
+  id: string;
+  sectionId: string;
+  question: string;
+  suggestedBy: string;
+  timestamp: string;
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 export interface InspectionItemResult {
