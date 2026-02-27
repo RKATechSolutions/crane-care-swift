@@ -1,12 +1,13 @@
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { Lightbulb, Check, X, FileText, Mail, LogOut } from 'lucide-react';
+import FormBuilder from '@/components/FormBuilder';
+import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench } from 'lucide-react';
 import { SuggestedQuestion, SentReport } from '@/types/inspection';
 import { useState } from 'react';
 
 export default function AdminDashboard() {
   const { state, dispatch } = useApp();
-  const [tab, setTab] = useState<'suggestions' | 'reports'>('suggestions');
+  const [tab, setTab] = useState<'suggestions' | 'forms' | 'reports'>('suggestions');
 
   // Gather all suggestions across all inspections
   const allSuggestions: (SuggestedQuestion & { inspectionId: string })[] = [];
@@ -70,13 +71,22 @@ export default function AdminDashboard() {
           )}
         </button>
         <button
+          onClick={() => setTab('forms')}
+          className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+            tab === 'forms' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Wrench className="w-4 h-4 inline mr-1" />
+          Form Builder
+        </button>
+        <button
           onClick={() => setTab('reports')}
           className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
             tab === 'reports' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
           }`}
         >
           <FileText className="w-4 h-4 inline mr-1" />
-          Sent Reports
+          Reports
         </button>
       </div>
 
@@ -149,6 +159,8 @@ export default function AdminDashboard() {
             )}
           </div>
         )}
+
+        {tab === 'forms' && <FormBuilder />}
 
         {tab === 'reports' && (
           <div className="p-4 space-y-3">

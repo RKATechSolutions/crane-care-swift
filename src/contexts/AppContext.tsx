@@ -38,7 +38,9 @@ type Action =
   | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } }
   | { type: 'UPDATE_INSPECTION_META'; payload: Partial<Pick<Inspection, 'suggestedQuestions' | 'nextInspectionDate'>> }
   | { type: 'UPDATE_SUGGESTION_STATUS'; payload: { inspectionId: string; suggestionId: string; status: 'approved' | 'rejected' } }
-  | { type: 'ADD_SENT_REPORT'; payload: SentReport };
+  | { type: 'ADD_SENT_REPORT'; payload: SentReport }
+  | { type: 'ADD_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
+  | { type: 'REMOVE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; itemId: string } };
 
 const initialState: AppState = {
   currentUser: null,
@@ -199,6 +201,32 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'ADD_SENT_REPORT':
       return { ...state, sentReports: [action.payload, ...state.sentReports] };
+    case 'ADD_TEMPLATE_ITEM': {
+      const templates = state.templates.map(t => {
+        if (t.id !== action.payload.templateId) return t;
+        return {
+          ...t,
+          sections: t.sections.map(s => {
+            if (s.id !== action.payload.sectionId) return s;
+            return { ...s, items: [...s.items, action.payload.item] };
+          }),
+        };
+      });
+      return { ...state, templates };
+    }
+    case 'REMOVE_TEMPLATE_ITEM': {
+      const templates2 = state.templates.map(t => {
+        if (t.id !== action.payload.templateId) return t;
+        return {
+          ...t,
+          sections: t.sections.map(s => {
+            if (s.id !== action.payload.sectionId) return s;
+            return { ...s, items: s.items.filter(i => i.id !== action.payload.itemId) };
+          }),
+        };
+      });
+      return { ...state, templates: templates2 };
+    }
     default:
       return state;
   }
