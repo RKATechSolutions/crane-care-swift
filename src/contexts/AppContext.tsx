@@ -185,6 +185,20 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         currentInspection: { ...state.currentInspection, ...action.payload },
       };
+    case 'UPDATE_SUGGESTION_STATUS': {
+      const updatedInspections = state.inspections.map(insp => {
+        if (insp.id !== action.payload.inspectionId) return insp;
+        return {
+          ...insp,
+          suggestedQuestions: (insp.suggestedQuestions || []).map(sq =>
+            sq.id === action.payload.suggestionId ? { ...sq, status: action.payload.status } : sq
+          ),
+        };
+      });
+      return { ...state, inspections: updatedInspections };
+    }
+    case 'ADD_SENT_REPORT':
+      return { ...state, sentReports: [action.payload, ...state.sentReports] };
     default:
       return state;
   }
