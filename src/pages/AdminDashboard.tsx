@@ -2,13 +2,14 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import FormBuilder from '@/components/FormBuilder';
 import AdminCustomisation from '@/components/AdminCustomisation';
-import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings } from 'lucide-react';
+import AdminSchedule from '@/components/AdminSchedule';
+import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar } from 'lucide-react';
 import { SuggestedQuestion, SentReport } from '@/types/inspection';
 import { useState } from 'react';
 
 export default function AdminDashboard() {
   const { state, dispatch } = useApp();
-  const [tab, setTab] = useState<'suggestions' | 'forms' | 'customise' | 'reports'>('suggestions');
+  const [tab, setTab] = useState<'suggestions' | 'forms' | 'customise' | 'reports' | 'schedule'>('schedule');
 
   // Gather all suggestions across all inspections
   const allSuggestions: (SuggestedQuestion & { inspectionId: string })[] = [];
@@ -56,8 +57,16 @@ export default function AdminDashboard() {
         onBack={() => dispatch({ type: 'LOGOUT' })}
       />
 
-      {/* Tabs */}
       <div className="flex border-b border-border bg-background sticky top-[56px] z-20 overflow-x-auto no-scrollbar">
+        <button
+          onClick={() => setTab('schedule')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
+            tab === 'schedule' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Calendar className="w-4 h-4 inline mr-1" />
+          Schedule
+        </button>
         <button
           onClick={() => setTab('suggestions')}
           className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
@@ -101,6 +110,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {tab === 'schedule' && <AdminSchedule />}
+
         {tab === 'suggestions' && (
           <div className="p-4 space-y-3">
             {pendingSuggestions.length === 0 && (
