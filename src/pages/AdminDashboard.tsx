@@ -3,13 +3,14 @@ import { AppHeader } from '@/components/AppHeader';
 import FormBuilder from '@/components/FormBuilder';
 import AdminCustomisation from '@/components/AdminCustomisation';
 import AdminSchedule from '@/components/AdminSchedule';
-import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar } from 'lucide-react';
+import AdminLeaveApproval from '@/components/AdminLeaveApproval';
+import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar, Palmtree } from 'lucide-react';
 import { SuggestedQuestion, SentReport } from '@/types/inspection';
 import { useState } from 'react';
 
 export default function AdminDashboard() {
   const { state, dispatch } = useApp();
-  const [tab, setTab] = useState<'suggestions' | 'forms' | 'customise' | 'reports' | 'schedule'>('schedule');
+  const [tab, setTab] = useState<'suggestions' | 'forms' | 'customise' | 'reports' | 'schedule' | 'leave'>('schedule');
 
   // Gather all suggestions across all inspections
   const allSuggestions: (SuggestedQuestion & { inspectionId: string })[] = [];
