@@ -241,7 +241,7 @@ export default function InspectionForm() {
             existingSuggestions={
               (inspection.suggestedQuestions || [])
                 .filter(sq => sq.sectionId === currentSection.id)
-                .map(sq => ({ question: sq.question, status: sq.status }))
+                .map(sq => ({ question: sq.question, answer: sq.answer, status: sq.status }))
             }
           />
         )}
