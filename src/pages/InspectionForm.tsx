@@ -6,7 +6,8 @@ import { ChecklistItem } from '@/components/ChecklistItem';
 import { SingleSelectItem } from '@/components/SingleSelectItem';
 import { NumericInputItem } from '@/components/NumericInputItem';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
-import { CraneOperationalStatus, InspectionItemResult } from '@/types/inspection';
+import { SuggestQuestionInput } from '@/components/SuggestQuestionInput';
+import { CraneOperationalStatus, InspectionItemResult, SuggestedQuestion } from '@/types/inspection';
 import { Save, CheckCircle, RotateCcw, AlertTriangle, Check } from 'lucide-react';
 
 export default function InspectionForm() {
