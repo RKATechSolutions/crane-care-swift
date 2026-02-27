@@ -33,6 +33,9 @@ export default function FormBuilder() {
 
     const options = newType === 'single_select' && newOptions.trim()
       ? newOptions.split(',').map(o => o.trim()).filter(Boolean)
+      : newType === 'yes_no_na'
+      ? ['Yes', 'No', 'N/A']
+      : undefined;
       : undefined;
 
     dispatch({
