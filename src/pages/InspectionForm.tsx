@@ -103,6 +103,23 @@ export default function InspectionForm() {
     setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
   }, [dispatch]);
 
+  const handleSuggestQuestion = useCallback((sectionId: string, question: string) => {
+    const newQ: SuggestedQuestion = {
+      id: `sq-${Date.now()}`,
+      sectionId,
+      question,
+      suggestedBy: state.currentUser?.name || 'Technician',
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+    };
+    const existing = inspection.suggestedQuestions || [];
+    dispatch({
+      type: 'UPDATE_INSPECTION_META',
+      payload: { suggestedQuestions: [...existing, newQ] },
+    });
+    setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
+  }, [dispatch, inspection.suggestedQuestions, state.currentUser]);
+
   const handleComplete = () => {
     if (defects.length > 0 && !inspection.craneStatus) {
       setShowStatusPicker(true);
