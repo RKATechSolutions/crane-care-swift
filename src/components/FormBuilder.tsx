@@ -156,7 +156,11 @@ export default function FormBuilder() {
                 <p className="text-sm font-medium truncate">{item.label}</p>
                 <p className="text-[10px] text-muted-foreground">
                   {item.type === 'single_select' ? `Select: ${item.options?.join(', ')}` :
-                   item.type === 'numeric' ? 'Numeric input' : 'Checklist (Pass/Defect)'}
+                   item.type === 'numeric' ? 'Numeric input' :
+                   item.type === 'date' ? 'Date picker' :
+                   item.type === 'text' ? 'Text / Notes' :
+                   item.type === 'photo_required' ? 'Photo required' :
+                   'Checklist (Pass/Defect)'}
                 </p>
               </div>
               <button
