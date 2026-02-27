@@ -50,6 +50,7 @@ const initialState: AppState = {
   currentInspection: null,
   siteJobSummaries: [],
   adminNotes: [],
+  sentReports: [],
 };
 
 function computeCraneStatus(items: InspectionItemResult[]): CraneOperationalStatus | undefined {
