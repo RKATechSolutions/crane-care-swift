@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { Calendar, Users, Package, FileText, LogOut } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock } from 'lucide-react';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
@@ -40,6 +40,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       title: 'Reports',
       desc: 'View sent reports & PDFs',
       color: 'bg-purple-500/10 text-purple-600',
+    },
+    {
+      id: 'timesheet',
+      icon: <Clock className="w-8 h-8" />,
+      title: 'Timesheet',
+      desc: 'Log hours & submit for approval',
+      color: 'bg-rose-500/10 text-rose-600',
     },
   ];
 
