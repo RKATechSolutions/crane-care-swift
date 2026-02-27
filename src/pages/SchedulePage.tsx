@@ -20,6 +20,17 @@ export default function SchedulePage({ onBack }: SchedulePageProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<ScheduleEvent[]>(mockScheduleEvents);
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const [showLeaveForm, setShowLeaveForm] = useState(false);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+
+  const loadLeave = async () => {
+    try {
+      const data = await fetchLeaveRequests(techId);
+      setLeaveRequests(data);
+    } catch {}
+  };
+
+  useEffect(() => { loadLeave(); }, [techId]);
 
   // Add event form state
   const [newTitle, setNewTitle] = useState('');
