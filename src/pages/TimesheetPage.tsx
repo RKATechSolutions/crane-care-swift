@@ -288,7 +288,7 @@ export default function TimesheetPage({ onBack }: TimesheetPageProps) {
         <button
           onClick={handleSubmitWeek}
           disabled={weekTotal === 0}
-          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm py-3 flex items-center justify-center gap-2 disabled:opacity-40"
         >
           <Send className="w-4 h-4" />
           Submit Week ({weekTotal}h)
