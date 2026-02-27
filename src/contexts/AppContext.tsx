@@ -43,6 +43,7 @@ type Action =
   | { type: 'ADD_SENT_REPORT'; payload: SentReport }
   | { type: 'ADD_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
   | { type: 'REMOVE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; itemId: string } }
+  | { type: 'UPDATE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
   | { type: 'UPDATE_ADMIN_CONFIG'; payload: Partial<AdminFormConfig> };
 
 const initialState: AppState = {
