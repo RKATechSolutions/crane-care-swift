@@ -21,7 +21,11 @@ export default function FormBuilder() {
   const typeConfig: { value: TemplateItemType; label: string; icon: React.ReactNode; desc: string }[] = [
     { value: 'checklist', label: 'Checklist', icon: <CheckSquare className="w-5 h-5" />, desc: 'Pass / Defect toggle' },
     { value: 'single_select', label: 'Single Select', icon: <List className="w-5 h-5" />, desc: 'Tap-to-select buttons' },
+    { value: 'yes_no_na', label: 'Yes / No / N/A', icon: <ToggleLeft className="w-5 h-5" />, desc: 'Quick 3-option select' },
     { value: 'numeric', label: 'Numeric', icon: <Hash className="w-5 h-5" />, desc: 'Number input field' },
+    { value: 'date', label: 'Date', icon: <Calendar className="w-5 h-5" />, desc: 'Date picker' },
+    { value: 'text', label: 'Text / Notes', icon: <Type className="w-5 h-5" />, desc: 'Free-text input' },
+    { value: 'photo_required', label: 'Photo Required', icon: <Camera className="w-5 h-5" />, desc: 'Mandatory photo capture' },
   ];
 
   const handleAddItem = () => {
