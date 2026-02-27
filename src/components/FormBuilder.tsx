@@ -38,6 +38,8 @@ export default function FormBuilder() {
       : undefined;
       : undefined;
 
+    const effectiveType = newType === 'yes_no_na' ? 'single_select' : newType;
+
     dispatch({
       type: 'ADD_TEMPLATE_ITEM',
       payload: {
@@ -47,10 +49,10 @@ export default function FormBuilder() {
           id: `item-custom-${Date.now()}`,
           label: newLabel.trim(),
           sortOrder: (selectedSection?.items.length || 0) + 1,
-          type: newType === 'checklist' ? undefined : newType,
+          type: effectiveType === 'checklist' ? undefined : effectiveType,
           options,
           conditionalCommentOn: newConditionalOn || undefined,
-          required: newType === 'single_select' ? true : undefined,
+          required: (newType === 'single_select' || newType === 'yes_no_na' || newType === 'photo_required') ? true : undefined,
         },
       },
     });
