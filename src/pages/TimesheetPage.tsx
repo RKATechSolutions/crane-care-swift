@@ -275,7 +275,7 @@ export default function TimesheetPage({ onBack }: TimesheetPageProps) {
             <button
               onClick={handleAdd}
               disabled={submitting}
-              className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40"
+              className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm py-3 disabled:opacity-40"
             >
               {submitting ? 'Adding...' : `Add ${calculateHours(startTime, endTime)}h`}
             </button>
