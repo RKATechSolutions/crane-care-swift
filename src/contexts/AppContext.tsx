@@ -4,6 +4,7 @@ import {
   InspectionTemplate, CraneOperationalStatus, SiteJobSummary, AdminNote,
   DefectSeverity, RectificationTimeframe, SuggestedQuestion, SentReport,
 } from '@/types/inspection';
+import { AdminFormConfig, DEFAULT_ADMIN_CONFIG } from '@/types/adminConfig';
 import { mockSites, mockTemplate, mockUsers } from '@/data/mockData';
 import { addDays, format } from 'date-fns';
 
@@ -18,6 +19,7 @@ interface AppState {
   siteJobSummaries: SiteJobSummary[];
   adminNotes: AdminNote[];
   sentReports: SentReport[];
+  adminConfig: AdminFormConfig;
 }
 
 type Action =
@@ -40,7 +42,8 @@ type Action =
   | { type: 'UPDATE_SUGGESTION_STATUS'; payload: { inspectionId: string; suggestionId: string; status: 'approved' | 'rejected' } }
   | { type: 'ADD_SENT_REPORT'; payload: SentReport }
   | { type: 'ADD_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
-  | { type: 'REMOVE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; itemId: string } };
+  | { type: 'REMOVE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; itemId: string } }
+  | { type: 'UPDATE_ADMIN_CONFIG'; payload: Partial<AdminFormConfig> };
 
 const initialState: AppState = {
   currentUser: null,
@@ -53,6 +56,7 @@ const initialState: AppState = {
   siteJobSummaries: [],
   adminNotes: [],
   sentReports: [],
+  adminConfig: DEFAULT_ADMIN_CONFIG,
 };
 
 function computeCraneStatus(items: InspectionItemResult[]): CraneOperationalStatus | undefined {
@@ -227,6 +231,8 @@ function reducer(state: AppState, action: Action): AppState {
       });
       return { ...state, templates: templates2 };
     }
+    case 'UPDATE_ADMIN_CONFIG':
+      return { ...state, adminConfig: { ...state.adminConfig, ...action.payload } };
     default:
       return state;
   }
