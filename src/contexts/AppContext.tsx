@@ -42,7 +42,8 @@ type Action =
   | { type: 'UPDATE_SUGGESTION_STATUS'; payload: { inspectionId: string; suggestionId: string; status: 'approved' | 'rejected' } }
   | { type: 'ADD_SENT_REPORT'; payload: SentReport }
   | { type: 'ADD_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
-  | { type: 'REMOVE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; itemId: string } };
+  | { type: 'REMOVE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; itemId: string } }
+  | { type: 'UPDATE_ADMIN_CONFIG'; payload: Partial<AdminFormConfig> };
 
 const initialState: AppState = {
   currentUser: null,
