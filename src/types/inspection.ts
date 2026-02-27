@@ -54,7 +54,7 @@ export interface TemplateSection {
   items: TemplateItem[];
 }
 
-export type TemplateItemType = 'checklist' | 'single_select' | 'numeric';
+export type TemplateItemType = 'checklist' | 'single_select' | 'numeric' | 'date' | 'text' | 'photo_required' | 'yes_no_na';
 
 export interface TemplateItem {
   id: string;
