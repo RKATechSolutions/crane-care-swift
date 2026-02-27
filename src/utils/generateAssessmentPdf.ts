@@ -33,6 +33,7 @@ const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
 const BORDER_GRAY: [number, number, number] = [220, 220, 220];
 const RKA_RED: [number, number, number] = [204, 41, 41];
 const RKA_ORANGE: [number, number, number] = [230, 126, 13];
+const RKA_DARK_GREEN: [number, number, number] = [34, 139, 69];
 
 interface PdfImages {
   headerImg?: HTMLImageElement;
@@ -43,11 +44,9 @@ function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages): number {
   const pageW = doc.internal.pageSize.getWidth();
 
   if (imgs.headerImg) {
-    // Header image is wide banner – scale to full page width
     const imgAspect = imgs.headerImg.width / imgs.headerImg.height;
     const headerH = pageW / imgAspect;
     doc.addImage(imgs.headerImg, 'PNG', 0, 0, pageW, headerH);
-    // Page title below the header image
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...DARK);
@@ -58,7 +57,6 @@ function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages): number {
     return headerH + 15;
   }
 
-  // Fallback: simple dark bar
   doc.setFillColor(...DARK);
   doc.rect(0, 0, pageW, 28, 'F');
   doc.setFont('helvetica', 'bold');
@@ -79,7 +77,6 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number, imgs: PdfIma
     const imgAspect = imgs.footerImg.width / imgs.footerImg.height;
     const footerH = pageW / imgAspect;
     doc.addImage(imgs.footerImg, 'PNG', 0, pageH - footerH, pageW, footerH);
-    // Text on top of footer image
     doc.setFontSize(7);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(255, 255, 255);
@@ -135,6 +132,305 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.src = src;
   });
 }
+
+// ═══════════════════════════════════
+// DASHBOARD DRAWING HELPERS
+// ═══════════════════════════════════
+
+function getScoreColor(pct: number): [number, number, number] {
+  if (pct >= 75) return RKA_GREEN;
+  if (pct >= 40) return RKA_ORANGE;
+  return RKA_RED;
+}
+
+function getMaturityLabel(pct: number): string {
+  if (pct >= 85) return 'LEADING';
+  if (pct >= 70) return 'ESTABLISHED';
+  if (pct >= 50) return 'DEVELOPING';
+  if (pct >= 30) return 'EMERGING';
+  return 'FOUNDATIONAL';
+}
+
+function drawTrafficLightScorecard(doc: jsPDF, x: number, y: number, w: number, data: AssessmentPdfData): number {
+  // Title
+  doc.setFillColor(...DARK);
+  doc.roundedRect(x, y, w, 7, 1, 1, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...WHITE);
+  doc.text('COMPLIANCE SCORECARD', x + w / 2, y + 5, { align: 'center' });
+  y += 10;
+
+  const colW = w / 4;
+  const rowH = 10;
+
+  partBFacets.forEach((f, i) => {
+    const score = data.facetScores[f.id] || 0;
+    const max = f.questions.length * 2;
+    const pct = max > 0 ? Math.round((score / max) * 100) : 0;
+    const color = getScoreColor(pct);
+
+    const col = i % 4;
+    const row = Math.floor(i / 4);
+    const cx = x + col * colW + colW / 2;
+    const cy = y + row * (rowH + 14) + 5;
+
+    // Traffic light circle
+    doc.setFillColor(...color);
+    doc.circle(cx, cy, 4, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...WHITE);
+    doc.text(`${pct}%`, cx, cy + 2.5, { align: 'center' });
+
+    // Label below
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(...DARK);
+    const shortName = f.title.length > 18 ? f.title.substring(0, 16) + '…' : f.title;
+    doc.text(shortName, cx, cy + 8, { align: 'center' });
+  });
+
+  const rows = Math.ceil(partBFacets.length / 4);
+  return y + rows * (rowH + 14) + 2;
+}
+
+function drawMaturityGauge(doc: jsPDF, cx: number, cy: number, radius: number, data: AssessmentPdfData) {
+  const maxTotal = partBFacets.reduce((sum, f) => sum + f.questions.length * 2, 0);
+  const overallPct = maxTotal > 0 ? Math.round((data.totalScore / maxTotal) * 100) : 0;
+  const label = getMaturityLabel(overallPct);
+
+  // Draw semicircle arc segments (background)
+  const startAngle = Math.PI;
+  const endAngle = 2 * Math.PI;
+  const segments = 30;
+
+  // Background arc
+  for (let i = 0; i < segments; i++) {
+    const a1 = startAngle + (i / segments) * Math.PI;
+    const a2 = startAngle + ((i + 1) / segments) * Math.PI;
+    const segPct = (i / segments) * 100;
+    const color = getScoreColor(segPct);
+    doc.setDrawColor(...color);
+    doc.setLineWidth(3);
+    const x1 = cx + radius * Math.cos(a1);
+    const y1 = cy + radius * Math.sin(a1);
+    const x2 = cx + radius * Math.cos(a2);
+    const y2 = cy + radius * Math.sin(a2);
+    doc.line(x1, y1, x2, y2);
+  }
+
+  // Needle
+  const needleAngle = startAngle + (overallPct / 100) * Math.PI;
+  const needleLen = radius - 4;
+  const nx = cx + needleLen * Math.cos(needleAngle);
+  const ny = cy + needleLen * Math.sin(needleAngle);
+  doc.setDrawColor(...DARK);
+  doc.setLineWidth(1);
+  doc.line(cx, cy, nx, ny);
+  doc.setFillColor(...DARK);
+  doc.circle(cx, cy, 2, 'F');
+
+  // Percentage text
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...DARK);
+  doc.text(`${overallPct}%`, cx, cy + 6, { align: 'center' });
+
+  // Label below
+  const labelColor = getScoreColor(overallPct);
+  doc.setFillColor(...labelColor);
+  doc.roundedRect(cx - 18, cy + 9, 36, 7, 2, 2, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7);
+  doc.setTextColor(...WHITE);
+  doc.text(label, cx, cy + 14, { align: 'center' });
+
+  // Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...DARK);
+  doc.text('OVERALL SITE MATURITY', cx, cy - radius - 6, { align: 'center' });
+}
+
+function drawRadarChart(doc: jsPDF, cx: number, cy: number, radius: number, data: AssessmentPdfData) {
+  const facets = partBFacets;
+  const n = facets.length;
+  const angleStep = (2 * Math.PI) / n;
+  const offset = -Math.PI / 2; // Start from top
+
+  // Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...DARK);
+  doc.text('FACET PERFORMANCE RADAR', cx, cy - radius - 8, { align: 'center' });
+
+  // Draw concentric rings (25%, 50%, 75%, 100%)
+  [0.25, 0.5, 0.75, 1.0].forEach(ring => {
+    doc.setDrawColor(210, 210, 210);
+    doc.setLineWidth(0.2);
+    const r = radius * ring;
+    // Draw polygon for ring
+    for (let i = 0; i < n; i++) {
+      const a1 = offset + i * angleStep;
+      const a2 = offset + ((i + 1) % n) * angleStep;
+      doc.line(
+        cx + r * Math.cos(a1), cy + r * Math.sin(a1),
+        cx + r * Math.cos(a2), cy + r * Math.sin(a2)
+      );
+    }
+  });
+
+  // Draw axis lines
+  for (let i = 0; i < n; i++) {
+    const angle = offset + i * angleStep;
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.15);
+    doc.line(cx, cy, cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+  }
+
+  // Data polygon - filled
+  const points: { x: number; y: number }[] = [];
+  facets.forEach((f, i) => {
+    const score = data.facetScores[f.id] || 0;
+    const max = f.questions.length * 2;
+    const pct = max > 0 ? score / max : 0;
+    const angle = offset + i * angleStep;
+    const r = radius * pct;
+    points.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+  });
+
+  // Draw filled polygon
+  if (points.length > 0) {
+    doc.setFillColor(96, 179, 76);
+    doc.setGState(new (doc as any).GState({ opacity: 0.25 }));
+    // Draw as lines connecting points
+    doc.setDrawColor(...RKA_GREEN);
+    doc.setLineWidth(0.8);
+    for (let i = 0; i < points.length; i++) {
+      const next = points[(i + 1) % points.length];
+      doc.line(points[i].x, points[i].y, next.x, next.y);
+    }
+    doc.setGState(new (doc as any).GState({ opacity: 1 }));
+
+    // Draw data polygon outline again solid
+    doc.setDrawColor(...RKA_GREEN);
+    doc.setLineWidth(1);
+    for (let i = 0; i < points.length; i++) {
+      const next = points[(i + 1) % points.length];
+      doc.line(points[i].x, points[i].y, next.x, next.y);
+    }
+
+    // Data points
+    points.forEach(p => {
+      doc.setFillColor(...RKA_GREEN);
+      doc.circle(p.x, p.y, 1.2, 'F');
+    });
+  }
+
+  // Labels
+  facets.forEach((f, i) => {
+    const angle = offset + i * angleStep;
+    const labelR = radius + 8;
+    const lx = cx + labelR * Math.cos(angle);
+    const ly = cy + labelR * Math.sin(angle);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(5.5);
+    doc.setTextColor(...DARK);
+    const align = Math.cos(angle) < -0.1 ? 'right' : Math.cos(angle) > 0.1 ? 'left' : 'center';
+    const shortName = facetNames[f.id] || f.title;
+    doc.text(shortName, lx, ly + 1.5, { align: align as any });
+  });
+}
+
+function drawRiskPriorityMatrix(doc: jsPDF, x: number, y: number, w: number, data: AssessmentPdfData): number {
+  // Title
+  doc.setFillColor(...DARK);
+  doc.roundedRect(x, y, w, 7, 1, 1, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...WHITE);
+  doc.text('RISK PRIORITY MATRIX', x + w / 2, y + 5, { align: 'center' });
+  y += 10;
+
+  // Sort facets by score ascending (highest risk first)
+  const sorted = partBFacets
+    .map(f => {
+      const score = data.facetScores[f.id] || 0;
+      const max = f.questions.length * 2;
+      const pct = max > 0 ? Math.round((score / max) * 100) : 0;
+      return { facet: f, score, max, pct };
+    })
+    .sort((a, b) => a.pct - b.pct);
+
+  // Table header
+  const colWidths = [w * 0.06, w * 0.38, w * 0.14, w * 0.14, w * 0.28];
+  const headers = ['#', 'Facet', 'Score', 'Status', 'Action Window'];
+  doc.setFillColor(...RKA_GREEN);
+  doc.rect(x, y, w, 6, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6);
+  doc.setTextColor(...WHITE);
+  let hx = x + 1;
+  headers.forEach((h, i) => {
+    doc.text(h, hx + 1, y + 4);
+    hx += colWidths[i];
+  });
+  y += 7;
+
+  sorted.forEach((item, idx) => {
+    const rowColor = idx % 2 === 0 ? LIGHT_GRAY : WHITE;
+    doc.setFillColor(...rowColor);
+    doc.rect(x, y, w, 7, 'F');
+
+    const statusColor = getScoreColor(item.pct);
+    const statusLabel = item.pct >= 75 ? 'LOW' : item.pct >= 40 ? 'MEDIUM' : 'HIGH';
+    const actionWindow = item.pct >= 75 ? 'LATER (6-12 mo)' : item.pct >= 40 ? 'NEXT (3-6 mo)' : 'NOW (0-3 mo)';
+
+    let rx = x + 1;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...DARK);
+
+    // Rank
+    doc.text(`${idx + 1}`, rx + 1, y + 5);
+    rx += colWidths[0];
+
+    // Facet name
+    doc.text(item.facet.title, rx + 1, y + 5);
+    rx += colWidths[1];
+
+    // Score
+    doc.text(`${item.score}/${item.max} (${item.pct}%)`, rx + 1, y + 5);
+    rx += colWidths[2];
+
+    // Status pill
+    doc.setFillColor(...statusColor);
+    doc.roundedRect(rx + 1, y + 1.5, colWidths[3] - 4, 4, 1.5, 1.5, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.5);
+    doc.setTextColor(...WHITE);
+    doc.text(statusLabel, rx + colWidths[3] / 2 - 1, y + 4.5, { align: 'center' });
+    rx += colWidths[3];
+
+    // Action window
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(...DARK);
+    const actionColor = item.pct >= 75 ? RKA_GREEN : item.pct >= 40 ? RKA_ORANGE : RKA_RED;
+    doc.setTextColor(...actionColor);
+    doc.setFont('helvetica', 'bold');
+    doc.text(actionWindow, rx + 1, y + 5);
+
+    y += 7;
+  });
+
+  return y + 4;
+}
+
+// ═══════════════════════════════════
+// MAIN GENERATOR
+// ═══════════════════════════════════
 
 export async function generateAssessmentPdf(data: AssessmentPdfData): Promise<jsPDF> {
   const doc = new jsPDF('p', 'mm', 'a4');
@@ -200,8 +496,40 @@ export async function generateAssessmentPdf(data: AssessmentPdfData): Promise<js
   }
 
   // ═══════════════════════════════════
-  // FACET SCORE SUMMARY TABLE
+  // PAGE 2: DASHBOARD
   // ═══════════════════════════════════
+  doc.addPage();
+  y = addHeader(doc, 'Site Assessment Report', imgs);
+  y = addSectionTitle(doc, y, 'Assessment Dashboard');
+
+  // Layout: Left column = Gauge + Radar, Right column = Scorecard + Matrix
+  const leftX = 14;
+  const rightX = pageW / 2 + 4;
+  const halfW = pageW / 2 - 18;
+
+  // TOP LEFT: Overall Maturity Gauge
+  const gaugeCx = leftX + halfW / 2;
+  const gaugeCy = y + 32;
+  drawMaturityGauge(doc, gaugeCx, gaugeCy, 22, data);
+
+  // TOP RIGHT: Traffic Light Scorecard
+  drawTrafficLightScorecard(doc, rightX, y, halfW, data);
+
+  // BOTTOM LEFT: Radar Chart
+  const radarY = y + 65;
+  const radarCx = leftX + halfW / 2;
+  const radarCy = radarY + 35;
+  drawRadarChart(doc, radarCx, radarCy, 25, data);
+
+  // BOTTOM: Risk Priority Matrix (full width)
+  const matrixY = radarY + 72;
+  drawRiskPriorityMatrix(doc, 14, matrixY, contentW, data);
+
+  // ═══════════════════════════════════
+  // PAGE 3: FACET SCORE SUMMARY TABLE
+  // ═══════════════════════════════════
+  doc.addPage();
+  y = addHeader(doc, 'Site Assessment Report', imgs);
   y = addSectionTitle(doc, y, 'Facet Score Summary');
 
   const facetRows = partBFacets.map(f => {
@@ -257,7 +585,7 @@ export async function generateAssessmentPdf(data: AssessmentPdfData): Promise<js
   doc.text(`Not Yet Implemented: ${data.countNotYet}  |  Partially Implemented: ${data.countPartial}`, 18, y);
 
   // ═══════════════════════════════════
-  // PAGE 2: AI EXECUTIVE SUMMARY
+  // AI EXECUTIVE SUMMARY
   // ═══════════════════════════════════
   doc.addPage();
   y = addHeader(doc, 'Site Assessment Report', imgs);
