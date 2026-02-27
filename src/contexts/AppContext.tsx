@@ -175,6 +175,12 @@ function reducer(state: AppState, action: Action): AppState {
 
       return { ...state, inspections: updatedInspections, currentInspection: updatedCurrent };
     }
+    case 'UPDATE_INSPECTION_META':
+      if (!state.currentInspection) return state;
+      return {
+        ...state,
+        currentInspection: { ...state.currentInspection, ...action.payload },
+      };
     default:
       return state;
   }
