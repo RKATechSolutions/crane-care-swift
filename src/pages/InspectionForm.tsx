@@ -6,7 +6,8 @@ import { ChecklistItem } from '@/components/ChecklistItem';
 import { SingleSelectItem } from '@/components/SingleSelectItem';
 import { NumericInputItem } from '@/components/NumericInputItem';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
-import { CraneOperationalStatus, InspectionItemResult } from '@/types/inspection';
+import { SuggestQuestionInput } from '@/components/SuggestQuestionInput';
+import { CraneOperationalStatus, InspectionItemResult, SuggestedQuestion } from '@/types/inspection';
 import { Save, CheckCircle, RotateCcw, AlertTriangle, Check } from 'lucide-react';
 
 export default function InspectionForm() {
@@ -101,6 +102,23 @@ export default function InspectionForm() {
     });
     setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
   }, [dispatch]);
+
+  const handleSuggestQuestion = useCallback((sectionId: string, question: string) => {
+    const newQ: SuggestedQuestion = {
+      id: `sq-${Date.now()}`,
+      sectionId,
+      question,
+      suggestedBy: state.currentUser?.name || 'Technician',
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+    };
+    const existing = inspection.suggestedQuestions || [];
+    dispatch({
+      type: 'UPDATE_INSPECTION_META',
+      payload: { suggestedQuestions: [...existing, newQ] },
+    });
+    setTimeout(() => dispatch({ type: 'SAVE_INSPECTION' }), 0);
+  }, [dispatch, inspection.suggestedQuestions, state.currentUser]);
 
   const handleComplete = () => {
     if (defects.length > 0 && !inspection.craneStatus) {
@@ -210,6 +228,20 @@ export default function InspectionForm() {
             />
           );
         })}
+
+        {/* Suggest Question for this section */}
+        {inspection.status !== 'completed' && (
+          <SuggestQuestionInput
+            sectionId={currentSection.id}
+            sectionName={currentSection.name}
+            onSubmit={handleSuggestQuestion}
+            existingSuggestions={
+              (inspection.suggestedQuestions || [])
+                .filter(sq => sq.sectionId === currentSection.id)
+                .map(sq => ({ question: sq.question, status: sq.status }))
+            }
+          />
+        )}
       </div>
 
       {/* Section Navigation */}

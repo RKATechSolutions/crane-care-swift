@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import {
   User, Site, Crane, Inspection, InspectionItemResult,
   InspectionTemplate, CraneOperationalStatus, SiteJobSummary, AdminNote,
-  DefectSeverity, RectificationTimeframe,
+  DefectSeverity, RectificationTimeframe, SuggestedQuestion,
 } from '@/types/inspection';
 import { mockSites, mockTemplate, mockUsers } from '@/data/mockData';
 import { addDays, format } from 'date-fns';
@@ -34,7 +34,8 @@ type Action =
   | { type: 'ADD_ADMIN_NOTE'; payload: AdminNote }
   | { type: 'BACK_TO_SITES' }
   | { type: 'BACK_TO_CRANES' }
-  | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } };
+  | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } }
+  | { type: 'UPDATE_INSPECTION_META'; payload: Partial<Pick<Inspection, 'suggestedQuestions' | 'nextInspectionDate'>> };
 
 const initialState: AppState = {
   currentUser: null,
@@ -174,6 +175,12 @@ function reducer(state: AppState, action: Action): AppState {
 
       return { ...state, inspections: updatedInspections, currentInspection: updatedCurrent };
     }
+    case 'UPDATE_INSPECTION_META':
+      if (!state.currentInspection) return state;
+      return {
+        ...state,
+        currentInspection: { ...state.currentInspection, ...action.payload },
+      };
     default:
       return state;
   }
