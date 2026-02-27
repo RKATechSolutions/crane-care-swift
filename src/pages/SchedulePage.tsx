@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { ScheduleEvent, ScheduleEventType, EVENT_TYPE_CONFIG } from '@/types/schedule';
 import { mockScheduleEvents } from '@/data/mockSchedule';
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Plus, X } from 'lucide-react';
+import { fetchLeaveRequests, LeaveRequest, LEAVE_TYPE_CONFIG } from '@/services/leaveService';
+import LeaveRequestForm from '@/components/LeaveRequestForm';
+import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, Plus, X, Palmtree } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, startOfWeek, endOfWeek, parseISO, isWithinInterval } from 'date-fns';
 
 interface SchedulePageProps {
