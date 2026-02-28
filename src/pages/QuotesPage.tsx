@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { AppHeader } from '@/components/AppHeader';
-import { Send, Clock, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Clock, AlertTriangle, Sparkles, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,11 +23,12 @@ interface Quote {
 
 interface QuotesPageProps {
   onBack: () => void;
+  onCreateQuote?: () => void;
 }
 
 const ESTIMATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-estimate`;
 
-export default function QuotesPage({ onBack }: QuotesPageProps) {
+export default function QuotesPage({ onBack, onCreateQuote }: QuotesPageProps) {
   const [filter, setFilter] = useState<QuoteFilter>('draft');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,6 +141,16 @@ export default function QuotesPage({ onBack }: QuotesPageProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader title="Quotes" subtitle="Manage your pending & sent quotes" onBack={onBack} />
+
+      {/* Create Quote Button */}
+      {onCreateQuote && (
+        <div className="px-4 pt-3">
+          <Button onClick={onCreateQuote} className="w-full gap-2">
+            <Plus className="w-4 h-4" />
+            Create Quote
+          </Button>
+        </div>
+      )}
 
       {/* Overdue reminder banner */}
       {overdueCount > 0 && filter === 'draft' && (
