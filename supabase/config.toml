@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.generate-site-assessment-summary]
 verify_jwt = false
+
+[functions.receipt-ocr]
+verify_jwt = false
+
+[functions.ai-estimate]
+verify_jwt = false

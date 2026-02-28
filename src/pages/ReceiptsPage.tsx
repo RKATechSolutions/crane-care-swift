@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Send, Loader2, X, Receipt, CheckCircle, Clock } from 'lucide-react';
+import { Camera, Send, Loader2, X, Receipt, CheckCircle, Clock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -31,6 +31,7 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
   const [receipts, setReceipts] = useState<ReceiptEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   // New receipt form
   const [photo, setPhoto] = useState<string | null>(null);
@@ -65,10 +66,30 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
     if (!file) return;
     setPhotoFile(file);
     const reader = new FileReader();
-    reader.onload = () => setPhoto(reader.result as string);
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      setPhoto(base64);
+      if (!showForm) setShowForm(true);
+      // Run AI OCR
+      setScanning(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('receipt-ocr', {
+          body: { image_base64: base64 },
+        });
+        if (!error && data) {
+          if (data.merchant_name) setMerchantName(data.merchant_name);
+          if (data.amount != null) setAmount(String(data.amount));
+          if (data.receipt_date) setReceiptDate(data.receipt_date);
+          toast.success('Receipt details extracted');
+        }
+      } catch {
+        // OCR failed silently — user can fill manually
+      } finally {
+        setScanning(false);
+      }
+    };
     reader.readAsDataURL(file);
     e.target.value = '';
-    if (!showForm) setShowForm(true);
   };
 
   const resetForm = () => {
@@ -164,6 +185,12 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
             {photo && (
               <div className="relative">
                 <img src={photo} alt="Receipt" className="w-full rounded-xl max-h-48 object-cover" />
+                {scanning && (
+                  <div className="absolute inset-0 bg-background/60 backdrop-blur-sm rounded-xl flex items-center justify-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+                    <span className="text-sm font-medium text-foreground">Scanning receipt...</span>
+                  </div>
+                )}
                 <button
                   onClick={() => fileRef.current?.click()}
                   className="absolute bottom-2 right-2 bg-background/80 backdrop-blur rounded-lg px-3 py-1 text-xs font-medium"
