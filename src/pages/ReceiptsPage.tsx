@@ -66,10 +66,30 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
     if (!file) return;
     setPhotoFile(file);
     const reader = new FileReader();
-    reader.onload = () => setPhoto(reader.result as string);
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      setPhoto(base64);
+      if (!showForm) setShowForm(true);
+      // Run AI OCR
+      setScanning(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('receipt-ocr', {
+          body: { image_base64: base64 },
+        });
+        if (!error && data) {
+          if (data.merchant_name) setMerchantName(data.merchant_name);
+          if (data.amount != null) setAmount(String(data.amount));
+          if (data.receipt_date) setReceiptDate(data.receipt_date);
+          toast.success('Receipt details extracted');
+        }
+      } catch {
+        // OCR failed silently — user can fill manually
+      } finally {
+        setScanning(false);
+      }
+    };
     reader.readAsDataURL(file);
     e.target.value = '';
-    if (!showForm) setShowForm(true);
   };
 
   const resetForm = () => {
