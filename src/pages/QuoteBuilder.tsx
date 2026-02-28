@@ -242,26 +242,31 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
   const { dispatch } = useApp();
 
   const handlePreviewPdf = async () => {
-    const pdf = await generateQuotePdf({
-      quoteName,
-      quoteNumber: arofloQuoteNumber || 'DRAFT',
-      clientName: clientInfo?.client_name || site.name,
-      clientAddress: clientInfo?.location_address || site.address || '',
-      contactName: clientInfo?.primary_contact_name || '',
-      contactEmail: clientInfo?.primary_contact_email || '',
-      contactPhone: clientInfo?.primary_contact_mobile || '',
-      technicianName: state.currentUser?.name || 'Technician',
-      date: format(new Date(), 'dd/MM/yyyy'),
-      validityDays,
-      lineItems,
-      subtotal,
-      gst,
-      total,
-      notes,
-      collateItems,
-    });
-    const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
-    pdf.save(`${clientNameSafe}_Quote_DRAFT.pdf`);
+    try {
+      const pdf = await generateQuotePdf({
+        quoteName,
+        quoteNumber: arofloQuoteNumber || 'DRAFT',
+        clientName: clientInfo?.client_name || site.name,
+        clientAddress: clientInfo?.location_address || site.address || '',
+        contactName: clientInfo?.primary_contact_name || '',
+        contactEmail: clientInfo?.primary_contact_email || '',
+        contactPhone: clientInfo?.primary_contact_mobile || '',
+        technicianName: state.currentUser?.name || 'Technician',
+        date: format(new Date(), 'dd/MM/yyyy'),
+        validityDays,
+        lineItems,
+        subtotal,
+        gst,
+        total,
+        notes,
+        collateItems,
+      });
+      const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
+      pdf.save(`${clientNameSafe}_Quote_DRAFT.pdf`);
+    } catch (err: any) {
+      console.error('Preview PDF error:', err);
+      toast.error(`Failed to generate PDF: ${err.message}`);
+    }
   };
 
   if (sent) {
