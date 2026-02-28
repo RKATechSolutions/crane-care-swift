@@ -102,6 +102,7 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
               </div>
             </button>
           ))}
+          <ToDoTile onClick={() => onNavigate('todo')} />
         </div>
       </div>
 
