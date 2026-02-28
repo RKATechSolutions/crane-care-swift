@@ -613,9 +613,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
       </div>
 
       <PdfPreviewModal
-        open={!!previewPdfUrl}
-        onClose={() => { if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl); setPreviewPdfUrl(null); setPreviewPdfDoc(null); }}
-        pdfBlobUrl={previewPdfUrl}
+        open={!!previewPdfDoc}
+        onClose={() => setPreviewPdfDoc(null)}
+        pdfDoc={previewPdfDoc}
         onDownload={handleDownloadPreview}
       />
     </div>
