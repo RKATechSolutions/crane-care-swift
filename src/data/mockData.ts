@@ -297,6 +297,66 @@ export const mockTemplateServiceBreakdown: InspectionTemplate = {
   ],
 };
 
+export const mockTemplateCommissioningLoadTest: InspectionTemplate = {
+  id: 'template_commissioning_loadtest_v1',
+  craneType: 'Lifting Equipment',
+  inspectionType: 'Quarterly',
+  version: 1,
+  isActive: true,
+  createdAt: '2026-02-28',
+  sections: [
+    {
+      id: 'clt_details',
+      name: 'Commissioning Details',
+      sortOrder: 0,
+      items: [
+        { id: 'clt_scope', label: 'Scope', sortOrder: 1, type: 'single_select', options: ['New crane commissioning', 'Hoist commissioning', 'Major modification', 'Load test only'], required: true },
+        { id: 'clt_swl', label: 'SWL / Rated Capacity', sortOrder: 2, type: 'numeric' },
+        { id: 'clt_standard', label: 'Design / Testing Standard (if applicable)', sortOrder: 3, type: 'text' },
+      ],
+    },
+    {
+      id: 'clt_prechecks',
+      name: 'Pre-Test Checks',
+      sortOrder: 1,
+      items: [
+        { id: 'clt_installation_ok', label: 'Installation verified (mechanical)', sortOrder: 1 },
+        { id: 'clt_electrical_ok', label: 'Electrical checks completed', sortOrder: 2 },
+        { id: 'clt_signage_ok', label: 'Signage & SWL displayed', sortOrder: 3 },
+        { id: 'clt_safety_ok', label: 'Safety devices operational', sortOrder: 4 },
+      ],
+    },
+    {
+      id: 'clt_loadtest',
+      name: 'Load Test',
+      sortOrder: 2,
+      items: [
+        { id: 'clt_test_load', label: 'Test Load Applied', sortOrder: 1, type: 'numeric' },
+        { id: 'clt_duration', label: 'Duration (minutes)', sortOrder: 2, type: 'numeric' },
+        { id: 'clt_deflection', label: 'Deflection measured (if required)', sortOrder: 3, type: 'text' },
+        { id: 'clt_result', label: 'Test Result', sortOrder: 4, type: 'single_select', options: ['Pass', 'Fail'], required: true },
+      ],
+    },
+    {
+      id: 'clt_photos',
+      name: 'Evidence',
+      sortOrder: 3,
+      items: [
+        { id: 'clt_photos', label: 'Photos (test setup, load, signage, key components)', sortOrder: 1, type: 'photo_required' },
+      ],
+    },
+    {
+      id: 'clt_closeout',
+      name: 'Closeout',
+      sortOrder: 4,
+      items: [
+        { id: 'clt_notes', label: 'Technician Notes', sortOrder: 1, type: 'text' },
+        { id: 'clt_certificate_required', label: 'Certificate Issued?', sortOrder: 2, type: 'single_select', options: ['Yes', 'No'], required: true },
+      ],
+    },
+  ],
+};
+
 export const mockUsers = [
   { id: 'tech-1', name: 'Aaron Harrison', email: 'aaron@rka.com.au', role: 'technician' as const },
   { id: 'tech-2', name: 'Vince Fernandez', email: 'vince@rka.com.au', role: 'technician' as const },
