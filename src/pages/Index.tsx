@@ -13,6 +13,7 @@ import TechReports from './TechReports';
 import TimesheetPage from './TimesheetPage';
 import QuoteBuilder from './QuoteBuilder';
 import QuotesPage from './QuotesPage';
+import ToDoPage from './ToDoPage';
 
 const Index = () => {
   const { state } = useApp();
