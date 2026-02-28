@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { generateQuotePdf } from '@/utils/generateQuotePdf';
+import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 
 export interface QuoteLineItem {
   id: string;
