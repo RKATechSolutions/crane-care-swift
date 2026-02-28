@@ -292,47 +292,79 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
           {/* Requested By (contact cards) */}
           {clientId && (
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Requested By</label>
-              {contacts.length === 0 && !showAddContact && (
-                <p className="text-xs text-muted-foreground mt-1">No contacts for this client.</p>
-              )}
-              <div className="space-y-1.5 mt-1.5">
-                {contacts.map(c => {
-                  const name = c.contact_name || `${c.contact_given_name || ''} ${c.contact_surname || ''}`.trim() || 'Unnamed';
-                  const isSelected = requestedById === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setRequestedById(isSelected ? '' : c.id)}
-                      className={cn(
-                        "w-full text-left rounded-lg border-2 p-2.5 transition-all",
-                        isSelected ? "border-primary bg-primary/10" : "border-border bg-background hover:border-muted-foreground/30"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-foreground">{name}</span>
-                        {isSelected && <Check className="w-4 h-4 text-primary" />}
-                      </div>
-                      {c.contact_position && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{c.contact_position}</p>
-                      )}
-                      <div className="flex flex-wrap gap-3 mt-1">
-                        {c.contact_mobile && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Phone className="w-3 h-3" />{c.contact_mobile}
-                          </span>
-                        )}
-                        {c.contact_email && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Mail className="w-3 h-3" />{c.contact_email}
-                          </span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold text-muted-foreground">Requested By</label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto p-0 text-xs text-primary"
+                  onClick={() => {
+                    setUseManualRequestedBy(prev => !prev);
+                    if (!useManualRequestedBy) setRequestedById('');
+                  }}
+                >
+                  {useManualRequestedBy ? 'Choose from contacts' : 'Use other contact'}
+                </Button>
               </div>
+
+              {!useManualRequestedBy && (
+                <>
+                  {contacts.length === 0 && !showAddContact && (
+                    <p className="text-xs text-muted-foreground mt-1">No saved contacts yet — add one below.</p>
+                  )}
+                  {contacts.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">{contacts.length} contact{contacts.length === 1 ? '' : 's'} available</p>
+                  )}
+
+                  <div className="space-y-1.5 mt-1.5">
+                    {contacts.map(c => {
+                      const name = c.contact_name || `${c.contact_given_name || ''} ${c.contact_surname || ''}`.trim() || 'Unnamed';
+                      const isSelected = requestedById === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => setRequestedById(isSelected ? '' : c.id)}
+                          className={cn(
+                            "w-full text-left rounded-lg border-2 p-2.5 transition-all",
+                            isSelected ? "border-primary bg-primary/10" : "border-border bg-background hover:border-muted-foreground/30"
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-foreground">{name}</span>
+                            {isSelected && <Check className="w-4 h-4 text-primary" />}
+                          </div>
+                          {c.contact_position && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{c.contact_position}</p>
+                          )}
+                          <div className="flex flex-wrap gap-3 mt-1">
+                            {c.contact_mobile && (
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Phone className="w-3 h-3" />{c.contact_mobile}
+                              </span>
+                            )}
+                            {c.contact_email && (
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <Mail className="w-3 h-3" />{c.contact_email}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+
+              {useManualRequestedBy && (
+                <div className="mt-2 border border-border rounded-lg p-3 space-y-2 bg-muted/50">
+                  <p className="text-xs font-semibold text-foreground">Other Contact</p>
+                  <Input placeholder="Name" value={manualRequestedByName} onChange={e => setManualRequestedByName(e.target.value)} />
+                  <Input placeholder="Phone" value={manualRequestedByPhone} onChange={e => setManualRequestedByPhone(e.target.value)} />
+                  <Input placeholder="Email" value={manualRequestedByEmail} onChange={e => setManualRequestedByEmail(e.target.value)} />
+                </div>
+              )}
 
               {/* Add Contact inline */}
               {!showAddContact ? (
@@ -370,6 +402,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
                         if (data) {
                           setContacts(prev => [...prev, data as ClientContact]);
                           setRequestedById(data.id);
+                          setUseManualRequestedBy(false);
                         }
                         setNewContactName(''); setNewContactPhone(''); setNewContactEmail(''); setNewContactPosition('');
                         setShowAddContact(false);
