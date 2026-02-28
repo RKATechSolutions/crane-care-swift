@@ -129,7 +129,7 @@ export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
         ) : displayed.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <CheckCircle className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">{tab === 'open' ? 'No open tasks' : 'No finished tasks yet'}</p>
+            <p className="font-medium">{tab === 'open' ? 'No open jobs' : 'No finished jobs yet'}</p>
           </div>
         ) : (
           displayed.map(task => {
