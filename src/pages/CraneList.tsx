@@ -384,7 +384,6 @@ export default function CraneList() {
 
         {/* Fallback to mock cranes if no DB assets */}
         {!loading && !hasDbAssets && mockCranes.map(crane => {
-          const canInspect = crane.type === 'Single Girder Overhead';
           const existing = getInspectionStatus(crane.id);
 
           return (
@@ -409,26 +408,19 @@ export default function CraneList() {
                   )}
                 </div>
 
-                {canInspect ? (
-                  <button
-                    onClick={() => startInspection(crane)}
-                    className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                      existing?.status === 'completed'
-                        ? 'bg-muted text-foreground'
-                        : existing?.status === 'in_progress'
-                        ? 'bg-rka-orange text-destructive-foreground'
-                        : 'bg-primary text-primary-foreground shadow-lg'
-                    }`}
-                  >
-                    <PlayCircle className="w-5 h-5" />
-                    {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
-                  </button>
-                ) : (
-                  <div className="mt-3 tap-target rounded-xl bg-muted flex items-center justify-center gap-2 text-muted-foreground text-sm">
-                    <Info className="w-4 h-4" />
-                    Inspection form not available yet
-                  </div>
-                )}
+                <button
+                  onClick={() => handleStartInspection(crane)}
+                  className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
+                    existing?.status === 'completed'
+                      ? 'bg-muted text-foreground'
+                      : existing?.status === 'in_progress'
+                      ? 'bg-rka-orange text-destructive-foreground'
+                      : 'bg-primary text-primary-foreground shadow-lg'
+                  }`}
+                >
+                  <PlayCircle className="w-5 h-5" />
+                  {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
+                </button>
               </div>
             </div>
           );
