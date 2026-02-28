@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { Calendar, Users, Package, FileText, LogOut, Clock } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck } from 'lucide-react';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
@@ -47,6 +47,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       title: 'Timesheet',
       desc: 'Log hours & submit for approval',
       color: 'bg-rose-500/10 text-rose-600',
+    },
+    {
+      id: 'quotes',
+      icon: <FileCheck className="w-8 h-8" />,
+      title: 'Quotes',
+      desc: 'View & send pending quotes',
+      color: 'bg-cyan-500/10 text-cyan-600',
     },
   ];
 
