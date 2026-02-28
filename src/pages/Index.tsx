@@ -57,7 +57,7 @@ const Index = () => {
   if (dashboardView === 'quotes') return <QuotesPage onBack={() => setDashboardView(null)} onCreateQuote={() => setQuoteMode({ active: true, fromQuotesPage: true })} onEditQuote={(quote) => {
     // Set site from quote so QuoteBuilder can load
     if (quote.site_name) {
-      dispatch({ type: 'SELECT_SITE', payload: { id: quote.id, name: quote.site_name, address: '', cranes: [] } });
+      dispatch({ type: 'SELECT_SITE', payload: { id: quote.id, name: quote.site_name, address: '', contactName: '', contactPhone: '', cranes: [] } });
     }
     setQuoteMode({ active: true, fromQuotesPage: true, draftQuote: { id: quote.id, client_name: quote.client_name, site_name: quote.site_name, items: quote.items || [], subtotal: quote.subtotal, gst: quote.gst, total: quote.total, quote_number: quote.quote_number } });
   }} />;
