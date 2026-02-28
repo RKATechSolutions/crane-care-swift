@@ -48,7 +48,7 @@ const LABOUR_COST_RATE = 117;
 const LABOUR_SELL_RATE = 195;
 const LABOUR_OT_SELL_RATE = 250;
 
-export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: QuoteBuilderProps) {
+export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, initialNotes }: QuoteBuilderProps) {
   const { state } = useApp();
   const site = state.selectedSite!;
 
