@@ -12,7 +12,8 @@ export interface QuoteLineItem {
   category: 'labour' | 'materials' | 'expenses';
   description: string;
   quantity: number;
-  unitPrice: number;
+  costPrice: number;
+  sellPrice: number;
   gstIncluded: boolean;
 }
 
@@ -83,7 +84,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         category: 'labour' as const,
         description: `${d.craneName} — ${d.itemLabel}: ${d.recommendedAction || d.notes || d.defectType}`,
         quantity: 1,
-        unitPrice: 0,
+        costPrice: 0,
+        sellPrice: 0,
         gstIncluded: false,
       }));
       setLineItems(items);
@@ -96,7 +98,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       category,
       description: '',
       quantity: 1,
-      unitPrice: 0,
+      costPrice: 0,
+      sellPrice: 0,
       gstIncluded: false,
     }]);
   };
@@ -109,7 +112,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
     setLineItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.sellPrice), 0);
+  const totalCost = lineItems.reduce((sum, item) => sum + (item.quantity * item.costPrice), 0);
+  const margin = subtotal - totalCost;
   const gst = subtotal * GST_RATE;
   const total = subtotal + gst;
 
@@ -142,7 +147,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
             category: item.category,
             description: item.description,
             quantity: item.quantity,
-            unitPrice: item.unitPrice,
+            costPrice: item.costPrice,
+            unitPrice: item.sellPrice,
           })),
           defects: prefilledDefects || [],
         },
@@ -303,7 +309,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="text-xs font-semibold text-muted-foreground">Qty</label>
               <input
@@ -316,11 +322,23 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground">Unit Price (ex GST)</label>
+              <label className="text-xs font-semibold text-muted-foreground">Cost (ex GST)</label>
               <input
                 type="number"
-                value={item.unitPrice || ''}
-                onChange={e => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                value={item.costPrice || ''}
+                onChange={e => updateItem(item.id, { costPrice: parseFloat(e.target.value) || 0 })}
+                className="w-full p-2 border border-border rounded-lg bg-background text-sm"
+                min="0"
+                step="0.01"
+                placeholder="$0.00"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Sell (ex GST)</label>
+              <input
+                type="number"
+                value={item.sellPrice || ''}
+                onChange={e => updateItem(item.id, { sellPrice: parseFloat(e.target.value) || 0 })}
                 className="w-full p-2 border border-border rounded-lg bg-background text-sm"
                 min="0"
                 step="0.01"
@@ -328,8 +346,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
               />
             </div>
           </div>
-          <div className="text-right">
-            <span className="text-sm font-bold">${(item.quantity * item.unitPrice).toFixed(2)}</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Margin: ${((item.sellPrice - item.costPrice) * item.quantity).toFixed(2)}</span>
+            <span className="font-bold">${(item.quantity * item.sellPrice).toFixed(2)}</span>
           </div>
         </div>
       ))}
@@ -387,8 +406,16 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         {/* Totals */}
         <div className="px-4 py-4 border-b border-border space-y-2">
           <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Total Cost</span>
+            <span className="font-medium">${totalCost.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal (ex GST)</span>
             <span className="font-bold">${subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Margin</span>
+            <span className={`font-bold ${margin >= 0 ? 'text-green-600' : 'text-destructive'}`}>${margin.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">GST (10%)</span>
