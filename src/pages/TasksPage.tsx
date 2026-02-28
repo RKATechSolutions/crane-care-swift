@@ -29,11 +29,12 @@ interface Task {
 }
 
 const JOB_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-  inspection: { label: 'Inspection', color: 'bg-blue-500/15 text-blue-700' },
-  service: { label: 'Service', color: 'bg-emerald-500/15 text-emerald-700' },
+  crane_inspection: { label: 'Crane Inspection', color: 'bg-blue-500/15 text-blue-700' },
+  lifting_inspection: { label: 'Lifting Inspection', color: 'bg-cyan-500/15 text-cyan-700' },
+  crane_lifting_inspection: { label: 'Crane & Lifting', color: 'bg-indigo-500/15 text-indigo-700' },
+  installation: { label: 'Installation', color: 'bg-purple-500/15 text-purple-700' },
   breakdown: { label: 'Breakdown', color: 'bg-red-500/15 text-red-700' },
-  commissioning: { label: 'Commissioning', color: 'bg-purple-500/15 text-purple-700' },
-  quote: { label: 'Quote', color: 'bg-amber-500/15 text-amber-700' },
+  repair: { label: 'Repair', color: 'bg-amber-500/15 text-amber-700' },
   general: { label: 'General', color: 'bg-muted text-muted-foreground' },
 };
 
