@@ -3,7 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck } from 'lucide-react';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
