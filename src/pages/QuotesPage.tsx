@@ -15,15 +15,19 @@ interface Quote {
   asset_name: string | null;
   site_name: string | null;
   total: number;
+  subtotal: number;
+  gst: number;
   status: string;
   created_at: string;
   sent_at: string | null;
   quote_number: string | null;
+  items: any;
 }
 
 interface QuotesPageProps {
   onBack: () => void;
   onCreateQuote?: () => void;
+  onEditQuote?: (quote: Quote) => void;
 }
 
 const ESTIMATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-estimate`;
