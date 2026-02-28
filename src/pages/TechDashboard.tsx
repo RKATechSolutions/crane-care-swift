@@ -3,7 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import { ToDoTile } from '@/components/ToDoTile';
-import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt } from 'lucide-react';
 
 export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | null;
 
