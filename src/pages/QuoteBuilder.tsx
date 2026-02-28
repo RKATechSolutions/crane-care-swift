@@ -17,6 +17,17 @@ export interface QuoteLineItem {
   gstIncluded: boolean;
 }
 
+export interface DraftQuote {
+  id: string;
+  client_name: string;
+  site_name: string | null;
+  items: QuoteLineItem[];
+  subtotal: number;
+  gst: number;
+  total: number;
+  quote_number: string | null;
+}
+
 interface QuoteBuilderProps {
   onBack: () => void;
   prefilledDefects?: Array<{
@@ -27,6 +38,7 @@ interface QuoteBuilderProps {
     notes: string;
     recommendedAction: string;
   }>;
+  draftQuote?: DraftQuote;
 }
 
 const GST_RATE = 0.10;
@@ -35,19 +47,20 @@ const LABOUR_COST_RATE = 117;
 const LABOUR_SELL_RATE = 195;
 const LABOUR_OT_SELL_RATE = 250;
 
-export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderProps) {
+export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: QuoteBuilderProps) {
   const { state } = useApp();
   const site = state.selectedSite!;
 
+  const [draftId, setDraftId] = useState<string | null>(draftQuote?.id || null);
   const [quoteName, setQuoteName] = useState('');
   const [validityDays, setValidityDays] = useState(30);
   const [notes, setNotes] = useState('');
-  const [lineItems, setLineItems] = useState<QuoteLineItem[]>([]);
+  const [lineItems, setLineItems] = useState<QuoteLineItem[]>(draftQuote?.items || []);
   const [collateItems, setCollateItems] = useState(false);
   const [sending, setSending] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [sent, setSent] = useState(false);
-  const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(null);
+  const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(draftQuote?.quote_number || null);
 
   // Client info
   const [clientInfo, setClientInfo] = useState<any>(null);
@@ -310,7 +323,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
 
     setSavingDraft(true);
     try {
-      const { error } = await supabase.from('quotes').insert({
+      const quoteData = {
         client_name: clientInfo?.client_name || site.name,
         site_name: site.name,
         technician_id: state.currentUser?.id || 'unknown',
@@ -320,10 +333,20 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         total,
         status: 'not_sent',
         items: lineItems as any,
-      });
+      };
 
-      if (error) throw error;
-      toast.success('Quote draft saved');
+      if (draftId) {
+        // Update existing draft
+        const { error } = await supabase.from('quotes').update(quoteData).eq('id', draftId);
+        if (error) throw error;
+        toast.success('Draft updated');
+      } else {
+        // Insert new draft
+        const { data, error } = await supabase.from('quotes').insert(quoteData).select('id').single();
+        if (error) throw error;
+        if (data) setDraftId(data.id);
+        toast.success('Quote draft saved');
+      }
     } catch (err: any) {
       toast.error(`Failed to save draft: ${err.message}`);
     } finally {

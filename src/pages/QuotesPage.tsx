@@ -15,20 +15,24 @@ interface Quote {
   asset_name: string | null;
   site_name: string | null;
   total: number;
+  subtotal: number;
+  gst: number;
   status: string;
   created_at: string;
   sent_at: string | null;
   quote_number: string | null;
+  items: any;
 }
 
 interface QuotesPageProps {
   onBack: () => void;
   onCreateQuote?: () => void;
+  onEditQuote?: (quote: Quote) => void;
 }
 
 const ESTIMATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-estimate`;
 
-export default function QuotesPage({ onBack, onCreateQuote }: QuotesPageProps) {
+export default function QuotesPage({ onBack, onCreateQuote, onEditQuote }: QuotesPageProps) {
   const [filter, setFilter] = useState<QuoteFilter>('draft');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +49,7 @@ export default function QuotesPage({ onBack, onCreateQuote }: QuotesPageProps) {
     async function fetchQuotes() {
       const { data, error } = await supabase
         .from('quotes')
-        .select('id, client_name, asset_name, site_name, total, status, created_at, sent_at, quote_number')
+        .select('id, client_name, asset_name, site_name, total, subtotal, gst, status, created_at, sent_at, quote_number, items')
         .order('created_at', { ascending: false });
       if (!error && data) setQuotes(data);
       setLoading(false);
@@ -244,7 +248,10 @@ export default function QuotesPage({ onBack, onCreateQuote }: QuotesPageProps) {
           filtered.map(quote => (
             <div
               key={quote.id}
+              onClick={() => quote.status !== 'sent' && onEditQuote?.(quote)}
               className={`bg-muted rounded-xl p-4 flex items-center justify-between ${
+                quote.status !== 'sent' ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''
+              } ${
                 quote.status !== 'sent' && isOverdue(quote.created_at) ? 'ring-2 ring-amber-500/40' : ''
               }`}
             >
