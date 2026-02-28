@@ -229,12 +229,14 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
             </div>
           </div>
 
-          {/* Title preview */}
+          {/* Editable Job Title */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground">Job Title</label>
-            <div className="bg-muted rounded-md px-3 py-2 text-sm text-foreground min-h-[2.5rem] flex items-center">
-              {autoTitle || <span className="text-muted-foreground">Select client & add description below</span>}
-            </div>
+            <label className="text-xs font-semibold text-muted-foreground">Job Title *</label>
+            <Input
+              value={jobTitle}
+              onChange={e => setJobTitle(e.target.value)}
+              placeholder="e.g. Client Name — Repair of Crane 1"
+            />
           </div>
 
           {/* Description */}
