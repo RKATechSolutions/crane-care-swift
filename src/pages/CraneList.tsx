@@ -329,7 +329,6 @@ export default function CraneList() {
             </div>
             {assets.map(asset => {
               const crane = assetToCrane(asset);
-              const canInspect = asset.class_name === 'Overhead Crane' || LIFTING_EQUIPMENT_CLASSES.some(c => asset.class_name.toLowerCase().includes(c.toLowerCase()));
               const existing = getInspectionStatus(crane.id);
 
               return (
@@ -363,21 +362,19 @@ export default function CraneList() {
                       )}
                     </div>
 
-                    {canInspect && (
-                      <button
-                        onClick={() => startInspection(crane)}
-                        className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                          existing?.status === 'completed'
-                            ? 'bg-muted text-foreground'
-                            : existing?.status === 'in_progress'
-                            ? 'bg-rka-orange text-destructive-foreground'
-                            : 'bg-primary text-primary-foreground shadow-lg'
-                        }`}
-                      >
-                        <PlayCircle className="w-5 h-5" />
-                        {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleStartInspection(crane)}
+                      className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
+                        existing?.status === 'completed'
+                          ? 'bg-muted text-foreground'
+                          : existing?.status === 'in_progress'
+                          ? 'bg-rka-orange text-destructive-foreground'
+                          : 'bg-primary text-primary-foreground shadow-lg'
+                      }`}
+                    >
+                      <PlayCircle className="w-5 h-5" />
+                      {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
+                    </button>
                   </div>
                 </div>
               );
