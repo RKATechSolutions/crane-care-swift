@@ -55,7 +55,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
   const [draftId, setDraftId] = useState<string | null>(draftQuote?.id || null);
   const [quoteName, setQuoteName] = useState('');
   const [validityDays, setValidityDays] = useState(30);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(initialNotes || '');
   const [lineItems, setLineItems] = useState<QuoteLineItem[]>(draftQuote?.items || []);
   const [collateItems, setCollateItems] = useState(false);
   const [sending, setSending] = useState(false);
