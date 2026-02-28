@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
+import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck } from 'lucide-react';
 
 export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | null;
@@ -65,6 +66,8 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       />
 
       <div className="flex-1 p-4 space-y-4">
+        <FiveStarGoalBanner />
+
         {/* Quick Stats */}
         <div className="flex gap-3">
           <div className="flex-1 bg-muted rounded-xl p-3 text-center">

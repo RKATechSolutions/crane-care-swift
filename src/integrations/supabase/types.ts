@@ -399,6 +399,66 @@ export type Database = {
         }
         Relationships: []
       }
+      quotes: {
+        Row: {
+          asset_id: string | null
+          asset_name: string | null
+          client_name: string
+          created_at: string
+          gst: number
+          id: string
+          items: Json
+          quote_number: string | null
+          reminder_sent: boolean
+          sent_at: string | null
+          site_name: string | null
+          status: string
+          subtotal: number
+          technician_id: string
+          technician_name: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          asset_name?: string | null
+          client_name: string
+          created_at?: string
+          gst?: number
+          id?: string
+          items?: Json
+          quote_number?: string | null
+          reminder_sent?: boolean
+          sent_at?: string | null
+          site_name?: string | null
+          status?: string
+          subtotal?: number
+          technician_id: string
+          technician_name: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          asset_name?: string | null
+          client_name?: string
+          created_at?: string
+          gst?: number
+          id?: string
+          items?: Json
+          quote_number?: string | null
+          reminder_sent?: boolean
+          sent_at?: string | null
+          site_name?: string | null
+          status?: string
+          subtotal?: number
+          technician_id?: string
+          technician_name?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_assessments: {
         Row: {
           ai_executive_summary: string | null
@@ -496,6 +556,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      star_ratings: {
+        Row: {
+          asset_name: string | null
+          client_name: string
+          created_at: string
+          id: string
+          inspection_id: string | null
+          rating: number
+          site_name: string | null
+          technician_id: string
+          technician_name: string
+        }
+        Insert: {
+          asset_name?: string | null
+          client_name: string
+          created_at?: string
+          id?: string
+          inspection_id?: string | null
+          rating: number
+          site_name?: string | null
+          technician_id: string
+          technician_name: string
+        }
+        Update: {
+          asset_name?: string | null
+          client_name?: string
+          created_at?: string
+          id?: string
+          inspection_id?: string | null
+          rating?: number
+          site_name?: string | null
+          technician_id?: string
+          technician_name?: string
+        }
+        Relationships: []
       }
       time_entries: {
         Row: {
