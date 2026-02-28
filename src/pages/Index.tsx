@@ -11,13 +11,20 @@ import TechDashboard, { DashboardView } from './TechDashboard';
 import SchedulePage from './SchedulePage';
 import TechReports from './TechReports';
 import TimesheetPage from './TimesheetPage';
+import QuoteBuilder from './QuoteBuilder';
 
 const Index = () => {
   const { state } = useApp();
   const [dashboardView, setDashboardView] = useState<DashboardView>(null);
+  const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[] }>({ active: false });
 
   if (!state.currentUser) return <Login />;
   if (state.currentUser.role === 'admin') return <AdminDashboard />;
+
+  // Quote builder
+  if (quoteMode.active && state.selectedSite) {
+    return <QuoteBuilder onBack={() => setQuoteMode({ active: false })} prefilledDefects={quoteMode.defects} />;
+  }
 
   // Active inspection takes priority
   if (state.currentInspection) {
@@ -25,7 +32,9 @@ const Index = () => {
     return <InspectionForm />;
   }
 
-  if (state.selectedCrane?.id === '__site_summary__') return <SiteJobSummary />;
+  if (state.selectedCrane?.id === '__site_summary__') {
+    return <SiteJobSummary onCreateQuote={(defects) => setQuoteMode({ active: true, defects })} />;
+  }
 
   if (state.selectedSite && (dashboardView === 'clients' || dashboardView === 'assets')) {
     return <CraneList />;
