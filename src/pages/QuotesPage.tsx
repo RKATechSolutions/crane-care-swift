@@ -28,6 +28,7 @@ interface QuotesPageProps {
   onBack: () => void;
   onCreateQuote?: () => void;
   onEditQuote?: (quote: Quote) => void;
+  onPushEstimateToDraft?: (description: string, clientName: string, assetName: string) => void;
 }
 
 const ESTIMATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-estimate`;
