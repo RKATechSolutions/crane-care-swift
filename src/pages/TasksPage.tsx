@@ -93,7 +93,7 @@ export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader title="Tasks" subtitle={`${openTasks.length} open · ${finishedTasks.length} finished`} onBack={onBack} />
+      <AppHeader title="Jobs" subtitle={`${openTasks.length} open · ${finishedTasks.length} finished`} onBack={onBack} />
 
       {/* Create button */}
       <div className="px-4 py-3">
