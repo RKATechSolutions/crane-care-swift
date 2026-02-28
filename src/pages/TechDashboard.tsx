@@ -3,9 +3,9 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import { ToDoTile } from '@/components/ToDoTile';
-import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt } from 'lucide-react';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
@@ -56,6 +56,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       title: 'Quotes',
       desc: 'View & send pending quotes',
       color: 'bg-cyan-500/10 text-cyan-600',
+    },
+    {
+      id: 'receipts',
+      icon: <Receipt className="w-8 h-8" />,
+      title: 'Receipts',
+      desc: 'Send receipts straight to Xero',
+      color: 'bg-teal-500/10 text-teal-600',
     },
   ];
 
