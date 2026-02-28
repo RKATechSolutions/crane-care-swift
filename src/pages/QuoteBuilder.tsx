@@ -89,8 +89,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         category: 'labour' as const,
         description: `${d.craneName} — ${d.itemLabel}: ${d.recommendedAction || d.notes || d.defectType}`,
         quantity: 1,
-        costPrice: 0,
-        sellPrice: 0,
+        costPrice: LABOUR_COST_RATE,
+        sellPrice: LABOUR_SELL_RATE,
         gstIncluded: false,
       }));
       setLineItems(items);
