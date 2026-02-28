@@ -5,7 +5,7 @@ import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import { ToDoTile } from '@/components/ToDoTile';
 import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench } from 'lucide-react';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | 'job-detail' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
@@ -67,7 +67,7 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
     {
       id: 'tasks',
       icon: <Wrench className="w-8 h-8" />,
-      title: 'Tasks',
+      title: 'Jobs',
       desc: 'Create & manage jobs',
       color: 'bg-indigo-500/10 text-indigo-600',
     },

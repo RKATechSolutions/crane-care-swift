@@ -9,6 +9,7 @@ import { CreateJobTaskModal } from '@/components/CreateJobTaskModal';
 
 interface TasksPageProps {
   onBack: () => void;
+  onOpenJob?: (jobId: string) => void;
 }
 
 interface Task {
@@ -38,7 +39,7 @@ const JOB_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   general: { label: 'General', color: 'bg-muted text-muted-foreground' },
 };
 
-export default function TasksPage({ onBack }: TasksPageProps) {
+export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'open' | 'finished'>('open');
@@ -92,12 +93,12 @@ export default function TasksPage({ onBack }: TasksPageProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader title="Tasks" subtitle={`${openTasks.length} open · ${finishedTasks.length} finished`} onBack={onBack} />
+      <AppHeader title="Jobs" subtitle={`${openTasks.length} open · ${finishedTasks.length} finished`} onBack={onBack} />
 
       {/* Create button */}
       <div className="px-4 py-3">
         <Button onClick={() => setShowCreate(true)} className="w-full gap-2">
-          <Plus className="w-4 h-4" /> Create Task
+          <Plus className="w-4 h-4" /> Create Job
         </Button>
       </div>
 
@@ -128,13 +129,13 @@ export default function TasksPage({ onBack }: TasksPageProps) {
         ) : displayed.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <CheckCircle className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">{tab === 'open' ? 'No open tasks' : 'No finished tasks yet'}</p>
+            <p className="font-medium">{tab === 'open' ? 'No open jobs' : 'No finished jobs yet'}</p>
           </div>
         ) : (
           displayed.map(task => {
             const jobCfg = JOB_TYPE_CONFIG[task.job_type || 'general'] || JOB_TYPE_CONFIG.general;
             return (
-              <div key={task.id} className={`bg-muted rounded-xl p-4 space-y-2 ${task.status === 'completed' ? 'opacity-70' : ''}`}>
+              <div key={task.id} onClick={() => onOpenJob?.(task.id)} className={`bg-muted rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-all ${task.status === 'completed' ? 'opacity-70' : ''}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-foreground">{task.title}</p>
