@@ -185,6 +185,12 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
             {photo && (
               <div className="relative">
                 <img src={photo} alt="Receipt" className="w-full rounded-xl max-h-48 object-cover" />
+                {scanning && (
+                  <div className="absolute inset-0 bg-background/60 backdrop-blur-sm rounded-xl flex items-center justify-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+                    <span className="text-sm font-medium text-foreground">Scanning receipt...</span>
+                  </div>
+                )}
                 <button
                   onClick={() => fileRef.current?.click()}
                   className="absolute bottom-2 right-2 bg-background/80 backdrop-blur rounded-lg px-3 py-1 text-xs font-medium"
