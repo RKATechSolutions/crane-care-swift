@@ -248,6 +248,21 @@ export default function CraneList() {
     return acc;
   }, {} as Record<string, DbAsset[]>);
 
+  // Show DB-driven inspection form
+  if (activeDbForm) {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+    return (
+      <DbInspectionForm
+        formId={activeDbForm.formId}
+        assetName={activeDbForm.crane.name}
+        assetId={activeDbForm.assetId}
+        clientId={clientId}
+        siteName={site.name}
+        onBack={() => setActiveDbForm(null)}
+      />
+    );
+  }
+
   // Show assessment form if selected
   if (showAssessment) {
     const refreshAssessment = async () => {
