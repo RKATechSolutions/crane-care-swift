@@ -314,6 +314,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
     } catch (err: any) {
       console.error('Preview PDF error:', err);
       toast.error(`Failed to generate PDF: ${err.message}`);
+    } finally {
+      setPreviewingPdf(false);
     }
   };
 
