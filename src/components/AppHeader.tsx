@@ -7,9 +7,10 @@ interface AppHeaderProps {
   onBack?: () => void;
   onNoteToAdmin?: () => void;
   unsafeBanner?: boolean;
+  logoOnly?: boolean;
 }
 
-export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner, logoOnly }: AppHeaderProps) {
   return (
     <div className="sticky top-0 z-50">
       {unsafeBanner && (
