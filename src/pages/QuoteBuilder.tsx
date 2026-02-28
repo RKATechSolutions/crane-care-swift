@@ -415,6 +415,12 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
 
         {/* Totals */}
         <div className="px-4 py-4 border-b border-border space-y-2">
+          {/* Rate reference */}
+          <div className="bg-muted rounded-lg p-2 mb-1">
+            <p className="text-[10px] text-muted-foreground">
+              Labour rates — Cost: ${LABOUR_COST_RATE}/hr · Sell: ${LABOUR_SELL_RATE}/hr · OT Sell: ${LABOUR_OT_SELL_RATE}/hr
+            </p>
+          </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Total Cost</span>
             <span className="font-medium">${totalCost.toFixed(2)}</span>
@@ -424,8 +430,15 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
             <span className="font-bold">${subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Margin</span>
+            <span className="text-muted-foreground">Margin ($)</span>
             <span className={`font-bold ${margin >= 0 ? 'text-green-600' : 'text-destructive'}`}>${margin.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm items-center">
+            <span className="text-muted-foreground">GP Margin (target {GP_TARGET * 100}%)</span>
+            <span className={`font-black text-base ${gpOnTarget ? 'text-green-600' : 'text-destructive'}`}>
+              {grossProfit.toFixed(1)}%
+              {gpOnTarget ? ' ✓' : ' ⚠️'}
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">GST (10%)</span>
