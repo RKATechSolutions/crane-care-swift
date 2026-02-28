@@ -227,25 +227,101 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
             </div>
           )}
 
-          {/* Requested By (contact) */}
+          {/* Requested By (contact cards) */}
           {clientId && (
             <div>
               <label className="text-xs font-semibold text-muted-foreground">Requested By</label>
-              <Select value={requestedById} onValueChange={setRequestedById}>
-                <SelectTrigger><SelectValue placeholder="Select contact" /></SelectTrigger>
-                <SelectContent>
-                  {contacts.length === 0 ? (
-                    <SelectItem value="__none" disabled>No contacts found</SelectItem>
-                  ) : (
-                    contacts.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.contact_name || `${c.contact_given_name || ''} ${c.contact_surname || ''}`.trim() || 'Unnamed'}
-                        {c.contact_position ? ` (${c.contact_position})` : ''}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              {contacts.length === 0 && !showAddContact && (
+                <p className="text-xs text-muted-foreground mt-1">No contacts for this client.</p>
+              )}
+              <div className="space-y-1.5 mt-1.5">
+                {contacts.map(c => {
+                  const name = c.contact_name || `${c.contact_given_name || ''} ${c.contact_surname || ''}`.trim() || 'Unnamed';
+                  const isSelected = requestedById === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setRequestedById(isSelected ? '' : c.id)}
+                      className={cn(
+                        "w-full text-left rounded-lg border-2 p-2.5 transition-all",
+                        isSelected ? "border-primary bg-primary/10" : "border-border bg-background hover:border-muted-foreground/30"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-foreground">{name}</span>
+                        {isSelected && <Check className="w-4 h-4 text-primary" />}
+                      </div>
+                      {c.contact_position && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{c.contact_position}</p>
+                      )}
+                      <div className="flex flex-wrap gap-3 mt-1">
+                        {c.contact_mobile && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Phone className="w-3 h-3" />{c.contact_mobile}
+                          </span>
+                        )}
+                        {c.contact_email && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Mail className="w-3 h-3" />{c.contact_email}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Add Contact inline */}
+              {!showAddContact ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 text-xs text-primary"
+                  onClick={() => setShowAddContact(true)}
+                >
+                  + Add Contact
+                </Button>
+              ) : (
+                <div className="mt-2 border border-border rounded-lg p-3 space-y-2 bg-muted/50">
+                  <p className="text-xs font-semibold text-foreground">New Contact</p>
+                  <Input placeholder="Name *" value={newContactName} onChange={e => setNewContactName(e.target.value)} />
+                  <Input placeholder="Phone" value={newContactPhone} onChange={e => setNewContactPhone(e.target.value)} />
+                  <Input placeholder="Email" value={newContactEmail} onChange={e => setNewContactEmail(e.target.value)} />
+                  <Input placeholder="Position" value={newContactPosition} onChange={e => setNewContactPosition(e.target.value)} />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      disabled={!newContactName.trim() || savingContact}
+                      onClick={async () => {
+                        setSavingContact(true);
+                        const { data, error } = await supabase.from('client_contacts').insert({
+                          client_id: clientId,
+                          contact_name: newContactName.trim(),
+                          contact_mobile: newContactPhone.trim() || null,
+                          contact_email: newContactEmail.trim() || null,
+                          contact_position: newContactPosition.trim() || null,
+                        }).select().single();
+                        setSavingContact(false);
+                        if (error) { toast.error('Failed to add contact'); return; }
+                        if (data) {
+                          setContacts(prev => [...prev, data as ClientContact]);
+                          setRequestedById(data.id);
+                        }
+                        setNewContactName(''); setNewContactPhone(''); setNewContactEmail(''); setNewContactPosition('');
+                        setShowAddContact(false);
+                        toast.success('Contact added');
+                      }}
+                    >
+                      {savingContact ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setShowAddContact(false); setNewContactName(''); setNewContactPhone(''); setNewContactEmail(''); setNewContactPosition(''); }}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
