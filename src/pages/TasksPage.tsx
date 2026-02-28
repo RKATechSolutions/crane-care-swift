@@ -98,7 +98,7 @@ export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
       {/* Create button */}
       <div className="px-4 py-3">
         <Button onClick={() => setShowCreate(true)} className="w-full gap-2">
-          <Plus className="w-4 h-4" /> Create Task
+          <Plus className="w-4 h-4" /> Create Job
         </Button>
       </div>
 
