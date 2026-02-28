@@ -31,6 +31,7 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
   const [receipts, setReceipts] = useState<ReceiptEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   // New receipt form
   const [photo, setPhoto] = useState<string | null>(null);
