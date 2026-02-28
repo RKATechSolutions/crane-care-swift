@@ -279,7 +279,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         collateItems,
       });
       const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
-      pdf.save(`${clientNameSafe}_Quote_DRAFT.pdf`);
+      const filename = `${clientNameSafe}_Quote_DRAFT.pdf`;
+      downloadPdf(pdf, filename);
+      toast.success('Draft PDF downloaded');
     } catch (err: any) {
       console.error('Preview PDF error:', err);
       toast.error(`Failed to generate PDF: ${err.message}`);
