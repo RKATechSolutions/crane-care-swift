@@ -14,7 +14,11 @@ import { FileText } from 'lucide-react';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
-export default function SiteJobSummary() {
+interface SiteJobSummaryProps {
+  onCreateQuote?: (defects: any[]) => void;
+}
+
+export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   const { state, dispatch } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
   const site = state.selectedSite!;
