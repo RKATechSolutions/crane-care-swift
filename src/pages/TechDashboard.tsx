@@ -48,6 +48,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       desc: 'Log hours & submit for approval',
       color: 'bg-rose-500/10 text-rose-600',
     },
+    {
+      id: 'quotes',
+      icon: <FileCheck className="w-8 h-8" />,
+      title: 'Quotes',
+      desc: 'View & send pending quotes',
+      color: 'bg-cyan-500/10 text-cyan-600',
+    },
   ];
 
   return (
