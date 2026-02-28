@@ -52,7 +52,7 @@ const Index = () => {
   }
 
   if (dashboardView === 'schedule') return <SchedulePage onBack={() => setDashboardView(null)} />;
-  if (dashboardView === 'clients' || dashboardView === 'assets') return <Sites />;
+  if (dashboardView === 'clients' || dashboardView === 'assets') return <Sites onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'reports') return <TechReports onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'timesheet') return <TimesheetPage onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'quotes') return <QuotesPage onBack={() => setDashboardView(null)} onCreateQuote={() => setQuoteMode({ active: true, fromQuotesPage: true })} onEditQuote={(quote) => {
