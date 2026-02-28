@@ -37,6 +37,7 @@ export default function CraneList() {
   const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
   const [showAssessment, setShowAssessment] = useState<null | { type: 'Initial Site Baseline' | '12-Month Review'; existingId?: string }>(null);
   const [initialAssessment, setInitialAssessment] = useState<{ id: string; status: string } | null>(null);
+  const [templatePickerCrane, setTemplatePickerCrane] = useState<Crane | null>(null);
   const site = state.selectedSite;
 
   // Fetch existing site assessments
