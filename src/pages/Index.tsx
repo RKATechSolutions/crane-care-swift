@@ -16,7 +16,7 @@ import QuotesPage from './QuotesPage';
 import ToDoPage from './ToDoPage';
 
 const Index = () => {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const [dashboardView, setDashboardView] = useState<DashboardView>(null);
   const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[]; fromQuotesPage?: boolean; draftQuote?: any }>({ active: false });
 
