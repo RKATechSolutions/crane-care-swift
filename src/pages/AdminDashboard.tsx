@@ -1,5 +1,6 @@
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
+import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import FormBuilder from '@/components/FormBuilder';
 import AdminCustomisation from '@/components/AdminCustomisation';
 import AdminSchedule from '@/components/AdminSchedule';

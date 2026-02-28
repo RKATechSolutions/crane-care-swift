@@ -66,6 +66,8 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       />
 
       <div className="flex-1 p-4 space-y-4">
+        <FiveStarGoalBanner />
+
         {/* Quick Stats */}
         <div className="flex gap-3">
           <div className="flex-1 bg-muted rounded-xl p-3 text-center">
