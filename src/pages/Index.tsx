@@ -12,6 +12,7 @@ import SchedulePage from './SchedulePage';
 import TechReports from './TechReports';
 import TimesheetPage from './TimesheetPage';
 import QuoteBuilder from './QuoteBuilder';
+import QuotesPage from './QuotesPage';
 
 const Index = () => {
   const { state } = useApp();
