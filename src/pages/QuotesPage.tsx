@@ -236,6 +236,15 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
                 <div className="prose prose-sm max-w-none text-foreground text-sm">
                   <ReactMarkdown>{estimateResult}</ReactMarkdown>
                 </div>
+                {onPushEstimateToDraft && !estimating && (
+                  <Button
+                    onClick={() => onPushEstimateToDraft(estimateResult, estimateClient, estimateAsset)}
+                    className="w-full mt-4 gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Push to Draft Quote
+                  </Button>
+                )}
               </div>
             )}
           </div>
