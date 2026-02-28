@@ -123,11 +123,51 @@ export default function SiteJobSummary() {
   const handleSaveDefects = () => {
     setDefectsSaved(true);
     setDefectsExpanded(false);
-    // Scroll to next inspection date section
     setTimeout(() => {
       const el = document.getElementById('next-inspection-date');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
+  };
+
+  const quoteNowDefects = allDefects.filter(d => d.item.defect?.quoteStatus === 'Quote Now');
+
+  const handleSendToAroflo = async () => {
+    if (quoteNowDefects.length === 0) {
+      toast.error('No defects marked as "Quote Now"');
+      return;
+    }
+    setSendingToAroflo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-aroflo-quote', {
+        body: {
+          clientName: clientInfo?.client_name || site.name,
+          siteName: site.name,
+          siteAddress: clientInfo?.location_address || site.address,
+          technicianName: state.currentUser?.name || 'Technician',
+          jobDate: format(new Date(), 'yyyy-MM-dd'),
+          defects: quoteNowDefects.map(d => ({
+            itemLabel: d.itemLabel,
+            craneName: d.crane?.name || 'Unknown',
+            severity: d.item.defect!.severity,
+            defectType: d.item.defect!.defectType,
+            rectificationTimeframe: d.item.defect!.rectificationTimeframe,
+            notes: d.item.defect!.notes || '',
+            recommendedAction: d.item.defect!.recommendedAction || '',
+          })),
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Unknown error');
+
+      setArofloQuoteSent(true);
+      toast.success(data.message || 'Draft quote created in AroFlo');
+    } catch (err: any) {
+      console.error('AroFlo quote error:', err);
+      toast.error(`Failed to create AroFlo quote: ${err.message}`);
+    } finally {
+      setSendingToAroflo(false);
+    }
   };
 
   const buildSummaryPayload = () => ({
