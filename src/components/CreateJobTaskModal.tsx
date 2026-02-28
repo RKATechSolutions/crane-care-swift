@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
-import { X, Phone, Mail, User as UserIcon } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, Phone, Mail, User as UserIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { mockUsers } from '@/data/mockData';
@@ -47,6 +50,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   const { state } = useApp();
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
+  const [clientOpen, setClientOpen] = useState(false);
   const [jobType, setJobType] = useState('crane_inspection');
   const [assignedToId, setAssignedToId] = useState('');
   const [priority, setPriority] = useState('normal');
@@ -133,7 +137,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   };
 
   const resetForm = () => {
-    setDescription(''); setClientId(''); setJobType('crane_inspection'); setJobTitle('');
+    setDescription(''); setClientId(''); setClientOpen(false); setJobType('crane_inspection'); setJobTitle('');
     setAssignedToId(''); setPriority('normal'); setScheduledDate('');
     setStartTime(''); setEndTime(''); setRequestedById('');
   };
@@ -152,14 +156,42 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
           {/* Client (top) */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Client *</label>
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-              <SelectContent>
-                {clients.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.client_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={clientOpen} onOpenChange={setClientOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={clientOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedClient ? selectedClient.client_name : "Search client..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Type to search..." />
+                  <CommandList>
+                    <CommandEmpty>No client found.</CommandEmpty>
+                    <CommandGroup>
+                      {clients.map(c => (
+                        <CommandItem
+                          key={c.id}
+                          value={c.client_name}
+                          onSelect={() => {
+                            setClientId(c.id);
+                            setClientOpen(false);
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", clientId === c.id ? "opacity-100" : "opacity-0")} />
+                          {c.client_name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Client contact info card */}
