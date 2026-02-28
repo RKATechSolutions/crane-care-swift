@@ -145,7 +145,7 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader title="Quotes" subtitle="Manage your pending & sent quotes" onBack={onBack} />
+      <AppHeader title="Quotes" onBack={onBack} logoOnly />
 
       {/* Create Quote Button */}
       {onCreateQuote && (
