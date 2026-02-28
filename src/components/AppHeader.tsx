@@ -7,9 +7,10 @@ interface AppHeaderProps {
   onBack?: () => void;
   onNoteToAdmin?: () => void;
   unsafeBanner?: boolean;
+  logoOnly?: boolean;
 }
 
-export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner, logoOnly }: AppHeaderProps) {
   return (
     <div className="sticky top-0 z-50">
       {unsafeBanner && (
@@ -30,10 +31,12 @@ export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3">
             <img src={rkaLogo} alt="RKA Industrial Solutions" className="h-8 object-contain flex-shrink-0" />
-            <div className="min-w-0">
-              <h1 className="text-lg font-bold leading-tight truncate">{title}</h1>
-              {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
-            </div>
+            {!logoOnly && (
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold leading-tight truncate">{title}</h1>
+                {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
+              </div>
+            )}
           </div>
         </div>
         {onNoteToAdmin && (
