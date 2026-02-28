@@ -15,6 +15,7 @@ import QuoteBuilder from './QuoteBuilder';
 import QuotesPage from './QuotesPage';
 import ToDoPage from './ToDoPage';
 import ReceiptsPage from './ReceiptsPage';
+import TasksPage from './TasksPage';
 
 const Index = () => {
   const { state, dispatch } = useApp();
