@@ -339,6 +339,235 @@ export type Database = {
         }
         Relationships: []
       }
+      db_inspections: {
+        Row: {
+          ai_12_month_plan: string | null
+          ai_summary: string | null
+          asset_id: string | null
+          asset_name: string | null
+          client_id: string | null
+          crane_status: string | null
+          created_at: string
+          customer_name: string | null
+          customer_signature: string | null
+          form_id: string
+          id: string
+          inspection_date: string
+          inspection_type: string
+          site_name: string | null
+          status: string
+          technician_id: string
+          technician_name: string
+          technician_signature: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_12_month_plan?: string | null
+          ai_summary?: string | null
+          asset_id?: string | null
+          asset_name?: string | null
+          client_id?: string | null
+          crane_status?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_signature?: string | null
+          form_id: string
+          id?: string
+          inspection_date?: string
+          inspection_type?: string
+          site_name?: string | null
+          status?: string
+          technician_id: string
+          technician_name: string
+          technician_signature?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_12_month_plan?: string | null
+          ai_summary?: string | null
+          asset_id?: string | null
+          asset_name?: string | null
+          client_id?: string | null
+          crane_status?: string | null
+          created_at?: string
+          customer_name?: string | null
+          customer_signature?: string | null
+          form_id?: string
+          id?: string
+          inspection_date?: string
+          inspection_type?: string
+          site_name?: string | null
+          status?: string
+          technician_id?: string
+          technician_name?: string
+          technician_signature?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "db_inspections_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "db_inspections_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "db_inspections_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
+            referencedColumns: ["form_id"]
+          },
+        ]
+      }
+      form_template_questions: {
+        Row: {
+          conditional_rule: string | null
+          created_at: string
+          form_id: string
+          id: string
+          override_help_text: string | null
+          override_sort_order: number | null
+          override_standard_ref: string | null
+          question_id: string
+          required: boolean
+          section_override: string | null
+        }
+        Insert: {
+          conditional_rule?: string | null
+          created_at?: string
+          form_id: string
+          id?: string
+          override_help_text?: string | null
+          override_sort_order?: number | null
+          override_standard_ref?: string | null
+          question_id: string
+          required?: boolean
+          section_override?: string | null
+        }
+        Update: {
+          conditional_rule?: string | null
+          created_at?: string
+          form_id?: string
+          id?: string
+          override_help_text?: string | null
+          override_sort_order?: number | null
+          override_standard_ref?: string | null
+          question_id?: string
+          required?: boolean
+          section_override?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_template_questions_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "form_templates"
+            referencedColumns: ["form_id"]
+          },
+          {
+            foreignKeyName: "form_template_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "question_library"
+            referencedColumns: ["question_id"]
+          },
+        ]
+      }
+      form_templates: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          form_id: string
+          form_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          form_id: string
+          form_name: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          form_id?: string
+          form_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inspection_responses: {
+        Row: {
+          answer_value: string | null
+          comment: string | null
+          created_at: string
+          defect_flag: boolean
+          id: string
+          inspection_id: string
+          pass_fail_status: string | null
+          photo_urls: string[] | null
+          question_id: string
+          severity: string | null
+          updated_at: string
+        }
+        Insert: {
+          answer_value?: string | null
+          comment?: string | null
+          created_at?: string
+          defect_flag?: boolean
+          id?: string
+          inspection_id: string
+          pass_fail_status?: string | null
+          photo_urls?: string[] | null
+          question_id: string
+          severity?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answer_value?: string | null
+          comment?: string | null
+          created_at?: string
+          defect_flag?: boolean
+          id?: string
+          inspection_id?: string
+          pass_fail_status?: string | null
+          photo_urls?: string[] | null
+          question_id?: string
+          severity?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_responses_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "db_inspections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspection_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "question_library"
+            referencedColumns: ["question_id"]
+          },
+        ]
+      }
       leave_requests: {
         Row: {
           created_at: string
@@ -396,6 +625,66 @@ export type Database = {
           technician_name?: string
           updated_at?: string
           xero_synced?: boolean
+        }
+        Relationships: []
+      }
+      question_library: {
+        Row: {
+          active: boolean
+          answer_type: string
+          asset_types: string[]
+          category: string
+          created_at: string
+          help_text: string | null
+          id: string
+          options: string[] | null
+          question_id: string
+          question_text: string
+          requires_comment_on_fail: boolean
+          requires_photo_on_fail: boolean
+          section: string
+          severity_required_on_fail: boolean
+          sort_order: number
+          standard_ref: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          answer_type?: string
+          asset_types?: string[]
+          category?: string
+          created_at?: string
+          help_text?: string | null
+          id?: string
+          options?: string[] | null
+          question_id: string
+          question_text: string
+          requires_comment_on_fail?: boolean
+          requires_photo_on_fail?: boolean
+          section?: string
+          severity_required_on_fail?: boolean
+          sort_order?: number
+          standard_ref?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          answer_type?: string
+          asset_types?: string[]
+          category?: string
+          created_at?: string
+          help_text?: string | null
+          id?: string
+          options?: string[] | null
+          question_id?: string
+          question_text?: string
+          requires_comment_on_fail?: boolean
+          requires_photo_on_fail?: boolean
+          section?: string
+          severity_required_on_fail?: boolean
+          sort_order?: number
+          standard_ref?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
