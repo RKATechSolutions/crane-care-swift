@@ -112,7 +112,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
     setLineItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.sellPrice), 0);
+  const totalCost = lineItems.reduce((sum, item) => sum + (item.quantity * item.costPrice), 0);
+  const margin = subtotal - totalCost;
   const gst = subtotal * GST_RATE;
   const total = subtotal + gst;
 
