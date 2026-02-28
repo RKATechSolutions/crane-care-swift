@@ -3,9 +3,9 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import { ToDoTile } from '@/components/ToDoTile';
-import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench } from 'lucide-react';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
@@ -63,6 +63,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       title: 'Receipts',
       desc: 'Send receipts straight to Xero',
       color: 'bg-teal-500/10 text-teal-600',
+    },
+    {
+      id: 'tasks',
+      icon: <Wrench className="w-8 h-8" />,
+      title: 'Tasks',
+      desc: 'Create & manage jobs',
+      color: 'bg-indigo-500/10 text-indigo-600',
     },
   ];
 

@@ -15,6 +15,7 @@ import QuoteBuilder from './QuoteBuilder';
 import QuotesPage from './QuotesPage';
 import ToDoPage from './ToDoPage';
 import ReceiptsPage from './ReceiptsPage';
+import TasksPage from './TasksPage';
 
 const Index = () => {
   const { state, dispatch } = useApp();
@@ -69,6 +70,7 @@ const Index = () => {
   }} />;
   if (dashboardView === 'receipts') return <ReceiptsPage onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
+  if (dashboardView === 'tasks') return <TasksPage onBack={() => setDashboardView(null)} />;
 
   return <TechDashboard onNavigate={setDashboardView} />;
 };
