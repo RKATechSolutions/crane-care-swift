@@ -166,13 +166,20 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
 
     const assignee = mockUsers.find(u => u.id === assignedToId);
     const requestedContact = contacts.find(c => c.id === requestedById);
+    const requestedByLine = useManualRequestedBy
+      ? (manualRequestedByName.trim() ? `Requested by: ${manualRequestedByName.trim()}` : null)
+      : (requestedContact ? `Requested by: ${requestedContact.contact_name || `${requestedContact.contact_given_name} ${requestedContact.contact_surname}`}` : null);
+    const requestedByPhoneLine = useManualRequestedBy && manualRequestedByPhone.trim() ? `Requested by phone: ${manualRequestedByPhone.trim()}` : null;
+    const requestedByEmailLine = useManualRequestedBy && manualRequestedByEmail.trim() ? `Requested by email: ${manualRequestedByEmail.trim()}` : null;
     setSaving(true);
 
     const { error } = await supabase.from('tasks').insert({
       title: jobTitle.trim(),
       description: [
         description.trim() || null,
-        requestedContact ? `Requested by: ${requestedContact.contact_name || `${requestedContact.contact_given_name} ${requestedContact.contact_surname}`}` : null,
+        requestedByLine,
+        requestedByPhoneLine,
+        requestedByEmailLine,
         startTime ? `Start: ${startTime}` : null,
         endTime ? `Finish: ${endTime}` : null,
       ].filter(Boolean).join('\n') || null,
