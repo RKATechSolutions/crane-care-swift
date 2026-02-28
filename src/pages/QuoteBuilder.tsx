@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
-import { Plus, Trash2, Loader2, CheckCircle, Send, FileText } from 'lucide-react';
+import { Plus, Trash2, Loader2, CheckCircle, Send, FileText, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
@@ -45,6 +45,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
   const [lineItems, setLineItems] = useState<QuoteLineItem[]>([]);
   const [collateItems, setCollateItems] = useState(false);
   const [sending, setSending] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [sent, setSent] = useState(false);
   const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(null);
 
@@ -130,6 +131,22 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
   const materialItems = lineItems.filter(i => i.category === 'materials');
   const expenseItems = lineItems.filter(i => i.category === 'expenses');
 
+  const downloadPdf = (pdf: any, filename: string) => {
+    try {
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      pdf.save(filename);
+    }
+  };
+
   const handleSendQuote = async () => {
     if (lineItems.length === 0) {
       toast.error('Add at least one line item');
@@ -194,7 +211,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       const filename = `${clientNameSafe}_Quote_${dateStr}.pdf`;
 
       // Download PDF
-      pdf.save(filename);
+      downloadPdf(pdf, filename);
 
       // 3. Email to customer if we have their email
       const recipientEmail = clientInfo?.primary_contact_email;
@@ -262,10 +279,41 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         collateItems,
       });
       const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
-      pdf.save(`${clientNameSafe}_Quote_DRAFT.pdf`);
+      const filename = `${clientNameSafe}_Quote_DRAFT.pdf`;
+      downloadPdf(pdf, filename);
+      toast.success('Draft PDF downloaded');
     } catch (err: any) {
       console.error('Preview PDF error:', err);
       toast.error(`Failed to generate PDF: ${err.message}`);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (lineItems.length === 0) {
+      toast.error('Add at least one line item');
+      return;
+    }
+
+    setSavingDraft(true);
+    try {
+      const { error } = await supabase.from('quotes').insert({
+        client_name: clientInfo?.client_name || site.name,
+        site_name: site.name,
+        technician_id: state.currentUser?.id || 'unknown',
+        technician_name: state.currentUser?.name || 'Technician',
+        subtotal,
+        gst,
+        total,
+        status: 'not_sent',
+        items: lineItems as any,
+      });
+
+      if (error) throw error;
+      toast.success('Quote draft saved');
+    } catch (err: any) {
+      toast.error(`Failed to save draft: ${err.message}`);
+    } finally {
+      setSavingDraft(false);
     }
   };
 
@@ -484,6 +532,17 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
 
       {/* Action buttons */}
       <div className="p-4 border-t border-border space-y-2">
+        <button
+          onClick={handleSaveDraft}
+          disabled={savingDraft || lineItems.length === 0}
+          className="w-full tap-target py-3 bg-secondary text-secondary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {savingDraft ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Saving Draft...</>
+          ) : (
+            <><Save className="w-5 h-5" /> Save Draft</>
+          )}
+        </button>
         <button
           onClick={handlePreviewPdf}
           className="w-full tap-target py-3 bg-muted text-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
