@@ -5,7 +5,7 @@ import { SignaturePad } from '@/components/SignaturePad';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User, Loader2 } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,6 +47,8 @@ export default function SiteJobSummary() {
   const [jobType, setJobType] = useState('Periodic Inspection');
   const [customerDefectComments, setCustomerDefectComments] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendingToAroflo, setSendingToAroflo] = useState(false);
+  const [arofloQuoteSent, setArofloQuoteSent] = useState(false);
 
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
@@ -121,11 +123,51 @@ export default function SiteJobSummary() {
   const handleSaveDefects = () => {
     setDefectsSaved(true);
     setDefectsExpanded(false);
-    // Scroll to next inspection date section
     setTimeout(() => {
       const el = document.getElementById('next-inspection-date');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
+  };
+
+  const quoteNowDefects = allDefects.filter(d => d.item.defect?.quoteStatus === 'Quote Now');
+
+  const handleSendToAroflo = async () => {
+    if (quoteNowDefects.length === 0) {
+      toast.error('No defects marked as "Quote Now"');
+      return;
+    }
+    setSendingToAroflo(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-aroflo-quote', {
+        body: {
+          clientName: clientInfo?.client_name || site.name,
+          siteName: site.name,
+          siteAddress: clientInfo?.location_address || site.address,
+          technicianName: state.currentUser?.name || 'Technician',
+          jobDate: format(new Date(), 'yyyy-MM-dd'),
+          defects: quoteNowDefects.map(d => ({
+            itemLabel: d.itemLabel,
+            craneName: d.crane?.name || 'Unknown',
+            severity: d.item.defect!.severity,
+            defectType: d.item.defect!.defectType,
+            rectificationTimeframe: d.item.defect!.rectificationTimeframe,
+            notes: d.item.defect!.notes || '',
+            recommendedAction: d.item.defect!.recommendedAction || '',
+          })),
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Unknown error');
+
+      setArofloQuoteSent(true);
+      toast.success(data.message || 'Draft quote created in AroFlo');
+    } catch (err: any) {
+      console.error('AroFlo quote error:', err);
+      toast.error(`Failed to create AroFlo quote: ${err.message}`);
+    } finally {
+      setSendingToAroflo(false);
+    }
   };
 
   const buildSummaryPayload = () => ({
@@ -518,6 +560,27 @@ export default function SiteJobSummary() {
                   <Check className="w-5 h-5" />
                   Save Defect Details
                 </button>
+
+                {/* Send Quote Now defects to AroFlo */}
+                {quoteNowDefects.length > 0 && (
+                  <button
+                    onClick={handleSendToAroflo}
+                    disabled={sendingToAroflo || arofloQuoteSent}
+                    className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 mt-2 ${
+                      arofloQuoteSent
+                        ? 'bg-rka-green text-primary-foreground'
+                        : 'bg-rka-orange text-destructive-foreground'
+                    }`}
+                  >
+                    {sendingToAroflo ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" /> Sending to AroFlo...</>
+                    ) : arofloQuoteSent ? (
+                      <><CheckCircle className="w-5 h-5" /> Quote Sent to AroFlo</>
+                    ) : (
+                      <><ExternalLink className="w-5 h-5" /> Send {quoteNowDefects.length} Defect{quoteNowDefects.length !== 1 ? 's' : ''} to AroFlo as Quote</>
+                    )}
+                  </button>
+                )}
               </>
             )}
           </div>

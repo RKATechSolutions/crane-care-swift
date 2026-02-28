@@ -3,6 +3,9 @@ project_id = "jhqdrsoahbtdsxvzxees"
 [functions.import-aroflo-clients]
 verify_jwt = false
 
+[functions.create-aroflo-quote]
+verify_jwt = false
+
 [functions.send-report]
 verify_jwt = false
 
