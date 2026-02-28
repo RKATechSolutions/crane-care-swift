@@ -428,6 +428,20 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
           </div>
         </div>
 
+        {/* Collate toggle */}
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Collate Items</p>
+            <p className="text-xs text-muted-foreground">Show as single line item on quote PDF</p>
+          </div>
+          <button
+            onClick={() => setCollateItems(!collateItems)}
+            className={`w-12 h-7 rounded-full transition-colors relative ${collateItems ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+          >
+            <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${collateItems ? 'left-6' : 'left-1'}`} />
+          </button>
+        </div>
+
         {/* Notes */}
         <div className="px-4 py-4 border-b border-border">
           <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Additional Notes</label>
