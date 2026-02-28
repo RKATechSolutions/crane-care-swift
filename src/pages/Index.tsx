@@ -14,6 +14,7 @@ import TimesheetPage from './TimesheetPage';
 import QuoteBuilder from './QuoteBuilder';
 import QuotesPage from './QuotesPage';
 import ToDoPage from './ToDoPage';
+import ReceiptsPage from './ReceiptsPage';
 
 const Index = () => {
   const { state, dispatch } = useApp();
@@ -66,6 +67,7 @@ const Index = () => {
     dispatch({ type: 'SELECT_SITE', payload: { id: `estimate-${Date.now()}`, name: siteName, address: '', contactName: '', contactPhone: '', cranes: [] } });
     setQuoteMode({ active: true, fromQuotesPage: true, estimateNotes: description });
   }} />;
+  if (dashboardView === 'receipts') return <ReceiptsPage onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
 
   return <TechDashboard onNavigate={setDashboardView} />;

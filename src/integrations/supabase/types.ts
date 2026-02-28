@@ -459,6 +459,54 @@ export type Database = {
         }
         Relationships: []
       }
+      receipts: {
+        Row: {
+          amount: number | null
+          category: string | null
+          created_at: string
+          id: string
+          merchant_name: string | null
+          notes: string | null
+          photo_url: string
+          receipt_date: string | null
+          status: string
+          technician_id: string
+          technician_name: string
+          updated_at: string
+          xero_synced: boolean
+        }
+        Insert: {
+          amount?: number | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          merchant_name?: string | null
+          notes?: string | null
+          photo_url: string
+          receipt_date?: string | null
+          status?: string
+          technician_id: string
+          technician_name: string
+          updated_at?: string
+          xero_synced?: boolean
+        }
+        Update: {
+          amount?: number | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          merchant_name?: string | null
+          notes?: string | null
+          photo_url?: string
+          receipt_date?: string | null
+          status?: string
+          technician_id?: string
+          technician_name?: string
+          updated_at?: string
+          xero_synced?: boolean
+        }
+        Relationships: []
+      }
       site_assessments: {
         Row: {
           ai_executive_summary: string | null
