@@ -60,6 +60,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
   const [sending, setSending] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [sent, setSent] = useState(false);
+  const [previewingPdf, setPreviewingPdf] = useState(false);
   const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(draftQuote?.quote_number || null);
 
   // Client info
