@@ -63,10 +63,22 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
 
   const selectedClient = clients.find(c => c.id === clientId);
 
-  // Build auto title: "ClientName — description"
-  const autoTitle = selectedClient
-    ? `${selectedClient.client_name}${description.trim() ? ' — ' + description.trim() : ''}`
-    : description.trim();
+  const [jobTitle, setJobTitle] = useState('');
+
+  // When client changes, prepopulate the title prefix
+  useEffect(() => {
+    if (selectedClient) {
+      setJobTitle(prev => {
+        // If title is empty or was previously set to another client name, reset with new client
+        const oldClient = clients.find(c => prev.startsWith(c.client_name));
+        if (!prev || (oldClient && oldClient.id !== clientId)) {
+          return `${selectedClient.client_name} — `;
+        }
+        return prev;
+      });
+    }
+  }, [clientId, selectedClient]);
+
 
   useEffect(() => {
     if (open) {
