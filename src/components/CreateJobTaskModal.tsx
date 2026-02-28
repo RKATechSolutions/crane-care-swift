@@ -102,11 +102,34 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   // Fetch contacts when client changes — include primary contact from client record
   useEffect(() => {
     if (!clientId) { setContacts([]); setRequestedById(''); return; }
-    const client = clients.find(c => c.id === clientId);
-    supabase.from('client_contacts').select('id, contact_name, contact_given_name, contact_surname, contact_phone, contact_mobile, contact_email, contact_position').eq('client_id', clientId).eq('status', 'Active').order('contact_name').then(({ data }) => {
-      let allContacts: ClientContact[] = data || [];
+
+    const loadContacts = async () => {
+      const client = clients.find(c => c.id === clientId);
+      if (!client) { setContacts([]); setRequestedById(''); return; }
+
+      const relatedClientIds = clients
+        .filter(c => c.client_name.trim().toLowerCase() === client.client_name.trim().toLowerCase())
+        .map(c => c.id);
+
+      const { data } = await supabase
+        .from('client_contacts')
+        .select('id, contact_name, contact_given_name, contact_surname, contact_phone, contact_mobile, contact_email, contact_position, status')
+        .in('client_id', relatedClientIds.length > 0 ? relatedClientIds : [clientId])
+        .order('contact_name');
+
+      let allContacts: ClientContact[] = (data || []).filter(c => (c.status || 'Active').toLowerCase() !== 'inactive');
+
+      // Dedupe contacts that may exist across duplicate client records
+      const seen = new Set<string>();
+      allContacts = allContacts.filter(c => {
+        const key = `${(c.contact_name || '').trim().toLowerCase()}|${(c.contact_mobile || '').trim()}|${(c.contact_email || '').trim().toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
       // Add primary contact from client record if it exists and isn't already in contacts
-      if (client?.primary_contact_name && client.primary_contact_name !== '. .') {
+      if (client.primary_contact_name && client.primary_contact_name !== '. .') {
         const alreadyExists = allContacts.some(c =>
           (c.contact_name === client.primary_contact_name) ||
           (c.contact_mobile === client.primary_contact_mobile && client.primary_contact_mobile)
@@ -121,11 +144,15 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
             contact_mobile: client.primary_contact_mobile,
             contact_email: client.primary_contact_email,
             contact_position: null,
+            status: 'Active',
           }, ...allContacts];
         }
       }
+
       setContacts(allContacts);
-    });
+    };
+
+    loadContacts();
   }, [clientId, clients]);
 
   const handleSave = async () => {
