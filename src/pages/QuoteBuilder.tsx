@@ -287,6 +287,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
   const { dispatch } = useApp();
 
   const handlePreviewPdf = async () => {
+    setPreviewingPdf(true);
     try {
       const pdf = await generateQuotePdf({
         quoteName,
