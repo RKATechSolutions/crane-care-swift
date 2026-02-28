@@ -216,7 +216,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
       <div className="bg-background w-full max-w-md rounded-t-2xl sm:rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h2 className="font-bold text-lg text-foreground">Create Task</h2>
+          <h2 className="font-bold text-lg text-foreground">Create Job</h2>
           <button onClick={onClose} className="p-1"><X className="w-5 h-5 text-muted-foreground" /></button>
         </div>
 

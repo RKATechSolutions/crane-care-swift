@@ -67,7 +67,7 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
     {
       id: 'tasks',
       icon: <Wrench className="w-8 h-8" />,
-      title: 'Tasks',
+      title: 'Jobs',
       desc: 'Create & manage jobs',
       color: 'bg-indigo-500/10 text-indigo-600',
     },

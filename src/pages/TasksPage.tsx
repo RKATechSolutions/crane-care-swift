@@ -135,7 +135,7 @@ export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
           displayed.map(task => {
             const jobCfg = JOB_TYPE_CONFIG[task.job_type || 'general'] || JOB_TYPE_CONFIG.general;
             return (
-              <div key={task.id} className={`bg-muted rounded-xl p-4 space-y-2 ${task.status === 'completed' ? 'opacity-70' : ''}`}>
+              <div key={task.id} onClick={() => onOpenJob?.(task.id)} className={`bg-muted rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-all ${task.status === 'completed' ? 'opacity-70' : ''}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-foreground">{task.title}</p>
