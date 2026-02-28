@@ -18,8 +18,8 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
     {
       id: 'schedule',
       icon: <Calendar className="w-8 h-8" />,
-      title: 'Schedule',
-      desc: 'View upcoming jobs & appointments',
+      title: 'Schedule & Leave',
+      desc: 'View jobs, calendar & request leave',
       color: 'bg-blue-500/10 text-blue-600',
     },
     {
