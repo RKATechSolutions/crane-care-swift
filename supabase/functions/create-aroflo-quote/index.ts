@@ -125,20 +125,40 @@ serve(async (req) => {
     }
 
     const requestBody: QuoteRequest = await req.json();
-    const { clientName, siteName, siteAddress, technicianName, jobDate, quoteName: customQuoteName, defects, lineItems } = requestBody;
+    const {
+      clientName,
+      siteName,
+      siteAddress,
+      technicianName,
+      jobDate,
+      quoteName: customQuoteName,
+      jobDescription,
+      collateItems,
+      defects,
+      lineItems,
+    } = requestBody;
 
     // Build quote name
     const auDate = formatAuDate(jobDate);
     const finalQuoteName = customQuoteName || `${clientName} - Repair Quote - ${auDate}`;
 
-    // Build description from defects if provided
-    let description = `Quote prepared by ${technicianName} for ${siteName} on ${auDate}.`;
+    // Build description from job description + defects
+    let description = jobDescription?.trim() || `Quote prepared by ${technicianName} for ${siteName} on ${auDate}.`;
     if (defects && defects.length > 0) {
       const defectLines = defects.map((d, i) =>
         `${i + 1}. [${d.severity}] ${d.itemLabel} (${d.craneName}) - ${d.defectType}\n   Timeframe: ${d.rectificationTimeframe}\n   Action: ${d.recommendedAction}\n   ${d.notes ? 'Notes: ' + d.notes : ''}`
       ).join('\n\n');
       description += `\n\nDefects identified:\n${defectLines}`;
     }
+
+    const preparedLineItems = collateItems && lineItems && lineItems.length > 0
+      ? [{
+          category: 'labour' as const,
+          description: lineItems.map(item => item.description?.trim()).filter(Boolean).join('; ') || 'Works as quoted',
+          quantity: 1,
+          unitPrice: lineItems.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0),
+        }]
+      : lineItems;
 
     // Step 1: Create the quote
     const quoteXml = `<quotes><quote><quotename><![CDATA[${escapeXml(finalQuoteName)}]]></quotename><client><clientname><![CDATA[${escapeXml(clientName)}]]></clientname></client><description><![CDATA[${escapeXml(description)}]]></description></quote></quotes>`;
