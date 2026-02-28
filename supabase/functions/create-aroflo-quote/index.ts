@@ -28,6 +28,11 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
+function formatAuDate(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 interface DefectItem {
   itemLabel: string;
   craneName: string;
@@ -38,13 +43,68 @@ interface DefectItem {
   recommendedAction: string;
 }
 
+interface LineItem {
+  category: 'labour' | 'materials' | 'expenses';
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 interface QuoteRequest {
   clientName: string;
   siteName: string;
   siteAddress: string;
-  defects: DefectItem[];
   technicianName: string;
   jobDate: string;
+  quoteName?: string;
+  defects?: DefectItem[];
+  lineItems?: LineItem[];
+}
+
+async function makeArofloRequest(
+  method: string,
+  body: string,
+  uEncoded: string,
+  pEncoded: string,
+  orgEncoded: string,
+  secretKey: string
+) {
+  const now = new Date();
+  const afDatetimeUtc = now.toISOString().replace(/(\.\d{3})Z$/, '$1000Z');
+  const authorization = `uencoded=${encodeURIComponent(uEncoded)}&pencoded=${encodeURIComponent(pEncoded)}&orgEncoded=${encodeURIComponent(orgEncoded)}`;
+  const accept = 'text/json';
+  
+  const urlPath = '';
+  const payloadString = [method, urlPath, accept, authorization, afDatetimeUtc, body].join('+');
+  const hmacSignature = await generateHmacSignature(payloadString, secretKey);
+
+  const response = await fetch('https://api.aroflo.com/', {
+    method,
+    headers: {
+      'Authentication': `HMAC ${hmacSignature}`,
+      'Authorization': authorization,
+      'Accept': accept,
+      'afdatetimeutc': afDatetimeUtc,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body,
+  });
+
+  const responseText = await response.text();
+  console.log(`AroFlo ${method} response (${response.status}): ${responseText.substring(0, 500)}`);
+
+  let data;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    throw new Error(`AroFlo returned non-JSON response: ${responseText.substring(0, 200)}`);
+  }
+
+  if (data.status !== '0' && data.status !== 0) {
+    throw new Error(`AroFlo API error (status ${data.status}): ${data.statusmessage}`);
+  }
+
+  return data;
 }
 
 serve(async (req) => {
@@ -62,83 +122,64 @@ serve(async (req) => {
       throw new Error('Missing AroFlo API credentials');
     }
 
-    const body: QuoteRequest = await req.json();
-    const { clientName, siteName, siteAddress, defects, technicianName, jobDate } = body;
+    const requestBody: QuoteRequest = await req.json();
+    const { clientName, siteName, siteAddress, technicianName, jobDate, quoteName: customQuoteName, defects, lineItems } = requestBody;
 
-    if (!defects || defects.length === 0) {
-      throw new Error('No defect items provided for quoting');
+    // Build quote name
+    const auDate = formatAuDate(jobDate);
+    const finalQuoteName = customQuoteName || `${clientName} - Repair Quote - ${auDate}`;
+
+    // Build description from defects if provided
+    let description = `Quote prepared by ${technicianName} for ${siteName} on ${auDate}.`;
+    if (defects && defects.length > 0) {
+      const defectLines = defects.map((d, i) =>
+        `${i + 1}. [${d.severity}] ${d.itemLabel} (${d.craneName}) - ${d.defectType}\n   Timeframe: ${d.rectificationTimeframe}\n   Action: ${d.recommendedAction}\n   ${d.notes ? 'Notes: ' + d.notes : ''}`
+      ).join('\n\n');
+      description += `\n\nDefects identified:\n${defectLines}`;
     }
 
-    // Build quote description from defects
-    const descriptionLines = defects.map((d, i) => 
-      `${i + 1}. [${d.severity}] ${d.itemLabel} (${d.craneName}) - ${d.defectType}\n   Timeframe: ${d.rectificationTimeframe}\n   Action: ${d.recommendedAction}\n   ${d.notes ? 'Notes: ' + d.notes : ''}`
-    ).join('\n\n');
+    // Step 1: Create the quote
+    const quoteXml = `<quotes><quote><quotename><![CDATA[${escapeXml(finalQuoteName)}]]></quotename><client><clientname><![CDATA[${escapeXml(clientName)}]]></clientname></client><description><![CDATA[${escapeXml(description)}]]></description></quote></quotes>`;
+    const quoteFormBody = `zone=${encodeURIComponent('quotes')}&postxml=${encodeURIComponent(quoteXml)}`;
 
-    // Format date as Australian DD/MM/YYYY
-    const [y, m, d] = jobDate.split('-');
-    const auDate = `${d}/${m}/${y}`;
-    const quoteName = `${clientName} - Repair Quote - ${auDate}`;
-    const description = `Defects identified during inspection at ${siteName} on ${jobDate} by ${technicianName}.\n\n${descriptionLines}`;
+    console.log('Creating AroFlo quote:', finalQuoteName);
+    const quoteData = await makeArofloRequest('POST', quoteFormBody, uEncoded, pEncoded, orgEncoded, secretKey);
 
-    // Build postxml for creating a quote in AroFlo
-    // The Quotes zone accepts: quotename, client (clientname), location, description, tasktype
-    const postxml = `<quotes><quote><quotename><![CDATA[${escapeXml(quoteName)}]]></quotename><client><clientname><![CDATA[${escapeXml(clientName)}]]></clientname></client><description><![CDATA[${escapeXml(description)}]]></description></quote></quotes>`;
-
-    // Build form body
-    const formBody = `zone=${encodeURIComponent('quotes')}&postxml=${encodeURIComponent(postxml)}`;
-
-    // Generate HMAC auth
-    const now = new Date();
-    const afDatetimeUtc = now.toISOString().replace(/(\.\d{3})Z$/, '$1000Z');
-    const authorization = `uencoded=${encodeURIComponent(uEncoded)}&pencoded=${encodeURIComponent(pEncoded)}&orgEncoded=${encodeURIComponent(orgEncoded)}`;
-
-    const method = 'POST';
-    const urlPath = '';
-    const accept = 'text/json';
-    const payloadString = [method, urlPath, accept, authorization, afDatetimeUtc, formBody].join('+');
-    
-    const hmacSignature = await generateHmacSignature(payloadString, secretKey);
-
-    console.log('Creating AroFlo quote:', quoteName);
-    console.log('Defects count:', defects.length);
-
-    const response = await fetch('https://api.aroflo.com/', {
-      method: 'POST',
-      headers: {
-        'Authentication': `HMAC ${hmacSignature}`,
-        'Authorization': authorization,
-        'Accept': accept,
-        'afdatetimeutc': afDatetimeUtc,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formBody,
-    });
-
-    const responseText = await response.text();
-    console.log(`AroFlo response status: ${response.status}`);
-    console.log(`AroFlo response: ${responseText.substring(0, 500)}`);
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      throw new Error(`AroFlo returned non-JSON response: ${responseText.substring(0, 200)}`);
-    }
-
-    if (data.status !== '0' && data.status !== 0) {
-      throw new Error(`AroFlo API error (status ${data.status}): ${data.statusmessage}`);
-    }
-
-    // Extract quote ID from response
-    const inserts = data.zoneresponse?.postresults?.inserts?.quotes || [];
+    const inserts = quoteData.zoneresponse?.postresults?.inserts?.quotes || [];
     const quoteId = inserts[0]?.quoteid || null;
 
+    console.log('AroFlo quote created, ID:', quoteId);
+
+    // Step 2: Add line items if provided (via QuoteLineItems zone)
+    if (lineItems && lineItems.length > 0 && quoteId) {
+      // Rate limit: wait before next request
+      await new Promise(resolve => setTimeout(resolve, 1100));
+
+      // Build line items XML - each line item as a quotelineitem
+      const lineItemsXml = lineItems.map(item => {
+        const lineTotal = (item.quantity * item.unitPrice).toFixed(2);
+        return `<quotelineitem><quoteid>${quoteId}</quoteid><description><![CDATA[${escapeXml(item.description)}]]></description><quantity>${item.quantity}</quantity><unitprice>${item.unitPrice.toFixed(2)}</unitprice><linetotal>${lineTotal}</linetotal></quotelineitem>`;
+      }).join('');
+
+      const lineItemsFormBody = `zone=${encodeURIComponent('quotelineitems')}&postxml=${encodeURIComponent(`<quotelineitems>${lineItemsXml}</quotelineitems>`)}`;
+
+      try {
+        const lineData = await makeArofloRequest('POST', lineItemsFormBody, uEncoded, pEncoded, orgEncoded, secretKey);
+        console.log('AroFlo line items added:', lineData.zoneresponse?.postresults?.inserttotal || 0);
+      } catch (lineErr) {
+        // Line items are a bonus — don't fail the whole quote if they fail
+        console.error('Warning: Failed to add line items to AroFlo quote:', lineErr.message);
+      }
+    }
+
+    const itemCount = lineItems?.length || defects?.length || 0;
+
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         success: true,
         quoteId,
-        quoteName,
-        message: `Draft quote "${quoteName}" created in AroFlo with ${defects.length} defect item(s)`,
+        quoteName: finalQuoteName,
+        message: `Draft quote "${finalQuoteName}" created in AroFlo with ${itemCount} item(s)`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

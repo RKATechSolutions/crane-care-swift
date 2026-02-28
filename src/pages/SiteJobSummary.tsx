@@ -14,7 +14,11 @@ import { FileText } from 'lucide-react';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
-export default function SiteJobSummary() {
+interface SiteJobSummaryProps {
+  onCreateQuote?: (defects: any[]) => void;
+}
+
+export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   const { state, dispatch } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
   const site = state.selectedSite!;
@@ -579,6 +583,24 @@ export default function SiteJobSummary() {
                     ) : (
                       <><ExternalLink className="w-5 h-5" /> Send {quoteNowDefects.length} Defect{quoteNowDefects.length !== 1 ? 's' : ''} to AroFlo as Quote</>
                     )}
+                  </button>
+                )}
+
+                {/* Create full quote on the spot */}
+                {quoteNowDefects.length > 0 && onCreateQuote && (
+                  <button
+                    onClick={() => onCreateQuote(quoteNowDefects.map(d => ({
+                      itemLabel: d.itemLabel,
+                      craneName: d.crane?.name || 'Unknown',
+                      severity: d.item.defect!.severity,
+                      defectType: d.item.defect!.defectType,
+                      notes: d.item.defect!.notes || '',
+                      recommendedAction: d.item.defect!.recommendedAction || '',
+                    })))}
+                    className="w-full tap-target py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 mt-2"
+                  >
+                    <FileText className="w-5 h-5" />
+                    Create Full Quote on the Spot
                   </button>
                 )}
               </>
