@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, ArrowLeft, Send, Loader2, X, Receipt, CheckCircle, Clock } from 'lucide-react';
+import { Camera, Send, Loader2, X, Receipt, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
