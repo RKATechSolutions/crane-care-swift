@@ -28,7 +28,7 @@ const Index = () => {
     return <QuoteBuilder onBack={() => {
       setQuoteMode({ active: false });
       if (quoteMode.fromQuotesPage) setDashboardView('quotes');
-    }} prefilledDefects={quoteMode.defects} />;
+    }} prefilledDefects={quoteMode.defects} draftQuote={quoteMode.draftQuote} />;
   }
 
   // If quoteMode is active but no site selected yet, show Sites for selection
