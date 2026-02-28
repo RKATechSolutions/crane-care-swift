@@ -15,7 +15,7 @@ interface DbClient {
   status: string;
 }
 
-export default function Sites() {
+export default function Sites({ onBack }: { onBack?: () => void }) {
   const { state, dispatch } = useApp();
   const [search, setSearch] = useState('');
   const [dbClients, setDbClients] = useState<DbClient[]>([]);
