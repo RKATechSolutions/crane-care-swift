@@ -1,6 +1,6 @@
 import { X, Download } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
-import jsPDF from 'jspdf';
+import { useMemo } from 'react';
+import type jsPDF from 'jspdf';
 
 interface PdfPreviewModalProps {
   open: boolean;
@@ -10,41 +10,17 @@ interface PdfPreviewModalProps {
 }
 
 export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload }: PdfPreviewModalProps) {
-  const [pageImages, setPageImages] = useState<string[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!pdfDoc || !open) {
-      setPageImages([]);
-      return;
-    }
-
-    // Render each page as a PNG data URL
-    const pages: string[] = [];
-    const totalPages = pdfDoc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      pdfDoc.setPage(i);
-      // Output as image data URL (high quality)
-      const imgData = pdfDoc.output('datauristring', { filename: `page-${i}.pdf` });
-      pages.push(imgData);
-    }
-
-    // Use a canvas approach: convert PDF pages to images via jsPDF internal canvas
-    // jsPDF doesn't have a direct toCanvas, so we'll use the data URI of the full PDF
-    // and render it in an <object> tag with PDF.js fallback
-    // Simpler approach: render as single data URI in an <img> via svg foreignObject trick
-    // Actually simplest reliable approach: render each page to a canvas manually
-    
-    // For jsPDF, the best cross-browser approach is to convert to base64 images per page
-    // Since jsPDF doesn't support per-page image export natively, we'll use the 
-    // full document as a single blob and try object tag, with image fallback
-    setPageImages([]);
+  const blobUrl = useMemo(() => {
+    if (!pdfDoc || !open) return null;
+    return URL.createObjectURL(pdfDoc.output('blob'));
   }, [pdfDoc, open]);
 
-  if (!open || !pdfDoc) return null;
+  if (!open || !pdfDoc || !blobUrl) return null;
 
-  // Use object tag which has better PDF support than iframe
-  const blobUrl = URL.createObjectURL(pdfDoc.output('blob'));
+  const handleClose = () => {
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-background">
@@ -62,10 +38,7 @@ export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload }: PdfPrevie
             </button>
           )}
           <button
-            onClick={() => {
-              URL.revokeObjectURL(blobUrl);
-              onClose();
-            }}
+            onClick={handleClose}
             className="tap-target flex items-center justify-center rounded-lg active:bg-muted transition-colors"
             aria-label="Close preview"
           >
@@ -75,7 +48,7 @@ export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload }: PdfPrevie
       </div>
 
       {/* PDF render area */}
-      <div className="flex-1 overflow-auto bg-muted" ref={containerRef}>
+      <div className="flex-1 overflow-auto bg-muted">
         <object
           data={blobUrl}
           type="application/pdf"
