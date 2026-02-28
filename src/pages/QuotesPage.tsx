@@ -28,11 +28,12 @@ interface QuotesPageProps {
   onBack: () => void;
   onCreateQuote?: () => void;
   onEditQuote?: (quote: Quote) => void;
+  onPushEstimateToDraft?: (description: string, clientName: string, assetName: string) => void;
 }
 
 const ESTIMATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-estimate`;
 
-export default function QuotesPage({ onBack, onCreateQuote, onEditQuote }: QuotesPageProps) {
+export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushEstimateToDraft }: QuotesPageProps) {
   const [filter, setFilter] = useState<QuoteFilter>('draft');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -235,6 +236,15 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote }: Quote
                 <div className="prose prose-sm max-w-none text-foreground text-sm">
                   <ReactMarkdown>{estimateResult}</ReactMarkdown>
                 </div>
+                {onPushEstimateToDraft && !estimating && (
+                  <Button
+                    onClick={() => onPushEstimateToDraft(estimateResult, estimateClient, estimateAsset)}
+                    className="w-full mt-4 gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Push to Draft Quote
+                  </Button>
+                )}
               </div>
             )}
           </div>

@@ -39,6 +39,7 @@ interface QuoteBuilderProps {
     recommendedAction: string;
   }>;
   draftQuote?: DraftQuote;
+  initialNotes?: string;
 }
 
 const GST_RATE = 0.10;
@@ -47,14 +48,14 @@ const LABOUR_COST_RATE = 117;
 const LABOUR_SELL_RATE = 195;
 const LABOUR_OT_SELL_RATE = 250;
 
-export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: QuoteBuilderProps) {
+export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, initialNotes }: QuoteBuilderProps) {
   const { state } = useApp();
   const site = state.selectedSite!;
 
   const [draftId, setDraftId] = useState<string | null>(draftQuote?.id || null);
   const [quoteName, setQuoteName] = useState('');
   const [validityDays, setValidityDays] = useState(30);
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(initialNotes || '');
   const [lineItems, setLineItems] = useState<QuoteLineItem[]>(draftQuote?.items || []);
   const [collateItems, setCollateItems] = useState(false);
   const [sending, setSending] = useState(false);
