@@ -138,8 +138,8 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
     const tableData = cat.items.map(item => [
       item.description,
       item.quantity.toString(),
-      `$${item.unitPrice.toFixed(2)}`,
-      `$${(item.quantity * item.unitPrice).toFixed(2)}`,
+      `$${item.sellPrice.toFixed(2)}`,
+      `$${(item.quantity * item.sellPrice).toFixed(2)}`,
     ]);
 
     autoTable(doc, {
