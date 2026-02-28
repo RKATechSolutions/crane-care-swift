@@ -9,6 +9,7 @@ import { CreateJobTaskModal } from '@/components/CreateJobTaskModal';
 
 interface TasksPageProps {
   onBack: () => void;
+  onOpenJob?: (jobId: string) => void;
 }
 
 interface Task {
