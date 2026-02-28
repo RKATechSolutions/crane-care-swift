@@ -63,7 +63,6 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
   const [savingDraft, setSavingDraft] = useState(false);
   const [sent, setSent] = useState(false);
   const [previewingPdf, setPreviewingPdf] = useState(false);
-  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
   const [previewPdfDoc, setPreviewPdfDoc] = useState<any>(null);
   const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(draftQuote?.quote_number || null);
 
@@ -311,9 +310,6 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
         notes,
         collateItems,
       });
-      const blob = pdf.output('blob');
-      const blobUrl = URL.createObjectURL(blob);
-      setPreviewPdfUrl(blobUrl);
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
       console.error('Preview PDF error:', err);
@@ -617,9 +613,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
       </div>
 
       <PdfPreviewModal
-        open={!!previewPdfUrl}
-        onClose={() => { if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl); setPreviewPdfUrl(null); setPreviewPdfDoc(null); }}
-        pdfBlobUrl={previewPdfUrl}
+        open={!!previewPdfDoc}
+        onClose={() => setPreviewPdfDoc(null)}
+        pdfDoc={previewPdfDoc}
         onDownload={handleDownloadPreview}
       />
     </div>
