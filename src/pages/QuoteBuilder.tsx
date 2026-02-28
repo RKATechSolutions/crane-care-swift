@@ -123,6 +123,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
   const gst = subtotal * GST_RATE;
   const total = subtotal + gst;
 
+  const grossProfit = subtotal > 0 ? ((subtotal - totalCost) / subtotal) * 100 : 0;
+  const gpOnTarget = grossProfit >= GP_TARGET * 100;
+
   const labourItems = lineItems.filter(i => i.category === 'labour');
   const materialItems = lineItems.filter(i => i.category === 'materials');
   const expenseItems = lineItems.filter(i => i.category === 'expenses');
