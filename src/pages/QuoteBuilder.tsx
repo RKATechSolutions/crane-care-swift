@@ -533,6 +533,17 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       {/* Action buttons */}
       <div className="p-4 border-t border-border space-y-2">
         <button
+          onClick={handleSaveDraft}
+          disabled={savingDraft || lineItems.length === 0}
+          className="w-full tap-target py-3 bg-secondary text-secondary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {savingDraft ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Saving Draft...</>
+          ) : (
+            <><Save className="w-5 h-5" /> Save Draft</>
+          )}
+        </button>
+        <button
           onClick={handlePreviewPdf}
           className="w-full tap-target py-3 bg-muted text-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
         >
