@@ -26,6 +26,7 @@ interface QuotePdfData {
   gst: number;
   total: number;
   notes: string;
+  collateItems?: boolean;
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -119,33 +120,22 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
   doc.line(margin, y, pageWidth - margin, y);
   y += 5;
 
-  // Line items by category
-  const categories: Array<{ key: string; label: string; items: QuoteLineItem[] }> = [
-    { key: 'labour', label: 'LABOUR', items: data.lineItems.filter(i => i.category === 'labour') },
-    { key: 'materials', label: 'MATERIALS', items: data.lineItems.filter(i => i.category === 'materials') },
-    { key: 'expenses', label: 'EXPENSES', items: data.lineItems.filter(i => i.category === 'expenses') },
-  ];
-
-  for (const cat of categories) {
-    if (cat.items.length === 0) continue;
+  // Line items
+  if (data.collateItems) {
+    // Collated: single line item with combined descriptions
+    const descriptions = data.lineItems.map(i => i.description).filter(Boolean);
+    const collatedDesc = descriptions.join('; ') || 'Works as quoted';
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...DARK);
-    doc.text(cat.label, margin, y);
+    doc.text('SCOPE OF WORKS', margin, y);
     y += 2;
-
-    const tableData = cat.items.map(item => [
-      item.description,
-      item.quantity.toString(),
-      `$${item.sellPrice.toFixed(2)}`,
-      `$${(item.quantity * item.sellPrice).toFixed(2)}`,
-    ]);
 
     autoTable(doc, {
       startY: y,
-      head: [['Description', 'Qty', 'Unit Price', 'Total']],
-      body: tableData,
+      head: [['Description', 'Total']],
+      body: [[collatedDesc, `$${data.subtotal.toFixed(2)}`]],
       theme: 'grid',
       margin: { left: margin, right: margin },
       headStyles: {
@@ -158,18 +148,66 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
         fontSize: 8,
         textColor: DARK,
       },
-      alternateRowStyles: {
-        fillColor: LIGHT_GRAY,
-      },
       columnStyles: {
         0: { cellWidth: 'auto' },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 28, halign: 'right' },
-        3: { cellWidth: 28, halign: 'right' },
+        1: { cellWidth: 28, halign: 'right' },
       },
     });
 
     y = (doc as any).lastAutoTable.finalY + 5;
+  } else {
+    // Line items by category
+    const categories: Array<{ key: string; label: string; items: QuoteLineItem[] }> = [
+      { key: 'labour', label: 'LABOUR', items: data.lineItems.filter(i => i.category === 'labour') },
+      { key: 'materials', label: 'MATERIALS', items: data.lineItems.filter(i => i.category === 'materials') },
+      { key: 'expenses', label: 'EXPENSES', items: data.lineItems.filter(i => i.category === 'expenses') },
+    ];
+
+    for (const cat of categories) {
+      if (cat.items.length === 0) continue;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...DARK);
+      doc.text(cat.label, margin, y);
+      y += 2;
+
+      const tableData = cat.items.map(item => [
+        item.description,
+        item.quantity.toString(),
+        `$${item.sellPrice.toFixed(2)}`,
+        `$${(item.quantity * item.sellPrice).toFixed(2)}`,
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Description', 'Qty', 'Unit Price', 'Total']],
+        body: tableData,
+        theme: 'grid',
+        margin: { left: margin, right: margin },
+        headStyles: {
+          fillColor: RKA_GREEN,
+          textColor: WHITE,
+          fontStyle: 'bold',
+          fontSize: 8,
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: DARK,
+        },
+        alternateRowStyles: {
+          fillColor: LIGHT_GRAY,
+        },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 20, halign: 'center' },
+          2: { cellWidth: 28, halign: 'right' },
+          3: { cellWidth: 28, halign: 'right' },
+        },
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 5;
+    }
   }
 
   // Totals

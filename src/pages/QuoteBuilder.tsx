@@ -39,6 +39,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
   const [validityDays, setValidityDays] = useState(30);
   const [notes, setNotes] = useState('');
   const [lineItems, setLineItems] = useState<QuoteLineItem[]>([]);
+  const [collateItems, setCollateItems] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(null);
@@ -177,6 +178,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         gst,
         total,
         notes,
+        collateItems,
       });
 
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
@@ -249,6 +251,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       gst,
       total,
       notes,
+      collateItems,
     });
     const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
     pdf.save(`${clientNameSafe}_Quote_DRAFT.pdf`);
@@ -425,6 +428,20 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
             <span className="font-bold">Total (inc GST)</span>
             <span className="font-black text-primary">${total.toFixed(2)}</span>
           </div>
+        </div>
+
+        {/* Collate toggle */}
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Collate Items</p>
+            <p className="text-xs text-muted-foreground">Show as single line item on quote PDF</p>
+          </div>
+          <button
+            onClick={() => setCollateItems(!collateItems)}
+            className={`w-12 h-7 rounded-full transition-colors relative ${collateItems ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+          >
+            <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${collateItems ? 'left-6' : 'left-1'}`} />
+          </button>
         </div>
 
         {/* Notes */}
