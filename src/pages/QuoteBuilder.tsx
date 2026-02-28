@@ -317,7 +317,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
     }
   };
 
-
+  if (sent) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <AppHeader title="Quote Sent" onBack={onBack} />
