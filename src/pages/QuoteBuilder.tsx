@@ -133,6 +133,10 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
 
   const downloadPdf = (pdf: any, filename: string) => {
     try {
+      // Primary path: jsPDF native save (best compatibility on mobile browsers)
+      pdf.save(filename);
+    } catch {
+      // Fallback path
       const blob = pdf.output('blob');
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -142,8 +146,6 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-    } catch {
-      pdf.save(filename);
     }
   };
 
