@@ -13,6 +13,7 @@ import TechReports from './TechReports';
 import TimesheetPage from './TimesheetPage';
 import QuoteBuilder from './QuoteBuilder';
 import QuotesPage from './QuotesPage';
+import ToDoPage from './ToDoPage';
 
 const Index = () => {
   const { state } = useApp();
@@ -46,6 +47,7 @@ const Index = () => {
   if (dashboardView === 'reports') return <TechReports onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'timesheet') return <TimesheetPage onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'quotes') return <QuotesPage onBack={() => setDashboardView(null)} />;
+  if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
 
   return <TechDashboard onNavigate={setDashboardView} />;
 };
