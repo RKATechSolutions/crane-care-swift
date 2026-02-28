@@ -468,6 +468,43 @@ export default function CraneList() {
           }}
         />
       )}
+
+      {/* Template Picker Modal */}
+      {templatePickerCrane && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={() => setTemplatePickerCrane(null)}>
+          <div
+            className="bg-background w-full max-w-lg rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <p className="font-bold text-base">Select Inspection Form</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{templatePickerCrane.name}</p>
+              </div>
+              <button onClick={() => setTemplatePickerCrane(null)} className="p-2 rounded-lg hover:bg-muted">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-2 max-h-[60vh] overflow-auto">
+              {state.templates.filter(t => t.isActive).map(template => (
+                <button
+                  key={template.id}
+                  onClick={() => startInspectionWithTemplate(templatePickerCrane, template)}
+                  className="w-full text-left p-4 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all flex items-start gap-3"
+                >
+                  <FileText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-sm">{template.craneType} — {template.inspectionType}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {template.sections.length} sections • {template.sections.reduce((sum, s) => sum + s.items.length, 0)} items • v{template.version}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
