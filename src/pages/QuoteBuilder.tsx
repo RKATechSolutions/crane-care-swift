@@ -311,8 +311,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
         notes,
         collateItems,
       });
-      const dataUrl = pdf.output('datauristring');
-      setPreviewPdfUrl(dataUrl);
+      const blob = pdf.output('blob');
+      const blobUrl = URL.createObjectURL(blob);
+      setPreviewPdfUrl(blobUrl);
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
       console.error('Preview PDF error:', err);
@@ -617,8 +618,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
 
       <PdfPreviewModal
         open={!!previewPdfUrl}
-        onClose={() => { setPreviewPdfUrl(null); setPreviewPdfDoc(null); }}
-        pdfDataUrl={previewPdfUrl}
+        onClose={() => { if (previewPdfUrl) URL.revokeObjectURL(previewPdfUrl); setPreviewPdfUrl(null); setPreviewPdfDoc(null); }}
+        pdfBlobUrl={previewPdfUrl}
         onDownload={handleDownloadPreview}
       />
     </div>

@@ -1,14 +1,21 @@
 import { X, Download } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface PdfPreviewModalProps {
   open: boolean;
   onClose: () => void;
-  pdfDataUrl: string | null;
+  pdfBlobUrl: string | null;
   onDownload?: () => void;
 }
 
-export function PdfPreviewModal({ open, onClose, pdfDataUrl, onDownload }: PdfPreviewModalProps) {
-  if (!open || !pdfDataUrl) return null;
+export function PdfPreviewModal({ open, onClose, pdfBlobUrl, onDownload }: PdfPreviewModalProps) {
+  const [iframeError, setIframeError] = useState(false);
+
+  useEffect(() => {
+    setIframeError(false);
+  }, [pdfBlobUrl]);
+
+  if (!open || !pdfBlobUrl) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-background">
@@ -37,11 +44,34 @@ export function PdfPreviewModal({ open, onClose, pdfDataUrl, onDownload }: PdfPr
 
       {/* PDF embed */}
       <div className="flex-1 overflow-hidden">
-        <iframe
-          src={pdfDataUrl}
-          className="w-full h-full border-0"
-          title="Quote PDF Preview"
-        />
+        {!iframeError ? (
+          <iframe
+            src={pdfBlobUrl}
+            className="w-full h-full border-0"
+            title="Quote PDF Preview"
+            onError={() => setIframeError(true)}
+          />
+        ) : null}
+
+        {/* Fallback for mobile browsers that can't render PDFs inline */}
+        {iframeError && (
+          <div className="flex-1 flex items-center justify-center p-8 text-center">
+            <div>
+              <p className="text-sm text-muted-foreground mb-4">
+                PDF preview is not supported on this device.
+              </p>
+              {onDownload && (
+                <button
+                  onClick={onDownload}
+                  className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm flex items-center gap-2 mx-auto"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
