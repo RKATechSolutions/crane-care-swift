@@ -60,6 +60,11 @@ const Index = () => {
       dispatch({ type: 'SELECT_SITE', payload: { id: quote.id, name: quote.site_name, address: '', contactName: '', contactPhone: '', cranes: [] } });
     }
     setQuoteMode({ active: true, fromQuotesPage: true, draftQuote: { id: quote.id, client_name: quote.client_name, site_name: quote.site_name, items: quote.items || [], subtotal: quote.subtotal, gst: quote.gst, total: quote.total, quote_number: quote.quote_number } });
+  }} onPushEstimateToDraft={(description, clientName) => {
+    // Create a site context from the estimate client name
+    const siteName = clientName || 'New Quote';
+    dispatch({ type: 'SELECT_SITE', payload: { id: `estimate-${Date.now()}`, name: siteName, address: '', contactName: '', contactPhone: '', cranes: [] } });
+    setQuoteMode({ active: true, fromQuotesPage: true, estimateNotes: description });
   }} />;
   if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
 
