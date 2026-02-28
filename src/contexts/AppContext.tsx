@@ -51,7 +51,7 @@ const initialState: AppState = {
   sites: mockSites,
   selectedSite: null,
   selectedCrane: null,
-  templates: [mockTemplate],
+  templates: [mockTemplate, mockTemplateLiftingEquipment],
   inspections: [],
   currentInspection: null,
   siteJobSummaries: [],

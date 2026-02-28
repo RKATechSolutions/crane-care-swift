@@ -326,7 +326,7 @@ export default function CraneList() {
             </div>
             {assets.map(asset => {
               const crane = assetToCrane(asset);
-              const canInspect = asset.class_name === 'Overhead Crane';
+              const canInspect = asset.class_name === 'Overhead Crane' || LIFTING_EQUIPMENT_CLASSES.some(c => asset.class_name.toLowerCase().includes(c.toLowerCase()));
               const existing = getInspectionStatus(crane.id);
 
               return (
