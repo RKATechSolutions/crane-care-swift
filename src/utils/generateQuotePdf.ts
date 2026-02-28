@@ -26,6 +26,7 @@ interface QuotePdfData {
   gst: number;
   total: number;
   notes: string;
+  collateItems?: boolean;
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
