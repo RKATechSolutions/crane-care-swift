@@ -177,7 +177,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
       const arofloLineItems = collateItems
         ? [{
             category: 'labour' as const,
-            description: lineItems.map(item => item.description.trim()).filter(Boolean).join('; ') || 'Works as quoted',
+            description: notes.trim() || lineItems.map(item => item.description.trim()).filter(Boolean).join('; ') || 'Works as quoted',
             quantity: 1,
             costPrice: totalCost,
             unitPrice: subtotal,
