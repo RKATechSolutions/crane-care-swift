@@ -39,7 +39,7 @@ const JOB_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   general: { label: 'General', color: 'bg-muted text-muted-foreground' },
 };
 
-export default function TasksPage({ onBack }: TasksPageProps) {
+export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'open' | 'finished'>('open');
