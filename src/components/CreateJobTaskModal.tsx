@@ -35,6 +35,7 @@ interface ClientContact {
   contact_mobile: string | null;
   contact_email: string | null;
   contact_position: string | null;
+  status?: string | null;
 }
 
 interface Client {
