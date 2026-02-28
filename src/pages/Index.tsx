@@ -14,6 +14,7 @@ import TimesheetPage from './TimesheetPage';
 import QuoteBuilder from './QuoteBuilder';
 import QuotesPage from './QuotesPage';
 import ToDoPage from './ToDoPage';
+import ReceiptsPage from './ReceiptsPage';
 
 const Index = () => {
   const { state, dispatch } = useApp();
