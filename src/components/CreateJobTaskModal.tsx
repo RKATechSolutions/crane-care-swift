@@ -98,13 +98,34 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
     }
   }, [open]);
 
-  // Fetch contacts when client changes
+  // Fetch contacts when client changes — include primary contact from client record
   useEffect(() => {
     if (!clientId) { setContacts([]); setRequestedById(''); return; }
+    const client = clients.find(c => c.id === clientId);
     supabase.from('client_contacts').select('id, contact_name, contact_given_name, contact_surname, contact_phone, contact_mobile, contact_email, contact_position').eq('client_id', clientId).eq('status', 'Active').order('contact_name').then(({ data }) => {
-      if (data) setContacts(data);
+      let allContacts: ClientContact[] = data || [];
+      // Add primary contact from client record if it exists and isn't already in contacts
+      if (client?.primary_contact_name && client.primary_contact_name !== '. .') {
+        const alreadyExists = allContacts.some(c =>
+          (c.contact_name === client.primary_contact_name) ||
+          (c.contact_mobile === client.primary_contact_mobile && client.primary_contact_mobile)
+        );
+        if (!alreadyExists) {
+          allContacts = [{
+            id: `primary-${clientId}`,
+            contact_name: client.primary_contact_name,
+            contact_given_name: null,
+            contact_surname: null,
+            contact_phone: null,
+            contact_mobile: client.primary_contact_mobile,
+            contact_email: client.primary_contact_email,
+            contact_position: null,
+          }, ...allContacts];
+        }
+      }
+      setContacts(allContacts);
     });
-  }, [clientId]);
+  }, [clientId, clients]);
 
   const handleSave = async () => {
     if (!jobTitle.trim()) { toast.error('Please add a job title'); return; }
