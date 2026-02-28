@@ -178,6 +178,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         gst,
         total,
         notes,
+        collateItems,
       });
 
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
