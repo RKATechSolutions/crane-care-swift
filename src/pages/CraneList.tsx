@@ -2,10 +2,10 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
-import { Crane, InspectionItemResult } from '@/types/inspection';
+import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
 
