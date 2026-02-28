@@ -34,7 +34,7 @@ interface Task {
 }
 
 export default function ToDoPage({ onBack, onGoToQuotes }: ToDoPageProps) {
-  const { state } = useApp();
+  const [overdueQuotes, setOverdueQuotes] = useState<OverdueQuote[]>([]);
   const [overdueQuotes, setOverdueQuotes] = useState<OverdueQuote[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
