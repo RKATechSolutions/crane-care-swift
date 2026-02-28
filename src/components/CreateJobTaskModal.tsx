@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
-import { X, Phone, Mail, User as UserIcon } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, Phone, Mail, User as UserIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { mockUsers } from '@/data/mockData';
