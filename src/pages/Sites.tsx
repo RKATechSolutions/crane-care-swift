@@ -15,7 +15,7 @@ interface DbClient {
   status: string;
 }
 
-export default function Sites() {
+export default function Sites({ onBack }: { onBack?: () => void }) {
   const { state, dispatch } = useApp();
   const [search, setSearch] = useState('');
   const [dbClients, setDbClients] = useState<DbClient[]>([]);
@@ -165,6 +165,7 @@ export default function Sites() {
       <AppHeader
         title="Select Site"
         subtitle={state.currentUser?.name}
+        onBack={onBack}
       />
 
       <div className="px-4 py-3 border-b border-border space-y-2">
