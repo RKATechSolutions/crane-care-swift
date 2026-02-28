@@ -5,7 +5,7 @@ import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import { ToDoTile } from '@/components/ToDoTile';
 import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt } from 'lucide-react';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
