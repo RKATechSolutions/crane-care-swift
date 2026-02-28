@@ -47,6 +47,7 @@ const Index = () => {
   if (dashboardView === 'reports') return <TechReports onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'timesheet') return <TimesheetPage onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'quotes') return <QuotesPage onBack={() => setDashboardView(null)} />;
+  if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
 
   return <TechDashboard onNavigate={setDashboardView} />;
 };
