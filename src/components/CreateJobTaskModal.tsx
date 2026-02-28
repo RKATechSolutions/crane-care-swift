@@ -106,7 +106,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
     setSaving(true);
 
     const { error } = await supabase.from('tasks').insert({
-      title: autoTitle,
+      title: jobTitle.trim(),
       description: [
         description.trim() || null,
         requestedContact ? `Requested by: ${requestedContact.contact_name || `${requestedContact.contact_given_name} ${requestedContact.contact_surname}`}` : null,
