@@ -234,12 +234,12 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
   doc.text(`$${data.total.toFixed(2)}`, pageWidth - margin, y + 3, { align: 'right' });
   y += 12;
 
-  // Notes
+  // Job description
   if (data.notes) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...DARK);
-    doc.text('ADDITIONAL NOTES', margin, y);
+    doc.text('JOB DESCRIPTION', margin, y);
     y += 5;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);

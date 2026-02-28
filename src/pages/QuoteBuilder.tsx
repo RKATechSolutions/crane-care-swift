@@ -531,13 +531,13 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
           </button>
         </div>
 
-        {/* Notes */}
+        {/* Job description */}
         <div className="px-4 py-4 border-b border-border">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Additional Notes</label>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Description</label>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="Terms, conditions, scope of works..."
+            placeholder="Describe the job scope for the customer..."
             className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
             rows={3}
           />

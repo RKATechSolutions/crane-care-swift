@@ -173,12 +173,12 @@ serve(async (req) => {
     console.log('AroFlo quote created, ID:', quoteId);
 
     // Step 2: Add line items if provided (via QuoteLineItems zone)
-    if (lineItems && lineItems.length > 0 && quoteId) {
+    if (preparedLineItems && preparedLineItems.length > 0 && quoteId) {
       // Rate limit: wait before next request
       await new Promise(resolve => setTimeout(resolve, 1100));
 
       // Build line items XML - each line item as a quotelineitem
-      const lineItemsXml = lineItems.map(item => {
+      const lineItemsXml = preparedLineItems.map(item => {
         const lineTotal = (item.quantity * item.unitPrice).toFixed(2);
         return `<quotelineitem><quoteid>${quoteId}</quoteid><description><![CDATA[${escapeXml(item.description)}]]></description><quantity>${item.quantity}</quantity><unitprice>${item.unitPrice.toFixed(2)}</unitprice><linetotal>${lineTotal}</linetotal></quotelineitem>`;
       }).join('');
@@ -194,7 +194,7 @@ serve(async (req) => {
       }
     }
 
-    const itemCount = lineItems?.length || defects?.length || 0;
+    const itemCount = preparedLineItems?.length || defects?.length || 0;
 
     return new Response(
       JSON.stringify({
