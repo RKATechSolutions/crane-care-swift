@@ -47,6 +47,8 @@ export default function SiteJobSummary() {
   const [jobType, setJobType] = useState('Periodic Inspection');
   const [customerDefectComments, setCustomerDefectComments] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendingToAroflo, setSendingToAroflo] = useState(false);
+  const [arofloQuoteSent, setArofloQuoteSent] = useState(false);
 
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
