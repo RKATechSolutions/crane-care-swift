@@ -171,21 +171,23 @@ export default function CraneList() {
   const mockCranes = site.cranes || [];
   const hasDbAssets = dbAssets.length > 0;
 
-  const startInspection = (crane: Crane) => {
-    dispatch({ type: 'SELECT_CRANE', payload: crane });
-
-    const template = state.templates.find(
-      t => t.craneType === crane.type && t.isActive
-    );
-    if (!template) return;
-
+  const handleStartInspection = (crane: Crane) => {
+    // If there's an existing in-progress inspection, resume it directly
     const existing = state.inspections.find(
       i => i.craneId === crane.id && i.status !== 'completed'
     );
     if (existing) {
+      dispatch({ type: 'SELECT_CRANE', payload: crane });
       dispatch({ type: 'START_INSPECTION', payload: existing });
       return;
     }
+    // Show template picker
+    setTemplatePickerCrane(crane);
+  };
+
+  const startInspectionWithTemplate = (crane: Crane, template: InspectionTemplate) => {
+    dispatch({ type: 'SELECT_CRANE', payload: crane });
+    setTemplatePickerCrane(null);
 
     const items: InspectionItemResult[] = template.sections.flatMap(section =>
       section.items.map(item => ({
