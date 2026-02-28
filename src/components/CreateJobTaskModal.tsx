@@ -61,6 +61,12 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [contacts, setContacts] = useState<ClientContact[]>([]);
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactEmail, setNewContactEmail] = useState('');
+  const [newContactPosition, setNewContactPosition] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
 
   const currentUser = state.currentUser;
   const techs = mockUsers.filter(u => u.role === 'technician');
