@@ -288,7 +288,36 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
     }
   };
 
-  if (sent) {
+  const handleSaveDraft = async () => {
+    if (lineItems.length === 0) {
+      toast.error('Add at least one line item');
+      return;
+    }
+
+    setSavingDraft(true);
+    try {
+      const { error } = await supabase.from('quotes').insert({
+        client_name: clientInfo?.client_name || site.name,
+        site_name: site.name,
+        technician_id: state.currentUser?.id || 'unknown',
+        technician_name: state.currentUser?.name || 'Technician',
+        subtotal,
+        gst,
+        total,
+        status: 'not_sent',
+        items: lineItems as any,
+      });
+
+      if (error) throw error;
+      toast.success('Quote draft saved');
+    } catch (err: any) {
+      toast.error(`Failed to save draft: ${err.message}`);
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <AppHeader title="Quote Sent" onBack={onBack} />
