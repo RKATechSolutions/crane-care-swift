@@ -934,6 +934,7 @@ export type Database = {
         Row: {
           assigned_to_id: string
           assigned_to_name: string
+          client_name: string | null
           completed_at: string | null
           created_at: string
           created_by_id: string
@@ -941,7 +942,9 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          job_type: string | null
           priority: string
+          scheduled_date: string | null
           status: string
           title: string
           updated_at: string
@@ -949,6 +952,7 @@ export type Database = {
         Insert: {
           assigned_to_id: string
           assigned_to_name: string
+          client_name?: string | null
           completed_at?: string | null
           created_at?: string
           created_by_id: string
@@ -956,7 +960,9 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          job_type?: string | null
           priority?: string
+          scheduled_date?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -964,6 +970,7 @@ export type Database = {
         Update: {
           assigned_to_id?: string
           assigned_to_name?: string
+          client_name?: string | null
           completed_at?: string | null
           created_at?: string
           created_by_id?: string
@@ -971,7 +978,9 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          job_type?: string | null
           priority?: string
+          scheduled_date?: string | null
           status?: string
           title?: string
           updated_at?: string
