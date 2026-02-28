@@ -17,6 +17,17 @@ export interface QuoteLineItem {
   gstIncluded: boolean;
 }
 
+export interface DraftQuote {
+  id: string;
+  client_name: string;
+  site_name: string | null;
+  items: QuoteLineItem[];
+  subtotal: number;
+  gst: number;
+  total: number;
+  quote_number: string | null;
+}
+
 interface QuoteBuilderProps {
   onBack: () => void;
   prefilledDefects?: Array<{
@@ -27,6 +38,7 @@ interface QuoteBuilderProps {
     notes: string;
     recommendedAction: string;
   }>;
+  draftQuote?: DraftQuote;
 }
 
 const GST_RATE = 0.10;
