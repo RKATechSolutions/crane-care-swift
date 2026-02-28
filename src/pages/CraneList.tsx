@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
+import DbInspectionForm from '@/pages/DbInspectionForm';
 import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
@@ -38,7 +39,18 @@ export default function CraneList() {
   const [showAssessment, setShowAssessment] = useState<null | { type: 'Initial Site Baseline' | '12-Month Review'; existingId?: string }>(null);
   const [initialAssessment, setInitialAssessment] = useState<{ id: string; status: string } | null>(null);
   const [templatePickerCrane, setTemplatePickerCrane] = useState<Crane | null>(null);
+  const [dbFormTemplates, setDbFormTemplates] = useState<{ form_id: string; form_name: string; description: string | null }[]>([]);
+  const [activeDbForm, setActiveDbForm] = useState<{ formId: string; crane: Crane; assetId?: string } | null>(null);
   const site = state.selectedSite;
+
+  // Fetch DB form templates
+  useEffect(() => {
+    const fetchForms = async () => {
+      const { data } = await supabase.from('form_templates').select('form_id, form_name, description').eq('active', true);
+      if (data) setDbFormTemplates(data);
+    };
+    fetchForms();
+  }, []);
 
   // Fetch existing site assessments
   useEffect(() => {
@@ -235,6 +247,21 @@ export default function CraneList() {
     acc[key].push(asset);
     return acc;
   }, {} as Record<string, DbAsset[]>);
+
+  // Show DB-driven inspection form
+  if (activeDbForm) {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+    return (
+      <DbInspectionForm
+        formId={activeDbForm.formId}
+        assetName={activeDbForm.crane.name}
+        assetId={activeDbForm.assetId}
+        clientId={clientId}
+        siteName={site.name}
+        onBack={() => setActiveDbForm(null)}
+      />
+    );
+  }
 
   // Show assessment form if selected
   if (showAssessment) {
@@ -486,18 +513,20 @@ export default function CraneList() {
               </button>
             </div>
             <div className="p-4 space-y-2 max-h-[60vh] overflow-auto">
-              {state.templates.filter(t => t.isActive).map(template => (
+              {dbFormTemplates.map(ft => (
                 <button
-                  key={template.id}
-                  onClick={() => startInspectionWithTemplate(templatePickerCrane, template)}
+                  key={ft.form_id}
+                  onClick={() => {
+                    const rawId = templatePickerCrane.id.startsWith('asset-') ? templatePickerCrane.id.replace('asset-', '') : undefined;
+                    setActiveDbForm({ formId: ft.form_id, crane: templatePickerCrane, assetId: rawId });
+                    setTemplatePickerCrane(null);
+                  }}
                   className="w-full text-left p-4 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all flex items-start gap-3"
                 >
                   <FileText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="font-bold text-sm">{template.craneType} — {template.inspectionType}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {template.sections.length} sections • {template.sections.reduce((sum, s) => sum + s.items.length, 0)} items • v{template.version}
-                    </p>
+                    <p className="font-bold text-sm">{ft.form_name}</p>
+                    {ft.description && <p className="text-xs text-muted-foreground mt-0.5">{ft.description}</p>}
                   </div>
                 </button>
               ))}
