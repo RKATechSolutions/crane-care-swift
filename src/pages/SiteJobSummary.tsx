@@ -585,6 +585,24 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
                     )}
                   </button>
                 )}
+
+                {/* Create full quote on the spot */}
+                {quoteNowDefects.length > 0 && onCreateQuote && (
+                  <button
+                    onClick={() => onCreateQuote(quoteNowDefects.map(d => ({
+                      itemLabel: d.itemLabel,
+                      craneName: d.crane?.name || 'Unknown',
+                      severity: d.item.defect!.severity,
+                      defectType: d.item.defect!.defectType,
+                      notes: d.item.defect!.notes || '',
+                      recommendedAction: d.item.defect!.recommendedAction || '',
+                    })))}
+                    className="w-full tap-target py-3 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 mt-2"
+                  >
+                    <FileText className="w-5 h-5" />
+                    Create Full Quote on the Spot
+                  </button>
+                )}
               </>
             )}
           </div>
