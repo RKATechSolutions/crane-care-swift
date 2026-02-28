@@ -57,6 +57,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       desc: 'View & send pending quotes',
       color: 'bg-cyan-500/10 text-cyan-600',
     },
+    {
+      id: 'receipts',
+      icon: <Receipt className="w-8 h-8" />,
+      title: 'Receipts',
+      desc: 'Send receipts straight to Xero',
+      color: 'bg-teal-500/10 text-teal-600',
+    },
   ];
 
   return (
