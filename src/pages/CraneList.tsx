@@ -148,16 +148,22 @@ export default function CraneList() {
     );
   }
 
-  const assetToCrane = (asset: DbAsset): Crane => ({
-    id: `asset-${asset.id}`,
-    siteId: site.id,
-    name: asset.asset_id2 || asset.description || asset.asset_id1 || asset.class_name,
-    type: asset.class_name === 'Overhead Crane' ? 'Single Girder Overhead' : asset.class_name as any,
-    serialNumber: asset.serial_number || asset.asset_id1 || 'N/A',
-    capacity: asset.capacity || 'N/A',
-    manufacturer: asset.crane_manufacturer || asset.manufacturer || 'N/A',
-    yearInstalled: 0,
-  });
+  const LIFTING_EQUIPMENT_CLASSES = ['Sling', 'Shackle', 'Spreader Beam', 'Lifting Clamp', 'Chain Block', 'Lever Hoist', 'Lifting Equipment'];
+
+  const assetToCrane = (asset: DbAsset): Crane => {
+    const isOverhead = asset.class_name === 'Overhead Crane';
+    const isLiftingEquipment = LIFTING_EQUIPMENT_CLASSES.some(c => asset.class_name.toLowerCase().includes(c.toLowerCase()));
+    return {
+      id: `asset-${asset.id}`,
+      siteId: site.id,
+      name: asset.asset_id2 || asset.description || asset.asset_id1 || asset.class_name,
+      type: isOverhead ? 'Single Girder Overhead' : isLiftingEquipment ? 'Lifting Equipment' : asset.class_name as any,
+      serialNumber: asset.serial_number || asset.asset_id1 || 'N/A',
+      capacity: asset.capacity || 'N/A',
+      manufacturer: asset.crane_manufacturer || asset.manufacturer || 'N/A',
+      yearInstalled: 0,
+    };
+  };
 
   // Use DB assets if available, otherwise fall back to mock cranes
   const displayAssets = dbAssets.length > 0 ? dbAssets : [];
@@ -320,7 +326,7 @@ export default function CraneList() {
             </div>
             {assets.map(asset => {
               const crane = assetToCrane(asset);
-              const canInspect = asset.class_name === 'Overhead Crane';
+              const canInspect = asset.class_name === 'Overhead Crane' || LIFTING_EQUIPMENT_CLASSES.some(c => asset.class_name.toLowerCase().includes(c.toLowerCase()));
               const existing = getInspectionStatus(crane.id);
 
               return (
