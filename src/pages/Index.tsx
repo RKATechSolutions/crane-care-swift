@@ -18,7 +18,7 @@ import ToDoPage from './ToDoPage';
 const Index = () => {
   const { state, dispatch } = useApp();
   const [dashboardView, setDashboardView] = useState<DashboardView>(null);
-  const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[]; fromQuotesPage?: boolean; draftQuote?: any }>({ active: false });
+  const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[]; fromQuotesPage?: boolean; draftQuote?: any; estimateNotes?: string }>({ active: false });
 
   if (!state.currentUser) return <Login />;
   if (state.currentUser.role === 'admin') return <AdminDashboard />;
