@@ -161,6 +161,22 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
 
     setSending(true);
     try {
+      const arofloLineItems = collateItems
+        ? [{
+            category: 'labour' as const,
+            description: lineItems.map(item => item.description.trim()).filter(Boolean).join('; ') || 'Works as quoted',
+            quantity: 1,
+            costPrice: totalCost,
+            unitPrice: subtotal,
+          }]
+        : lineItems.map(item => ({
+            category: item.category,
+            description: item.description,
+            quantity: item.quantity,
+            costPrice: item.costPrice,
+            unitPrice: item.sellPrice,
+          }));
+
       // 1. Create quote in AroFlo and get quote number
       const { data: arofloData, error: arofloError } = await supabase.functions.invoke('create-aroflo-quote', {
         body: {
@@ -170,13 +186,9 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
           technicianName: state.currentUser?.name || 'Technician',
           jobDate: format(new Date(), 'yyyy-MM-dd'),
           quoteName,
-          lineItems: lineItems.map(item => ({
-            category: item.category,
-            description: item.description,
-            quantity: item.quantity,
-            costPrice: item.costPrice,
-            unitPrice: item.sellPrice,
-          })),
+          jobDescription: notes.trim(),
+          collateItems,
+          lineItems: arofloLineItems,
           defects: prefilledDefects || [],
         },
       });
@@ -519,13 +531,13 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
           </button>
         </div>
 
-        {/* Notes */}
+        {/* Job description */}
         <div className="px-4 py-4 border-b border-border">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Additional Notes</label>
+          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Description</label>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="Terms, conditions, scope of works..."
+            placeholder="Describe the job scope for the customer..."
             className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
             rows={3}
           />
