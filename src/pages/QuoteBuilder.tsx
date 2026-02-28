@@ -614,6 +614,13 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
           )}
         </button>
       </div>
+
+      <PdfPreviewModal
+        open={!!previewPdfUrl}
+        onClose={() => { setPreviewPdfUrl(null); setPreviewPdfDoc(null); }}
+        pdfDataUrl={previewPdfUrl}
+        onDownload={handleDownloadPreview}
+      />
     </div>
   );
 }
