@@ -18,14 +18,22 @@ import ToDoPage from './ToDoPage';
 const Index = () => {
   const { state } = useApp();
   const [dashboardView, setDashboardView] = useState<DashboardView>(null);
-  const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[] }>({ active: false });
+  const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[]; fromQuotesPage?: boolean }>({ active: false });
 
   if (!state.currentUser) return <Login />;
   if (state.currentUser.role === 'admin') return <AdminDashboard />;
 
   // Quote builder
   if (quoteMode.active && state.selectedSite) {
-    return <QuoteBuilder onBack={() => setQuoteMode({ active: false })} prefilledDefects={quoteMode.defects} />;
+    return <QuoteBuilder onBack={() => {
+      setQuoteMode({ active: false });
+      if (quoteMode.fromQuotesPage) setDashboardView('quotes');
+    }} prefilledDefects={quoteMode.defects} />;
+  }
+
+  // If quoteMode is active but no site selected yet, show Sites for selection
+  if (quoteMode.active && !state.selectedSite) {
+    return <Sites />;
   }
 
   // Active inspection takes priority
@@ -46,7 +54,7 @@ const Index = () => {
   if (dashboardView === 'clients' || dashboardView === 'assets') return <Sites />;
   if (dashboardView === 'reports') return <TechReports onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'timesheet') return <TimesheetPage onBack={() => setDashboardView(null)} />;
-  if (dashboardView === 'quotes') return <QuotesPage onBack={() => setDashboardView(null)} onCreateQuote={() => setDashboardView('clients')} />;
+  if (dashboardView === 'quotes') return <QuotesPage onBack={() => setDashboardView(null)} onCreateQuote={() => setQuoteMode({ active: true, fromQuotesPage: true })} />;
   if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
 
   return <TechDashboard onNavigate={setDashboardView} />;
