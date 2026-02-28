@@ -34,8 +34,7 @@ const Index = () => {
 
   // If quoteMode is active but no site selected yet, show Sites for selection
   if (quoteMode.active && !state.selectedSite) {
-    return <Sites />;
-  }
+    return <Sites onBack={() => setQuoteMode({ active: false })} />;
 
   // Active inspection takes priority
   if (state.currentInspection) {
