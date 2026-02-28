@@ -23,6 +23,7 @@ interface Quote {
 
 interface QuotesPageProps {
   onBack: () => void;
+  onCreateQuote?: () => void;
 }
 
 const ESTIMATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-estimate`;
