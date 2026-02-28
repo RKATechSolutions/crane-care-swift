@@ -28,7 +28,7 @@ interface QuotesPageProps {
 
 const ESTIMATE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-estimate`;
 
-export default function QuotesPage({ onBack }: QuotesPageProps) {
+export default function QuotesPage({ onBack, onCreateQuote }: QuotesPageProps) {
   const [filter, setFilter] = useState<QuoteFilter>('draft');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
