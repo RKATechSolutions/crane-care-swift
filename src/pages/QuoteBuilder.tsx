@@ -103,8 +103,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       category,
       description: '',
       quantity: 1,
-      costPrice: 0,
-      sellPrice: 0,
+      costPrice: category === 'labour' ? LABOUR_COST_RATE : 0,
+      sellPrice: category === 'labour' ? LABOUR_SELL_RATE : 0,
       gstIncluded: false,
     }]);
   };
