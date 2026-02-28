@@ -131,6 +131,22 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
   const materialItems = lineItems.filter(i => i.category === 'materials');
   const expenseItems = lineItems.filter(i => i.category === 'expenses');
 
+  const downloadPdf = (pdf: any, filename: string) => {
+    try {
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      pdf.save(filename);
+    }
+  };
+
   const handleSendQuote = async () => {
     if (lineItems.length === 0) {
       toast.error('Add at least one line item');
