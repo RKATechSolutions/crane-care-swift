@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { generateQuotePdf } from '@/utils/generateQuotePdf';
+import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 
 export interface QuoteLineItem {
   id: string;
@@ -62,6 +63,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
   const [savingDraft, setSavingDraft] = useState(false);
   const [sent, setSent] = useState(false);
   const [previewingPdf, setPreviewingPdf] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [previewPdfDoc, setPreviewPdfDoc] = useState<any>(null);
   const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(draftQuote?.quote_number || null);
 
   // Client info
@@ -308,16 +311,23 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
         notes,
         collateItems,
       });
-      const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
-      const filename = `${clientNameSafe}_Quote_DRAFT.pdf`;
-      downloadPdf(pdf, filename);
-      toast.success('Draft PDF downloaded');
+      const dataUrl = pdf.output('datauristring');
+      setPreviewPdfUrl(dataUrl);
+      setPreviewPdfDoc(pdf);
     } catch (err: any) {
       console.error('Preview PDF error:', err);
       toast.error(`Failed to generate PDF: ${err.message}`);
     } finally {
       setPreviewingPdf(false);
     }
+  };
+
+  const handleDownloadPreview = () => {
+    if (!previewPdfDoc) return;
+    const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `${clientNameSafe}_Quote_DRAFT.pdf`;
+    downloadPdf(previewPdfDoc, filename);
+    toast.success('Draft PDF downloaded');
   };
 
   const handleSaveDraft = async () => {
@@ -362,7 +372,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
   if (sent) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <AppHeader title="Quote Sent" onBack={onBack} />
+        <AppHeader title="Quote Sent" onBack={onBack} logoOnly />
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center">
             <div className="w-16 h-16 rounded-full bg-rka-green-light flex items-center justify-center mx-auto mb-4">
@@ -462,11 +472,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader
-        title="Create Quote"
-        subtitle={clientInfo?.client_name || site.name}
-        onBack={onBack}
-      />
+      <AppHeader title="Create Quote" onBack={onBack} logoOnly />
 
       <div className="flex-1 overflow-y-auto">
         {/* Quote Header */}
@@ -608,6 +614,13 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
           )}
         </button>
       </div>
+
+      <PdfPreviewModal
+        open={!!previewPdfUrl}
+        onClose={() => { setPreviewPdfUrl(null); setPreviewPdfDoc(null); }}
+        pdfDataUrl={previewPdfUrl}
+        onDownload={handleDownloadPreview}
+      />
     </div>
   );
 }
