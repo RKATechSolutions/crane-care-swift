@@ -97,7 +97,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   }, [clientId]);
 
   const handleSave = async () => {
-    if (!autoTitle.trim()) { toast.error('Please select a client or add a description'); return; }
+    if (!jobTitle.trim()) { toast.error('Please add a job title'); return; }
     if (!assignedToId) { toast.error('Please assign to someone'); return; }
     if (!currentUser) { toast.error('Not logged in'); return; }
 
