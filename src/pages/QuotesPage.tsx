@@ -142,6 +142,16 @@ export default function QuotesPage({ onBack, onCreateQuote }: QuotesPageProps) {
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader title="Quotes" subtitle="Manage your pending & sent quotes" onBack={onBack} />
 
+      {/* Create Quote Button */}
+      {onCreateQuote && (
+        <div className="px-4 pt-3">
+          <Button onClick={onCreateQuote} className="w-full gap-2">
+            <Plus className="w-4 h-4" />
+            Create Quote
+          </Button>
+        </div>
+      )}
+
       {/* Overdue reminder banner */}
       {overdueCount > 0 && filter === 'draft' && (
         <div className="mx-4 mt-3 bg-amber-500/15 border border-amber-500/30 rounded-xl p-3 flex items-center gap-3">
