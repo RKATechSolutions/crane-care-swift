@@ -60,6 +60,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
   const [sending, setSending] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [sent, setSent] = useState(false);
+  const [previewingPdf, setPreviewingPdf] = useState(false);
   const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(draftQuote?.quote_number || null);
 
   // Client info
@@ -177,7 +178,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
       const arofloLineItems = collateItems
         ? [{
             category: 'labour' as const,
-            description: lineItems.map(item => item.description.trim()).filter(Boolean).join('; ') || 'Works as quoted',
+            description: notes.trim() || lineItems.map(item => item.description.trim()).filter(Boolean).join('; ') || 'Works as quoted',
             quantity: 1,
             costPrice: totalCost,
             unitPrice: subtotal,
@@ -286,6 +287,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
   const { dispatch } = useApp();
 
   const handlePreviewPdf = async () => {
+    setPreviewingPdf(true);
     try {
       const pdf = await generateQuotePdf({
         quoteName,
@@ -312,6 +314,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
     } catch (err: any) {
       console.error('Preview PDF error:', err);
       toast.error(`Failed to generate PDF: ${err.message}`);
+    } finally {
+      setPreviewingPdf(false);
     }
   };
 
@@ -582,10 +586,14 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
         </button>
         <button
           onClick={handlePreviewPdf}
-          className="w-full tap-target py-3 bg-muted text-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+          disabled={previewingPdf}
+          className={`w-full tap-target py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-70 ${previewingPdf ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
         >
-          <FileText className="w-5 h-5" />
-          Preview Quote PDF
+          {previewingPdf ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Generating PDF...</>
+          ) : (
+            <><FileText className="w-5 h-5" /> Preview Quote PDF</>
+          )}
         </button>
         <button
           onClick={handleSendQuote}

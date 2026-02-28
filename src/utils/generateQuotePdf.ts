@@ -122,9 +122,8 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
 
   // Line items
   if (data.collateItems) {
-    // Collated: single line item with combined descriptions
-    const descriptions = data.lineItems.map(i => i.description).filter(Boolean);
-    const collatedDesc = descriptions.join('; ') || 'Works as quoted';
+    // Collated: use job description as the single line item
+    const collatedDesc = data.notes?.trim() || data.lineItems.map(i => i.description).filter(Boolean).join('; ') || 'Works as quoted';
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
