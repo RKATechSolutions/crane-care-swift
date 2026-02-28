@@ -311,16 +311,23 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
         notes,
         collateItems,
       });
-      const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
-      const filename = `${clientNameSafe}_Quote_DRAFT.pdf`;
-      downloadPdf(pdf, filename);
-      toast.success('Draft PDF downloaded');
+      const dataUrl = pdf.output('datauristring');
+      setPreviewPdfUrl(dataUrl);
+      setPreviewPdfDoc(pdf);
     } catch (err: any) {
       console.error('Preview PDF error:', err);
       toast.error(`Failed to generate PDF: ${err.message}`);
     } finally {
       setPreviewingPdf(false);
     }
+  };
+
+  const handleDownloadPreview = () => {
+    if (!previewPdfDoc) return;
+    const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `${clientNameSafe}_Quote_DRAFT.pdf`;
+    downloadPdf(previewPdfDoc, filename);
+    toast.success('Draft PDF downloaded');
   };
 
   const handleSaveDraft = async () => {
