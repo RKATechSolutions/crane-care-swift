@@ -57,6 +57,8 @@ interface QuoteRequest {
   technicianName: string;
   jobDate: string;
   quoteName?: string;
+  jobDescription?: string;
+  collateItems?: boolean;
   defects?: DefectItem[];
   lineItems?: LineItem[];
 }
