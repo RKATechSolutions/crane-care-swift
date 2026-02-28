@@ -133,7 +133,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   };
 
   const resetForm = () => {
-    setDescription(''); setClientId(''); setJobType('crane_inspection');
+    setDescription(''); setClientId(''); setJobType('crane_inspection'); setJobTitle('');
     setAssignedToId(''); setPriority('normal'); setScheduledDate('');
     setStartTime(''); setEndTime(''); setRequestedById('');
   };
