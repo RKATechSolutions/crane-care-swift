@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AddTaskModal } from '@/components/AddTaskModal';
-import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 
 interface ToDoPageProps {
