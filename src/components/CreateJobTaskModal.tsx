@@ -206,6 +206,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
     setDescription(''); setClientId(''); setClientOpen(false); setJobType('crane_inspection'); setJobTitle('');
     setAssignedToId(''); setPriority('normal'); setScheduledDate('');
     setStartTime(''); setEndTime(''); setRequestedById('');
+    setUseManualRequestedBy(false); setManualRequestedByName(''); setManualRequestedByPhone(''); setManualRequestedByEmail('');
     setShowAddContact(false); setNewContactName(''); setNewContactPhone(''); setNewContactEmail(''); setNewContactPosition('');
   };
 
