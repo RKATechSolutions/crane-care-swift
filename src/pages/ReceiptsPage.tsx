@@ -122,7 +122,7 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
       <AppHeader
         title="Receipts"
         subtitle="Capture & send to Xero"
-        leftAction={{ icon: <ArrowLeft className="w-5 h-5" />, onClick: onBack }}
+        onBack={onBack}
       />
 
       <div className="flex-1 p-4 space-y-4 overflow-y-auto">

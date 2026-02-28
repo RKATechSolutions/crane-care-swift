@@ -67,6 +67,7 @@ const Index = () => {
     dispatch({ type: 'SELECT_SITE', payload: { id: `estimate-${Date.now()}`, name: siteName, address: '', contactName: '', contactPhone: '', cranes: [] } });
     setQuoteMode({ active: true, fromQuotesPage: true, estimateNotes: description });
   }} />;
+  if (dashboardView === 'receipts') return <ReceiptsPage onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
 
   return <TechDashboard onNavigate={setDashboardView} />;
