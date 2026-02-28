@@ -186,6 +186,67 @@ export const mockTemplate: InspectionTemplate = {
   ],
 };
 
+export const mockTemplateLiftingEquipment: InspectionTemplate = {
+  id: 'template_lifting_equipment_v1',
+  craneType: 'Lifting Equipment',
+  inspectionType: 'Quarterly',
+  version: 1,
+  isActive: true,
+  createdAt: '2026-02-28',
+  sections: [
+    {
+      id: 'le_details',
+      name: 'Equipment Details',
+      sortOrder: 0,
+      items: [
+        { id: 'le_asset_id', label: 'Asset ID / Tag', sortOrder: 1, type: 'text' },
+        { id: 'le_type', label: 'Equipment Type', sortOrder: 2, type: 'single_select', options: ['Chain sling', 'Webbing sling', 'Round sling', 'Shackle', 'Spreader beam', 'Lifting clamp', 'Other'], required: true },
+        { id: 'le_swl', label: 'SWL / WLL', sortOrder: 3, type: 'numeric' },
+        { id: 'le_manufacturer', label: 'Manufacturer (if known)', sortOrder: 4, type: 'text' },
+        { id: 'le_serial', label: 'Serial / Batch (if known)', sortOrder: 5, type: 'text' },
+      ],
+    },
+    {
+      id: 'le_identification',
+      name: 'Identification & Compliance',
+      sortOrder: 1,
+      items: [
+        { id: 'le_id_tag', label: 'Identification tag/label present & legible', sortOrder: 1 },
+        { id: 'le_register', label: 'Listed on lifting gear register', sortOrder: 2 },
+        { id: 'le_inspection_interval', label: 'Inspection interval current', sortOrder: 3 },
+      ],
+    },
+    {
+      id: 'le_condition',
+      name: 'Condition Checks',
+      sortOrder: 2,
+      items: [
+        { id: 'le_damage', label: 'No cuts, tears, gouges, crushing, kinks, or deformation', sortOrder: 1 },
+        { id: 'le_corrosion', label: 'No excessive corrosion / pitting / chemical attack', sortOrder: 2 },
+        { id: 'le_wear', label: 'Wear within acceptable limits', sortOrder: 3 },
+        { id: 'le_hooks_fittings', label: 'Fittings / hooks / master links serviceable (if fitted)', sortOrder: 4 },
+      ],
+    },
+    {
+      id: 'le_photos',
+      name: 'Photos (When Required)',
+      sortOrder: 3,
+      items: [
+        { id: 'le_defect_photos', label: 'Photos of defects (required if any FAIL)', sortOrder: 1, type: 'photo_required' },
+      ],
+    },
+    {
+      id: 'le_outcome',
+      name: 'Outcome',
+      sortOrder: 4,
+      items: [
+        { id: 'le_result', label: 'Outcome', sortOrder: 1, type: 'single_select', options: ['Fit for use', 'Fit for use with recommendations', 'Remove from service', 'Repair required'], required: true },
+        { id: 'le_notes', label: 'Technician Notes', sortOrder: 2, type: 'text' },
+      ],
+    },
+  ],
+};
+
 export const mockUsers = [
   { id: 'tech-1', name: 'Aaron Harrison', email: 'aaron@rka.com.au', role: 'technician' as const },
   { id: 'tech-2', name: 'Vince Fernandez', email: 'vince@rka.com.au', role: 'technician' as const },
