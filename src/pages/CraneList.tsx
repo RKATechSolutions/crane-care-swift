@@ -2,10 +2,10 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw } from 'lucide-react';
+import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
-import { Crane, InspectionItemResult } from '@/types/inspection';
+import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
 
@@ -37,6 +37,7 @@ export default function CraneList() {
   const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
   const [showAssessment, setShowAssessment] = useState<null | { type: 'Initial Site Baseline' | '12-Month Review'; existingId?: string }>(null);
   const [initialAssessment, setInitialAssessment] = useState<{ id: string; status: string } | null>(null);
+  const [templatePickerCrane, setTemplatePickerCrane] = useState<Crane | null>(null);
   const site = state.selectedSite;
 
   // Fetch existing site assessments
@@ -170,21 +171,23 @@ export default function CraneList() {
   const mockCranes = site.cranes || [];
   const hasDbAssets = dbAssets.length > 0;
 
-  const startInspection = (crane: Crane) => {
-    dispatch({ type: 'SELECT_CRANE', payload: crane });
-
-    const template = state.templates.find(
-      t => t.craneType === crane.type && t.isActive
-    );
-    if (!template) return;
-
+  const handleStartInspection = (crane: Crane) => {
+    // If there's an existing in-progress inspection, resume it directly
     const existing = state.inspections.find(
       i => i.craneId === crane.id && i.status !== 'completed'
     );
     if (existing) {
+      dispatch({ type: 'SELECT_CRANE', payload: crane });
       dispatch({ type: 'START_INSPECTION', payload: existing });
       return;
     }
+    // Show template picker
+    setTemplatePickerCrane(crane);
+  };
+
+  const startInspectionWithTemplate = (crane: Crane, template: InspectionTemplate) => {
+    dispatch({ type: 'SELECT_CRANE', payload: crane });
+    setTemplatePickerCrane(null);
 
     const items: InspectionItemResult[] = template.sections.flatMap(section =>
       section.items.map(item => ({
@@ -326,7 +329,6 @@ export default function CraneList() {
             </div>
             {assets.map(asset => {
               const crane = assetToCrane(asset);
-              const canInspect = asset.class_name === 'Overhead Crane' || LIFTING_EQUIPMENT_CLASSES.some(c => asset.class_name.toLowerCase().includes(c.toLowerCase()));
               const existing = getInspectionStatus(crane.id);
 
               return (
@@ -360,21 +362,19 @@ export default function CraneList() {
                       )}
                     </div>
 
-                    {canInspect && (
-                      <button
-                        onClick={() => startInspection(crane)}
-                        className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                          existing?.status === 'completed'
-                            ? 'bg-muted text-foreground'
-                            : existing?.status === 'in_progress'
-                            ? 'bg-rka-orange text-destructive-foreground'
-                            : 'bg-primary text-primary-foreground shadow-lg'
-                        }`}
-                      >
-                        <PlayCircle className="w-5 h-5" />
-                        {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleStartInspection(crane)}
+                      className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
+                        existing?.status === 'completed'
+                          ? 'bg-muted text-foreground'
+                          : existing?.status === 'in_progress'
+                          ? 'bg-rka-orange text-destructive-foreground'
+                          : 'bg-primary text-primary-foreground shadow-lg'
+                      }`}
+                    >
+                      <PlayCircle className="w-5 h-5" />
+                      {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
+                    </button>
                   </div>
                 </div>
               );
@@ -384,7 +384,6 @@ export default function CraneList() {
 
         {/* Fallback to mock cranes if no DB assets */}
         {!loading && !hasDbAssets && mockCranes.map(crane => {
-          const canInspect = crane.type === 'Single Girder Overhead';
           const existing = getInspectionStatus(crane.id);
 
           return (
@@ -409,26 +408,19 @@ export default function CraneList() {
                   )}
                 </div>
 
-                {canInspect ? (
-                  <button
-                    onClick={() => startInspection(crane)}
-                    className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                      existing?.status === 'completed'
-                        ? 'bg-muted text-foreground'
-                        : existing?.status === 'in_progress'
-                        ? 'bg-rka-orange text-destructive-foreground'
-                        : 'bg-primary text-primary-foreground shadow-lg'
-                    }`}
-                  >
-                    <PlayCircle className="w-5 h-5" />
-                    {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
-                  </button>
-                ) : (
-                  <div className="mt-3 tap-target rounded-xl bg-muted flex items-center justify-center gap-2 text-muted-foreground text-sm">
-                    <Info className="w-4 h-4" />
-                    Inspection form not available yet
-                  </div>
-                )}
+                <button
+                  onClick={() => handleStartInspection(crane)}
+                  className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
+                    existing?.status === 'completed'
+                      ? 'bg-muted text-foreground'
+                      : existing?.status === 'in_progress'
+                      ? 'bg-rka-orange text-destructive-foreground'
+                      : 'bg-primary text-primary-foreground shadow-lg'
+                  }`}
+                >
+                  <PlayCircle className="w-5 h-5" />
+                  {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
+                </button>
               </div>
             </div>
           );
@@ -475,6 +467,43 @@ export default function CraneList() {
             refreshAssets();
           }}
         />
+      )}
+
+      {/* Template Picker Modal */}
+      {templatePickerCrane && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={() => setTemplatePickerCrane(null)}>
+          <div
+            className="bg-background w-full max-w-lg rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <p className="font-bold text-base">Select Inspection Form</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{templatePickerCrane.name}</p>
+              </div>
+              <button onClick={() => setTemplatePickerCrane(null)} className="p-2 rounded-lg hover:bg-muted">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-2 max-h-[60vh] overflow-auto">
+              {state.templates.filter(t => t.isActive).map(template => (
+                <button
+                  key={template.id}
+                  onClick={() => startInspectionWithTemplate(templatePickerCrane, template)}
+                  className="w-full text-left p-4 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-all flex items-start gap-3"
+                >
+                  <FileText className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-bold text-sm">{template.craneType} — {template.inspectionType}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {template.sections.length} sections • {template.sections.reduce((sum, s) => sum + s.items.length, 0)} items • v{template.version}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
