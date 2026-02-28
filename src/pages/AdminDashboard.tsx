@@ -130,6 +130,8 @@ export default function AdminDashboard() {
         </button>
       </div>
 
+      <FiveStarGoalBanner />
+
       <div className="flex-1 overflow-y-auto">
         {tab === 'schedule' && <AdminSchedule />}
         {tab === 'leave' && <AdminLeaveApproval />}
