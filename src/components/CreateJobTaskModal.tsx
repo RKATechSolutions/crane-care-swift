@@ -63,10 +63,22 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
 
   const selectedClient = clients.find(c => c.id === clientId);
 
-  // Build auto title: "ClientName — description"
-  const autoTitle = selectedClient
-    ? `${selectedClient.client_name}${description.trim() ? ' — ' + description.trim() : ''}`
-    : description.trim();
+  const [jobTitle, setJobTitle] = useState('');
+
+  // When client changes, prepopulate the title prefix
+  useEffect(() => {
+    if (selectedClient) {
+      setJobTitle(prev => {
+        // If title is empty or was previously set to another client name, reset with new client
+        const oldClient = clients.find(c => prev.startsWith(c.client_name));
+        if (!prev || (oldClient && oldClient.id !== clientId)) {
+          return `${selectedClient.client_name} — `;
+        }
+        return prev;
+      });
+    }
+  }, [clientId, selectedClient]);
+
 
   useEffect(() => {
     if (open) {
@@ -85,7 +97,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   }, [clientId]);
 
   const handleSave = async () => {
-    if (!autoTitle.trim()) { toast.error('Please select a client or add a description'); return; }
+    if (!jobTitle.trim()) { toast.error('Please add a job title'); return; }
     if (!assignedToId) { toast.error('Please assign to someone'); return; }
     if (!currentUser) { toast.error('Not logged in'); return; }
 
@@ -94,7 +106,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
     setSaving(true);
 
     const { error } = await supabase.from('tasks').insert({
-      title: autoTitle,
+      title: jobTitle.trim(),
       description: [
         description.trim() || null,
         requestedContact ? `Requested by: ${requestedContact.contact_name || `${requestedContact.contact_given_name} ${requestedContact.contact_surname}`}` : null,
@@ -121,7 +133,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   };
 
   const resetForm = () => {
-    setDescription(''); setClientId(''); setJobType('crane_inspection');
+    setDescription(''); setClientId(''); setJobType('crane_inspection'); setJobTitle('');
     setAssignedToId(''); setPriority('normal'); setScheduledDate('');
     setStartTime(''); setEndTime(''); setRequestedById('');
   };
@@ -217,12 +229,14 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
             </div>
           </div>
 
-          {/* Title preview */}
+          {/* Editable Job Title */}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground">Job Title</label>
-            <div className="bg-muted rounded-md px-3 py-2 text-sm text-foreground min-h-[2.5rem] flex items-center">
-              {autoTitle || <span className="text-muted-foreground">Select client & add description below</span>}
-            </div>
+            <label className="text-xs font-semibold text-muted-foreground">Job Title *</label>
+            <Input
+              value={jobTitle}
+              onChange={e => setJobTitle(e.target.value)}
+              placeholder="e.g. Client Name — Repair of Crane 1"
+            />
           </div>
 
           {/* Description */}
