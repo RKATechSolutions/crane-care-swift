@@ -43,6 +43,15 @@ export default function CraneList() {
   const [activeDbForm, setActiveDbForm] = useState<{ formId: string; crane: Crane; assetId?: string } | null>(null);
   const site = state.selectedSite;
 
+  // Fetch DB form templates
+  useEffect(() => {
+    const fetchForms = async () => {
+      const { data } = await supabase.from('form_templates').select('form_id, form_name, description').eq('active', true);
+      if (data) setDbFormTemplates(data);
+    };
+    fetchForms();
+  }, []);
+
   // Fetch existing site assessments
   useEffect(() => {
     if (!site) return;
