@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
+import DbInspectionForm from '@/pages/DbInspectionForm';
 import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
