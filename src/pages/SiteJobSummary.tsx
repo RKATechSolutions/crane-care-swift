@@ -5,7 +5,7 @@ import { SignaturePad } from '@/components/SignaturePad';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User, Loader2 } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
 import { supabase } from '@/integrations/supabase/client';
