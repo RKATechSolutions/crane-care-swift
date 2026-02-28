@@ -251,6 +251,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       gst,
       total,
       notes,
+      collateItems,
     });
     const clientNameSafe = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
     pdf.save(`${clientNameSafe}_Quote_DRAFT.pdf`);
