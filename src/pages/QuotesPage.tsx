@@ -49,7 +49,7 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote }: Quote
     async function fetchQuotes() {
       const { data, error } = await supabase
         .from('quotes')
-        .select('id, client_name, asset_name, site_name, total, status, created_at, sent_at, quote_number')
+        .select('id, client_name, asset_name, site_name, total, subtotal, gst, status, created_at, sent_at, quote_number, items')
         .order('created_at', { ascending: false });
       if (!error && data) setQuotes(data);
       setLoading(false);
