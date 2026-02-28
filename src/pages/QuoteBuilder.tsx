@@ -462,11 +462,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader
-        title="Create Quote"
-        subtitle={clientInfo?.client_name || site.name}
-        onBack={onBack}
-      />
+      <AppHeader title="Create Quote" onBack={onBack} logoOnly />
 
       <div className="flex-1 overflow-y-auto">
         {/* Quote Header */}
