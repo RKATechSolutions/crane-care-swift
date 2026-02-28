@@ -310,9 +310,6 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote, ini
         notes,
         collateItems,
       });
-      const blob = pdf.output('blob');
-      const blobUrl = URL.createObjectURL(blob);
-      setPreviewPdfUrl(blobUrl);
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
       console.error('Preview PDF error:', err);
