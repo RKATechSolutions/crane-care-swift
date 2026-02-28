@@ -64,6 +64,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       desc: 'Send receipts straight to Xero',
       color: 'bg-teal-500/10 text-teal-600',
     },
+    {
+      id: 'tasks',
+      icon: <Wrench className="w-8 h-8" />,
+      title: 'Tasks',
+      desc: 'Create & manage jobs',
+      color: 'bg-indigo-500/10 text-indigo-600',
+    },
   ];
 
   return (
