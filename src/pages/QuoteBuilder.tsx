@@ -30,6 +30,10 @@ interface QuoteBuilderProps {
 }
 
 const GST_RATE = 0.10;
+const GP_TARGET = 0.50;
+const LABOUR_COST_RATE = 117;
+const LABOUR_SELL_RATE = 195;
+const LABOUR_OT_SELL_RATE = 250;
 
 export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderProps) {
   const { state } = useApp();
