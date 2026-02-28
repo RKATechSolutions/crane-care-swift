@@ -560,6 +560,27 @@ export default function SiteJobSummary() {
                   <Check className="w-5 h-5" />
                   Save Defect Details
                 </button>
+
+                {/* Send Quote Now defects to AroFlo */}
+                {quoteNowDefects.length > 0 && (
+                  <button
+                    onClick={handleSendToAroflo}
+                    disabled={sendingToAroflo || arofloQuoteSent}
+                    className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 mt-2 ${
+                      arofloQuoteSent
+                        ? 'bg-rka-green text-primary-foreground'
+                        : 'bg-rka-orange text-destructive-foreground'
+                    }`}
+                  >
+                    {sendingToAroflo ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" /> Sending to AroFlo...</>
+                    ) : arofloQuoteSent ? (
+                      <><CheckCircle className="w-5 h-5" /> Quote Sent to AroFlo</>
+                    ) : (
+                      <><ExternalLink className="w-5 h-5" /> Send {quoteNowDefects.length} Defect{quoteNowDefects.length !== 1 ? 's' : ''} to AroFlo as Quote</>
+                    )}
+                  </button>
+                )}
               </>
             )}
           </div>
