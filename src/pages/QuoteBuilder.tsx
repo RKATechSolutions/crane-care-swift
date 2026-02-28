@@ -47,19 +47,20 @@ const LABOUR_COST_RATE = 117;
 const LABOUR_SELL_RATE = 195;
 const LABOUR_OT_SELL_RATE = 250;
 
-export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderProps) {
+export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: QuoteBuilderProps) {
   const { state } = useApp();
   const site = state.selectedSite!;
 
+  const [draftId, setDraftId] = useState<string | null>(draftQuote?.id || null);
   const [quoteName, setQuoteName] = useState('');
   const [validityDays, setValidityDays] = useState(30);
   const [notes, setNotes] = useState('');
-  const [lineItems, setLineItems] = useState<QuoteLineItem[]>([]);
+  const [lineItems, setLineItems] = useState<QuoteLineItem[]>(draftQuote?.items || []);
   const [collateItems, setCollateItems] = useState(false);
   const [sending, setSending] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [sent, setSent] = useState(false);
-  const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(null);
+  const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(draftQuote?.quote_number || null);
 
   // Client info
   const [clientInfo, setClientInfo] = useState<any>(null);
