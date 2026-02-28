@@ -39,6 +39,7 @@ interface QuoteBuilderProps {
     recommendedAction: string;
   }>;
   draftQuote?: DraftQuote;
+  initialNotes?: string;
 }
 
 const GST_RATE = 0.10;
