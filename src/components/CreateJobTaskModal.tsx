@@ -50,6 +50,7 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   const { state } = useApp();
   const [description, setDescription] = useState('');
   const [clientId, setClientId] = useState('');
+  const [clientOpen, setClientOpen] = useState(false);
   const [jobType, setJobType] = useState('crane_inspection');
   const [assignedToId, setAssignedToId] = useState('');
   const [priority, setPriority] = useState('normal');
