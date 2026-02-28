@@ -5,7 +5,7 @@ import {
   DefectSeverity, RectificationTimeframe, SuggestedQuestion, SentReport,
 } from '@/types/inspection';
 import { AdminFormConfig, DEFAULT_ADMIN_CONFIG } from '@/types/adminConfig';
-import { mockSites, mockTemplate, mockTemplateLiftingEquipment, mockTemplateServiceBreakdown, mockUsers } from '@/data/mockData';
+import { mockSites, mockTemplate, mockTemplateLiftingEquipment, mockTemplateServiceBreakdown, mockTemplateCommissioningLoadTest, mockUsers } from '@/data/mockData';
 import { addDays, format } from 'date-fns';
 
 interface AppState {
