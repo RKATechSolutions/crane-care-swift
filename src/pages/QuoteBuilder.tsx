@@ -12,7 +12,8 @@ export interface QuoteLineItem {
   category: 'labour' | 'materials' | 'expenses';
   description: string;
   quantity: number;
-  unitPrice: number;
+  costPrice: number;
+  sellPrice: number;
   gstIncluded: boolean;
 }
 
