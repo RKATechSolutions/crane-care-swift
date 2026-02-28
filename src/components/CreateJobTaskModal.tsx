@@ -156,14 +156,42 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
           {/* Client (top) */}
           <div>
             <label className="text-xs font-semibold text-muted-foreground">Client *</label>
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-              <SelectContent>
-                {clients.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.client_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={clientOpen} onOpenChange={setClientOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={clientOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  {selectedClient ? selectedClient.client_name : "Search client..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Type to search..." />
+                  <CommandList>
+                    <CommandEmpty>No client found.</CommandEmpty>
+                    <CommandGroup>
+                      {clients.map(c => (
+                        <CommandItem
+                          key={c.id}
+                          value={c.client_name}
+                          onSelect={() => {
+                            setClientId(c.id);
+                            setClientOpen(false);
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", clientId === c.id ? "opacity-100" : "opacity-0")} />
+                          {c.client_name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Client contact info card */}
