@@ -74,7 +74,7 @@ serve(async (req) => {
       `${i + 1}. [${d.severity}] ${d.itemLabel} (${d.craneName}) - ${d.defectType}\n   Timeframe: ${d.rectificationTimeframe}\n   Action: ${d.recommendedAction}\n   ${d.notes ? 'Notes: ' + d.notes : ''}`
     ).join('\n\n');
 
-    const quoteName = `Repair Quote - ${siteName} - ${jobDate}`;
+    const quoteName = `${clientName} - Repair Quote - ${jobDate}`;
     const description = `Defects identified during inspection at ${siteName} on ${jobDate} by ${technicianName}.\n\n${descriptionLines}`;
 
     // Build postxml for creating a quote in AroFlo
