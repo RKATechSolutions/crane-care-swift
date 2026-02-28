@@ -406,8 +406,16 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
         {/* Totals */}
         <div className="px-4 py-4 border-b border-border space-y-2">
           <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Total Cost</span>
+            <span className="font-medium">${totalCost.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal (ex GST)</span>
             <span className="font-bold">${subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Margin</span>
+            <span className={`font-bold ${margin >= 0 ? 'text-green-600' : 'text-destructive'}`}>${margin.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">GST (10%)</span>
