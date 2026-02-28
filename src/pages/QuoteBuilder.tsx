@@ -323,7 +323,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
 
     setSavingDraft(true);
     try {
-      const { error } = await supabase.from('quotes').insert({
+      const quoteData = {
         client_name: clientInfo?.client_name || site.name,
         site_name: site.name,
         technician_id: state.currentUser?.id || 'unknown',
@@ -333,10 +333,20 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
         total,
         status: 'not_sent',
         items: lineItems as any,
-      });
+      };
 
-      if (error) throw error;
-      toast.success('Quote draft saved');
+      if (draftId) {
+        // Update existing draft
+        const { error } = await supabase.from('quotes').update(quoteData).eq('id', draftId);
+        if (error) throw error;
+        toast.success('Draft updated');
+      } else {
+        // Insert new draft
+        const { data, error } = await supabase.from('quotes').insert(quoteData).select('id').single();
+        if (error) throw error;
+        if (data) setDraftId(data.id);
+        toast.success('Quote draft saved');
+      }
     } catch (err: any) {
       toast.error(`Failed to save draft: ${err.message}`);
     } finally {

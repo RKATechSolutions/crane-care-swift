@@ -248,7 +248,10 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote }: Quote
           filtered.map(quote => (
             <div
               key={quote.id}
+              onClick={() => quote.status !== 'sent' && onEditQuote?.(quote)}
               className={`bg-muted rounded-xl p-4 flex items-center justify-between ${
+                quote.status !== 'sent' ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''
+              } ${
                 quote.status !== 'sent' && isOverdue(quote.created_at) ? 'ring-2 ring-amber-500/40' : ''
               }`}
             >
