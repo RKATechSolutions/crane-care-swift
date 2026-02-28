@@ -98,7 +98,8 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       category,
       description: '',
       quantity: 1,
-      unitPrice: 0,
+      costPrice: 0,
+      sellPrice: 0,
       gstIncluded: false,
     }]);
   };
