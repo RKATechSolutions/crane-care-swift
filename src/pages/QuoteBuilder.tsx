@@ -211,7 +211,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
       const filename = `${clientNameSafe}_Quote_${dateStr}.pdf`;
 
       // Download PDF
-      pdf.save(filename);
+      downloadPdf(pdf, filename);
 
       // 3. Email to customer if we have their email
       const recipientEmail = clientInfo?.primary_contact_email;
