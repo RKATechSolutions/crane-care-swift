@@ -59,6 +59,10 @@ export function CreateJobTaskModal({ open, onClose, onCreated }: AddTaskModalPro
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [requestedById, setRequestedById] = useState('');
+  const [useManualRequestedBy, setUseManualRequestedBy] = useState(false);
+  const [manualRequestedByName, setManualRequestedByName] = useState('');
+  const [manualRequestedByPhone, setManualRequestedByPhone] = useState('');
+  const [manualRequestedByEmail, setManualRequestedByEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [contacts, setContacts] = useState<ClientContact[]>([]);
