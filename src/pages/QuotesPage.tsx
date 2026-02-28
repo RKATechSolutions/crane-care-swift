@@ -27,11 +27,7 @@ export default function QuotesPage({ onBack }: QuotesPageProps) {
       <AppHeader
         title="Quotes"
         subtitle="Manage your pending & sent quotes"
-        leftAction={
-          <button onClick={onBack} className="p-2 -ml-2 rounded-xl active:bg-muted">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        }
+        onBack={onBack}
       />
 
       {/* Filter Buttons */}
