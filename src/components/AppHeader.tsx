@@ -1,5 +1,5 @@
 import { ArrowLeft, MessageSquarePlus } from 'lucide-react';
-import rkaLogo from '@/assets/rka-logo.jpg';
+import rkaLogo from '@/assets/rka-main-logo.png';
 
 interface AppHeaderProps {
   title: string;
