@@ -33,7 +33,8 @@ export type CraneType =
   | 'Double Girder Overhead'
   | 'Jib Crane'
   | 'Gantry Crane'
-  | 'Monorail';
+  | 'Monorail'
+  | 'Lifting Equipment';
 
 // ===== Template System =====
 
