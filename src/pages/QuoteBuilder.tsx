@@ -586,10 +586,14 @@ export default function QuoteBuilder({ onBack, prefilledDefects, draftQuote }: Q
         </button>
         <button
           onClick={handlePreviewPdf}
-          className="w-full tap-target py-3 bg-muted text-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+          disabled={previewingPdf}
+          className={`w-full tap-target py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-70 ${previewingPdf ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
         >
-          <FileText className="w-5 h-5" />
-          Preview Quote PDF
+          {previewingPdf ? (
+            <><Loader2 className="w-5 h-5 animate-spin" /> Generating PDF...</>
+          ) : (
+            <><FileText className="w-5 h-5" /> Preview Quote PDF</>
+          )}
         </button>
         <button
           onClick={handleSendQuote}
