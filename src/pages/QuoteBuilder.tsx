@@ -39,6 +39,7 @@ export default function QuoteBuilder({ onBack, prefilledDefects }: QuoteBuilderP
   const [validityDays, setValidityDays] = useState(30);
   const [notes, setNotes] = useState('');
   const [lineItems, setLineItems] = useState<QuoteLineItem[]>([]);
+  const [collateItems, setCollateItems] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [arofloQuoteNumber, setArofloQuoteNumber] = useState<string | null>(null);
