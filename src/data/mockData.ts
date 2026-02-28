@@ -247,6 +247,56 @@ export const mockTemplateLiftingEquipment: InspectionTemplate = {
   ],
 };
 
+export const mockTemplateServiceBreakdown: InspectionTemplate = {
+  id: 'template_service_breakdown_v1',
+  craneType: 'Lifting Equipment',
+  inspectionType: 'Quarterly',
+  version: 1,
+  isActive: true,
+  createdAt: '2026-02-28',
+  sections: [
+    {
+      id: 'sb_call_details',
+      name: 'Call Details',
+      sortOrder: 0,
+      items: [
+        { id: 'sb_reported_issue', label: 'Reported Issue', sortOrder: 1, type: 'text' },
+        { id: 'sb_time_reported', label: 'Time Reported', sortOrder: 2, type: 'text' },
+        { id: 'sb_production_impact', label: 'Production Impact', sortOrder: 3, type: 'single_select', options: ['Low', 'Medium', 'High', 'Critical'], required: true },
+      ],
+    },
+    {
+      id: 'sb_findings',
+      name: 'Findings',
+      sortOrder: 1,
+      items: [
+        { id: 'sb_root_cause_found', label: 'Root Cause Identified', sortOrder: 1, type: 'single_select', options: ['Yes', 'Partially', 'Not yet'], required: true },
+        { id: 'sb_cause_category', label: 'Cause Category', sortOrder: 2, type: 'single_select', options: ['Mechanical', 'Electrical', 'Operational / Misuse', 'Environmental', 'Unknown'], required: true },
+        { id: 'sb_work_done', label: 'Work Performed', sortOrder: 3, type: 'text' },
+        { id: 'sb_parts_used', label: 'Parts Used', sortOrder: 4, type: 'text' },
+      ],
+    },
+    {
+      id: 'sb_photos',
+      name: 'Photos',
+      sortOrder: 2,
+      items: [
+        { id: 'sb_photos', label: 'Photos (fault / repair / before-after)', sortOrder: 1, type: 'photo_required' },
+      ],
+    },
+    {
+      id: 'sb_outcome',
+      name: 'Outcome & Next Steps',
+      sortOrder: 3,
+      items: [
+        { id: 'sb_status', label: 'Status', sortOrder: 1, type: 'single_select', options: ['Temporary fix applied', 'Permanent fix completed', 'Further work required', 'Parts required – return visit'], required: true },
+        { id: 'sb_follow_up', label: 'Follow-Up Required', sortOrder: 2, type: 'single_select', options: ['Yes', 'No'], required: true },
+        { id: 'sb_recommendations', label: 'Recommendations', sortOrder: 3, type: 'text' },
+      ],
+    },
+  ],
+};
+
 export const mockUsers = [
   { id: 'tech-1', name: 'Aaron Harrison', email: 'aaron@rka.com.au', role: 'technician' as const },
   { id: 'tech-2', name: 'Vince Fernandez', email: 'vince@rka.com.au', role: 'technician' as const },
