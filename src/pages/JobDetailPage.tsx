@@ -441,11 +441,20 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
               {showAddCost === 'labour' ? (
                 <div className="bg-background rounded-lg p-3 space-y-2 border border-border">
                   <p className="text-xs font-bold text-foreground">Add Labour</p>
-                  <Input placeholder="Description *" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
+                  <Input placeholder="Description * (e.g. Tech name)" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
                   <div className="flex gap-2">
                     <Input placeholder="Hours" type="number" value={costQty} onChange={e => setCostQty(e.target.value)} className="w-20" />
-                    <Input placeholder="Rate $/hr *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
+                    <Input placeholder="Cost $/hr" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
                   </div>
+                  <div className="flex gap-2 items-center">
+                    <label className="text-[10px] text-muted-foreground whitespace-nowrap">Charge rate:</label>
+                    <Input placeholder="Charge $/hr" type="number" value={labourChargeRate} onChange={e => setLabourChargeRate(e.target.value)} className="flex-1" />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Cost: ${((parseFloat(costQty) || 0) * (parseFloat(costUnitCost) || 0)).toFixed(2)} · 
+                    Charge: ${((parseFloat(costQty) || 0) * (parseFloat(labourChargeRate) || 0)).toFixed(2)} · 
+                    Margin: ${(((parseFloat(costQty) || 0) * (parseFloat(labourChargeRate) || 0)) - ((parseFloat(costQty) || 0) * (parseFloat(costUnitCost) || 0))).toFixed(2)}
+                  </p>
                   <div className="flex gap-2">
                     <Button onClick={addCostItem} size="sm" className="flex-1">Add</Button>
                     <Button onClick={() => setShowAddCost(null)} size="sm" variant="outline">Cancel</Button>
