@@ -60,8 +60,8 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
   }, []);
 
   const filtered = quotes.filter(q => {
-    if (filter === 'sent') return q.status === 'sent';
-    if (filter === 'draft') return q.status !== 'sent';
+    if (filter === 'sent') return q.status === 'sent' || q.status === 'accepted';
+    if (filter === 'draft') return q.status !== 'sent' && q.status !== 'accepted';
     return false;
   });
 
