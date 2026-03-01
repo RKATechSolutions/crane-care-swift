@@ -476,24 +476,135 @@ export default function FormBuilder() {
 
         <div className="space-y-1">
           {sectionQuestions.map((q, idx) => (
-            <div key={q.id} className="flex items-center gap-2 rounded-lg p-3 bg-muted">
-              <span className="text-xs font-bold text-muted-foreground w-6">{idx + 1}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{q.question_text}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {getAnswerTypeLabel(q.answer_type)}
-                  {q.standard_ref && ` • ${q.standard_ref}`}
-                </p>
-                {q.help_text && (
-                  <p className="text-[10px] text-muted-foreground/70 italic truncate">{q.help_text}</p>
-                )}
+            <div key={q.id}>
+              <div className={`flex items-center gap-2 rounded-lg p-3 transition-colors ${
+                editingDbQuestion?.id === q.id ? 'bg-primary/10 ring-2 ring-primary' : 'bg-muted'
+              }`}>
+                <span className="text-xs font-bold text-muted-foreground w-6">{idx + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{q.question_text}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {getAnswerTypeLabel(q.answer_type)}
+                    {q.standard_ref && ` • ${q.standard_ref}`}
+                  </p>
+                  {q.help_text && (
+                    <p className="text-[10px] text-muted-foreground/70 italic truncate">{q.help_text}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => startEditingDbQuestion(q)}
+                  className="p-1.5 text-muted-foreground active:text-primary transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleRemoveDbQuestion(q.id)}
+                  className="p-1.5 text-muted-foreground active:text-destructive transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => handleRemoveDbQuestion(q.id)}
-                className="p-1.5 text-muted-foreground active:text-destructive transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+
+              {/* Inline edit form */}
+              {editingDbQuestion?.id === q.id && (
+                <div className="bg-muted rounded-xl p-4 space-y-3 border-2 border-primary/30 mt-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold">Edit Question</p>
+                    <button onClick={cancelDbEdit} className="p-1 text-muted-foreground">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Question Text</label>
+                    <input
+                      type="text"
+                      value={dbEditText}
+                      onChange={e => setDbEditText(e.target.value)}
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Answer Type</label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {dbAnswerTypes.map(at => (
+                        <button
+                          key={at.value}
+                          onClick={() => setDbEditAnswerType(at.value)}
+                          className={`p-2 rounded-lg border-2 text-center transition-all text-xs font-semibold ${
+                            dbEditAnswerType === at.value ? 'border-primary bg-primary/10' : 'border-border bg-background'
+                          }`}
+                        >
+                          {at.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {(dbEditAnswerType === 'SingleSelect' || dbEditAnswerType === 'YesPartialNo') && (
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Options (comma separated)</label>
+                      <input
+                        type="text"
+                        value={dbEditOptions}
+                        onChange={e => setDbEditOptions(e.target.value)}
+                        placeholder="e.g. Good, Fair, Poor"
+                        className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Section</label>
+                    <input
+                      type="text"
+                      value={dbEditSection}
+                      onChange={e => setDbEditSection(e.target.value)}
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Help Text (optional)</label>
+                    <input
+                      type="text"
+                      value={dbEditHelpText}
+                      onChange={e => setDbEditHelpText(e.target.value)}
+                      placeholder="Guidance shown to technicians"
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Standard Ref (optional)</label>
+                    <input
+                      type="text"
+                      value={dbEditStandardRef}
+                      onChange={e => setDbEditStandardRef(e.target.value)}
+                      placeholder="e.g. AS 2550 Cl 8.3.1"
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveDbQuestion}
+                      disabled={!dbEditText.trim() || savingDbEdit}
+                      className="flex-1 tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {savingDbEdit ? 'Saving...' : <><Save className="w-4 h-4" /> Save Changes</>}
+                    </button>
+                    <button
+                      onClick={cancelDbEdit}
+                      className="px-4 tap-target bg-muted rounded-xl font-semibold text-sm border border-border"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
