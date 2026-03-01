@@ -37,6 +37,7 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
   const [filter, setFilter] = useState<QuoteFilter>('draft');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   // AI estimate state
   const [estimateDesc, setEstimateDesc] = useState('');
