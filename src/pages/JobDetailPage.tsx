@@ -452,7 +452,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                   </div>
                 </div>
               ) : (
-                <Button onClick={() => setShowAddCost('labour')} variant="outline" size="sm" className="w-full gap-1 text-xs">
+                <Button onClick={() => { setShowAddCost('labour'); setCostUnitCost('117'); setLabourChargeRate('195'); }} variant="outline" size="sm" className="w-full gap-1 text-xs">
                   <Plus className="w-3 h-3" /> Add Labour
                 </Button>
               )}
