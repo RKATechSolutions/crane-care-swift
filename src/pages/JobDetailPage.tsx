@@ -112,7 +112,14 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
         supabase.from('job_documents').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
         supabase.from('time_entries').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
       ]);
-      if (!jobRes.error && jobRes.data) setJob(jobRes.data as Task);
+      if (!jobRes.error && jobRes.data) {
+        setJob(jobRes.data as Task);
+        // Load linked quote if exists
+        if ((jobRes.data as any).quote_id) {
+          const { data: q } = await supabase.from('quotes').select('*').eq('id', (jobRes.data as any).quote_id).single();
+          if (q) setLinkedQuote(q);
+        }
+      }
       if (!costsRes.error && costsRes.data) setCosts(costsRes.data as CostItem[]);
       if (!notesRes.error && notesRes.data) setNotes(notesRes.data as NoteItem[]);
       if (!docsRes.error && docsRes.data) setDocs(docsRes.data as DocItem[]);
@@ -126,24 +133,42 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
 
   const materialCosts = costs.filter(c => c.cost_type === 'material');
   const labourCosts = costs.filter(c => c.cost_type === 'labour');
-  const totalMaterials = materialCosts.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
+  const totalMaterialsCost = materialCosts.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
+  const totalMaterialsSell = materialCosts.reduce((sum, c) => sum + (c.sell_price != null ? c.sell_price * c.quantity : (c.total ?? c.quantity * c.unit_cost)), 0);
   const totalLabour = labourCosts.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
-  const totalCosts = totalMaterials + totalLabour;
-  const quoteValue = 0;
+  const totalCosts = totalMaterialsCost + totalLabour;
+  const quoteValue = linkedQuote ? Number(linkedQuote.total) : 0;
   const invoiceValue = 0;
   const totalExpenses = totalCosts;
   const profit = (invoiceValue || quoteValue) - totalExpenses;
   const margin = (invoiceValue || quoteValue) > 0 ? (profit / (invoiceValue || quoteValue)) * 100 : 0;
 
+  const fetchApprovedQuotes = async () => {
+    const { data } = await supabase.from('quotes').select('*').eq('status', 'accepted').order('created_at', { ascending: false });
+    setAvailableQuotes(data || []);
+    setShowQuotePicker(true);
+  };
+
+  const linkQuote = async (quoteId: string) => {
+    const { error } = await supabase.from('tasks').update({ quote_id: quoteId }).eq('id', jobId);
+    if (error) { toast.error('Failed to link quote'); return; }
+    const q = availableQuotes.find(q => q.id === quoteId);
+    setLinkedQuote(q);
+    setShowQuotePicker(false);
+    toast.success('Quote linked');
+  };
+
   const addCostItem = async () => {
     if (!costDesc.trim() || !costUnitCost || !showAddCost) { toast.error('Description and cost required'); return; }
     const qty = parseFloat(costQty) || 1;
     const uc = parseFloat(costUnitCost) || 0;
+    const sp = costSellPrice ? parseFloat(costSellPrice) : null;
     const { data, error } = await supabase.from('job_costs').insert({
       task_id: jobId,
       description: costDesc.trim(),
       quantity: qty,
       unit_cost: uc,
+      sell_price: sp,
       supplier: costSupplier.trim() || null,
       cost_type: showAddCost,
     }).select().single();
@@ -166,9 +191,29 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
       if (teData) setTimeEntries(prev => [teData, ...prev]);
     }
 
-    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSupplier(''); setLabourChargeRate('195');
+    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSellPrice(''); setCostSupplier(''); setLabourChargeRate('195');
     setShowAddCost(null);
     toast.success('Cost added');
+  };
+
+  const uploadMaterialDoc = async (file: File, costId: string) => {
+    setMaterialDocUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `${jobId}/material-${costId}-${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
+    if (uploadErr) { toast.error('Upload failed'); setMaterialDocUploading(false); return; }
+    const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+    const { data, error } = await supabase.from('job_documents').insert({
+      task_id: jobId,
+      file_name: `Supplier Doc: ${file.name}`,
+      file_url: urlData.publicUrl,
+      file_type: file.type || null,
+      uploaded_by: 'You',
+    }).select().single();
+    if (error) { toast.error('Failed to save'); setMaterialDocUploading(false); return; }
+    setDocs(prev => [data as DocItem, ...prev]);
+    setMaterialDocUploading(false);
+    toast.success('Supplier document uploaded');
   };
 
   const removeCost = async (id: string) => {
