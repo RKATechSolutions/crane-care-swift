@@ -38,6 +38,7 @@ interface CostItem {
   description: string;
   quantity: number;
   unit_cost: number;
+  sell_price: number | null;
   supplier: string | null;
   total: number;
   cost_type: 'material' | 'labour';
