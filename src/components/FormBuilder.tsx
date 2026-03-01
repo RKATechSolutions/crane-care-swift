@@ -224,6 +224,7 @@ export default function FormBuilder() {
     { value: 'SingleSelect', label: 'Single Select' },
   ];
 
+  const generateFormId = (name: string) => {
     return name
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
