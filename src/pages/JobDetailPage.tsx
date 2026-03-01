@@ -10,6 +10,7 @@ import {
   Plus, Trash2, TrendingUp,
   Send, Calendar, User, Wrench, Package
 } from 'lucide-react';
+import { useApp } from '@/contexts/AppContext';
 
 interface JobDetailPageProps {
   jobId: string;
