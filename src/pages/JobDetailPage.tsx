@@ -87,11 +87,19 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   const [costDesc, setCostDesc] = useState('');
   const [costQty, setCostQty] = useState('1');
   const [costUnitCost, setCostUnitCost] = useState('');
+  const [costSellPrice, setCostSellPrice] = useState('');
   const [costSupplier, setCostSupplier] = useState('');
   const [labourChargeRate, setLabourChargeRate] = useState('195');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const materialDocInputRef = useRef<HTMLInputElement>(null);
+  const [materialDocUploading, setMaterialDocUploading] = useState(false);
+
+  // Link Quote state
+  const [showQuotePicker, setShowQuotePicker] = useState(false);
+  const [availableQuotes, setAvailableQuotes] = useState<any[]>([]);
+  const [linkedQuote, setLinkedQuote] = useState<any>(null);
 
   // Fetch job + related data
   useEffect(() => {
