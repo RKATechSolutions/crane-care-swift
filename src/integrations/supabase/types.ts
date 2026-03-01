@@ -754,6 +754,8 @@ export type Database = {
           created_at: string
           help_text: string | null
           id: string
+          optional_comment: boolean
+          optional_photo: boolean
           options: string[] | null
           question_id: string
           question_text: string
@@ -773,6 +775,8 @@ export type Database = {
           created_at?: string
           help_text?: string | null
           id?: string
+          optional_comment?: boolean
+          optional_photo?: boolean
           options?: string[] | null
           question_id: string
           question_text: string
@@ -792,6 +796,8 @@ export type Database = {
           created_at?: string
           help_text?: string | null
           id?: string
+          optional_comment?: boolean
+          optional_photo?: boolean
           options?: string[] | null
           question_id?: string
           question_text?: string
