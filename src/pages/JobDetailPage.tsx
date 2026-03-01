@@ -108,11 +108,14 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  const totalCosts = costs.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
+  const materialCosts = costs.filter(c => c.cost_type === 'material');
+  const labourCosts = costs.filter(c => c.cost_type === 'labour');
+  const totalMaterials = materialCosts.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
+  const totalLabour = labourCosts.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
+  const totalCosts = totalMaterials + totalLabour;
   const quoteValue = 0;
   const invoiceValue = 0;
-  const labourCost = 0;
-  const totalExpenses = totalCosts + labourCost;
+  const totalExpenses = totalCosts;
   const profit = (invoiceValue || quoteValue) - totalExpenses;
   const margin = (invoiceValue || quoteValue) > 0 ? (profit / (invoiceValue || quoteValue)) * 100 : 0;
 
