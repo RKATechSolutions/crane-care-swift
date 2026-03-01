@@ -375,10 +375,32 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-2">
                 <FileText className="w-4 h-4" /> Linked Quote
               </h3>
-              <p className="text-xs text-muted-foreground">No quote linked yet. Link a quote to track revenue.</p>
-              <Button variant="outline" size="sm" className="mt-2 text-xs gap-1">
-                <Plus className="w-3 h-3" /> Link Quote
-              </Button>
+              {linkedQuote ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">{linkedQuote.client_name} — ${Number(linkedQuote.total).toLocaleString()}</p>
+                  {linkedQuote.quote_number && <p className="text-[10px] text-muted-foreground">Quote #{linkedQuote.quote_number}</p>}
+                  <p className="text-[10px] text-muted-foreground">Status: {linkedQuote.status}</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">No quote linked yet. Link a quote to track revenue.</p>
+                  <Button variant="outline" size="sm" className="mt-2 text-xs gap-1" onClick={fetchApprovedQuotes}>
+                    <Plus className="w-3 h-3" /> Link Quote
+                  </Button>
+                  {showQuotePicker && (
+                    <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto">
+                      {availableQuotes.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No accepted quotes available</p>
+                      ) : availableQuotes.map(q => (
+                        <button key={q.id} onClick={() => linkQuote(q.id)} className="w-full text-left bg-background rounded-lg p-2.5 hover:bg-accent transition-colors">
+                          <p className="text-sm font-semibold text-foreground">{q.client_name} — ${Number(q.total).toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">{q.quote_number ? `#${q.quote_number} · ` : ''}{formatDate(q.created_at)}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="bg-muted rounded-xl p-4">
