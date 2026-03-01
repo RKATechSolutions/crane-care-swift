@@ -151,7 +151,79 @@ export default function FormBuilder() {
     }
   };
 
-  const generateFormId = (name: string) => {
+  const startEditingDbQuestion = (q: DbQuestion) => {
+    setEditingDbQuestion(q);
+    setDbEditText(q.question_text);
+    setDbEditAnswerType(q.answer_type);
+    setDbEditHelpText(q.help_text || '');
+    setDbEditStandardRef(q.standard_ref || '');
+    setDbEditOptions(q.options ? q.options.join(', ') : '');
+    setDbEditSection(q.section);
+  };
+
+  const cancelDbEdit = () => {
+    setEditingDbQuestion(null);
+    setDbEditText('');
+    setDbEditAnswerType('');
+    setDbEditHelpText('');
+    setDbEditStandardRef('');
+    setDbEditOptions('');
+    setDbEditSection('');
+  };
+
+  const handleSaveDbQuestion = async () => {
+    if (!editingDbQuestion || !dbEditText.trim()) return;
+    setSavingDbEdit(true);
+    try {
+      // Update the question in question_library
+      const updateData: any = {
+        question_text: dbEditText.trim(),
+        answer_type: dbEditAnswerType,
+        help_text: dbEditHelpText.trim() || null,
+        standard_ref: dbEditStandardRef.trim() || null,
+        section: dbEditSection.trim() || editingDbQuestion.section,
+      };
+      if (dbEditAnswerType === 'SingleSelect' || dbEditAnswerType === 'YesPartialNo') {
+        updateData.options = dbEditOptions.split(',').map((o: string) => o.trim()).filter(Boolean);
+      } else {
+        updateData.options = null;
+      }
+
+      const { error } = await supabase
+        .from('question_library')
+        .update(updateData)
+        .eq('question_id', editingDbQuestion.question_id);
+
+      if (error) throw error;
+
+      // Update section_override on bridge table if section changed
+      if (dbEditSection.trim() && dbEditSection.trim() !== editingDbQuestion.section) {
+        await supabase
+          .from('form_template_questions')
+          .update({ section_override: dbEditSection.trim() })
+          .eq('id', editingDbQuestion.id);
+      }
+
+      toast({ title: 'Question Updated' });
+      cancelDbEdit();
+      if (selectedDbFormId) fetchDbFormQuestions(selectedDbFormId);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingDbEdit(false);
+    }
+  };
+
+  const dbAnswerTypes = [
+    { value: 'PassFailNA', label: 'Pass / Fail / NA' },
+    { value: 'YesPartialNo', label: 'Yes / Partial / No' },
+    { value: 'Text', label: 'Text / Notes' },
+    { value: 'Number', label: 'Numeric' },
+    { value: 'Date', label: 'Date' },
+    { value: 'PhotoOnly', label: 'Photo Only' },
+    { value: 'SingleSelect', label: 'Single Select' },
+  ];
+
     return name
       .toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
