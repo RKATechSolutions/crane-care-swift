@@ -439,6 +439,7 @@ export type Database = {
           question_id: string
           required: boolean
           section_override: string | null
+          sub_heading: string | null
         }
         Insert: {
           conditional_rule?: string | null
@@ -451,6 +452,7 @@ export type Database = {
           question_id: string
           required?: boolean
           section_override?: string | null
+          sub_heading?: string | null
         }
         Update: {
           conditional_rule?: string | null
@@ -463,6 +465,7 @@ export type Database = {
           question_id?: string
           required?: boolean
           section_override?: string | null
+          sub_heading?: string | null
         }
         Relationships: [
           {
