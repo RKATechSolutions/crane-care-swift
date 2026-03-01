@@ -316,52 +316,114 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
         {tab === 'costs' && (
           <>
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-foreground">Materials & Costs</h3>
-              <span className="text-xs font-bold text-foreground">Total: ${totalCosts.toLocaleString()}</span>
+              <h3 className="text-sm font-bold text-foreground">Job Costs</h3>
+              <div className="flex gap-3 text-xs font-bold text-foreground">
+                <span>Materials: ${totalMaterials.toLocaleString()}</span>
+                <span>Labour: ${totalLabour.toLocaleString()}</span>
+              </div>
             </div>
 
-            {costs.length === 0 && !showAddCost && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="text-sm font-medium">No costs recorded</p>
-                <p className="text-xs mt-1">Add materials, parts or other expenses</p>
+            {/* MATERIALS SECTION */}
+            <div className="bg-muted rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5" /> Materials & Parts
+                </h4>
+                <span className="text-[10px] font-semibold text-muted-foreground">${totalMaterials.toLocaleString()}</span>
               </div>
-            )}
 
-            {costs.map(c => (
-              <div key={c.id} className="bg-muted rounded-xl p-3 flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">{c.description}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.quantity} × ${c.unit_cost.toFixed(2)} = <strong>${(c.total ?? c.quantity * c.unit_cost).toFixed(2)}</strong>
-                  </p>
-                  {c.supplier && <p className="text-[10px] text-muted-foreground mt-0.5">Supplier: {c.supplier}</p>}
-                </div>
-                <button onClick={() => removeCost(c.id)} className="p-1 text-muted-foreground hover:text-destructive">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+              {materialCosts.length === 0 && showAddCost !== 'material' && (
+                <p className="text-xs text-muted-foreground text-center py-2">No materials recorded</p>
+              )}
 
-            {showAddCost ? (
-              <div className="bg-muted rounded-xl p-4 space-y-2 border border-border">
-                <p className="text-xs font-bold text-foreground">Add Cost Item</p>
-                <Input placeholder="Description *" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
-                <div className="flex gap-2">
-                  <Input placeholder="Qty" type="number" value={costQty} onChange={e => setCostQty(e.target.value)} className="w-20" />
-                  <Input placeholder="Unit Cost *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
+              {materialCosts.map(c => (
+                <div key={c.id} className="bg-background rounded-lg p-2.5 flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{c.description}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {c.quantity} × ${c.unit_cost.toFixed(2)} = <strong>${(c.total ?? c.quantity * c.unit_cost).toFixed(2)}</strong>
+                    </p>
+                    {c.supplier && <p className="text-[10px] text-muted-foreground mt-0.5">Supplier: {c.supplier}</p>}
+                  </div>
+                  <button onClick={() => removeCost(c.id)} className="p-1 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <Input placeholder="Supplier" value={costSupplier} onChange={e => setCostSupplier(e.target.value)} />
-                <div className="flex gap-2">
-                  <Button onClick={addCostItem} size="sm" className="flex-1">Add</Button>
-                  <Button onClick={() => setShowAddCost(false)} size="sm" variant="outline">Cancel</Button>
+              ))}
+
+              {showAddCost === 'material' ? (
+                <div className="bg-background rounded-lg p-3 space-y-2 border border-border">
+                  <p className="text-xs font-bold text-foreground">Add Material</p>
+                  <Input placeholder="Description *" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
+                  <div className="flex gap-2">
+                    <Input placeholder="Qty" type="number" value={costQty} onChange={e => setCostQty(e.target.value)} className="w-20" />
+                    <Input placeholder="Unit Cost *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
+                  </div>
+                  <Input placeholder="Supplier" value={costSupplier} onChange={e => setCostSupplier(e.target.value)} />
+                  <div className="flex gap-2">
+                    <Button onClick={addCostItem} size="sm" className="flex-1">Add</Button>
+                    <Button onClick={() => setShowAddCost(null)} size="sm" variant="outline">Cancel</Button>
+                  </div>
                 </div>
+              ) : (
+                <Button onClick={() => setShowAddCost('material')} variant="outline" size="sm" className="w-full gap-1 text-xs">
+                  <Plus className="w-3 h-3" /> Add Material
+                </Button>
+              )}
+            </div>
+
+            {/* LABOUR SECTION */}
+            <div className="bg-muted rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Wrench className="w-3.5 h-3.5" /> Labour
+                </h4>
+                <span className="text-[10px] font-semibold text-muted-foreground">${totalLabour.toLocaleString()}</span>
               </div>
-            ) : (
-              <Button onClick={() => setShowAddCost(true)} variant="outline" className="w-full gap-2">
-                <Plus className="w-4 h-4" /> Add Cost
-              </Button>
-            )}
+
+              {labourCosts.length === 0 && showAddCost !== 'labour' && (
+                <p className="text-xs text-muted-foreground text-center py-2">No labour costs recorded</p>
+              )}
+
+              {labourCosts.map(c => (
+                <div key={c.id} className="bg-background rounded-lg p-2.5 flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">{c.description}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {c.quantity} hrs × ${c.unit_cost.toFixed(2)}/hr = <strong>${(c.total ?? c.quantity * c.unit_cost).toFixed(2)}</strong>
+                    </p>
+                  </div>
+                  <button onClick={() => removeCost(c.id)} className="p-1 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+
+              {showAddCost === 'labour' ? (
+                <div className="bg-background rounded-lg p-3 space-y-2 border border-border">
+                  <p className="text-xs font-bold text-foreground">Add Labour</p>
+                  <Input placeholder="Description *" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
+                  <div className="flex gap-2">
+                    <Input placeholder="Hours" type="number" value={costQty} onChange={e => setCostQty(e.target.value)} className="w-20" />
+                    <Input placeholder="Rate $/hr *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={addCostItem} size="sm" className="flex-1">Add</Button>
+                    <Button onClick={() => setShowAddCost(null)} size="sm" variant="outline">Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <Button onClick={() => setShowAddCost('labour')} variant="outline" size="sm" className="w-full gap-1 text-xs">
+                  <Plus className="w-3 h-3" /> Add Labour
+                </Button>
+              )}
+            </div>
+
+            {/* TOTAL */}
+            <div className="bg-primary/10 rounded-xl p-3 flex items-center justify-between">
+              <span className="text-sm font-bold text-foreground">Total Job Cost</span>
+              <span className="text-lg font-bold text-foreground">${totalCosts.toLocaleString()}</span>
+            </div>
           </>
         )}
 
