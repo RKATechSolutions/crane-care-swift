@@ -21,6 +21,7 @@ interface DbInspectionFormProps {
 interface FormQuestion extends QuestionConfig {
   override_sort_order: number | null;
   section_override: string | null;
+  sub_heading: string | null;
 }
 
 export default function DbInspectionForm({
@@ -53,7 +54,7 @@ export default function DbInspectionForm({
       // Get questions via bridge table
       const { data: bridgeData } = await supabase
         .from('form_template_questions')
-        .select('question_id, required, override_sort_order, override_help_text, override_standard_ref, section_override')
+        .select('question_id, required, override_sort_order, override_help_text, override_standard_ref, section_override, sub_heading')
         .eq('form_id', formId)
         .order('override_sort_order');
 
@@ -94,6 +95,7 @@ export default function DbInspectionForm({
           section: bridge.section_override || q.section,
           override_sort_order: bridge.override_sort_order,
           section_override: bridge.section_override,
+          sub_heading: bridge.sub_heading || null,
         };
       }).filter(Boolean) as FormQuestion[];
 
@@ -339,22 +341,32 @@ export default function DbInspectionForm({
 
       {/* Questions */}
       <div className="flex-1">
-        {currentSection?.questions.map(q => (
-          <StandardQuestionBlock
-            key={q.question_id}
-            question={q}
-            response={responses[q.question_id] || {
-              question_id: q.question_id,
-              answer_value: null,
-              pass_fail_status: null,
-              severity: null,
-              comment: null,
-              photo_urls: [],
-              defect_flag: false,
-            }}
-            onUpdate={(r) => handleResponseUpdate(q.question_id, r)}
-          />
-        ))}
+        {currentSection?.questions.map((q, idx) => {
+          const prevSubHeading = idx > 0 ? currentSection.questions[idx - 1].sub_heading : null;
+          const showSubHeading = q.sub_heading && q.sub_heading !== prevSubHeading;
+          return (
+            <div key={q.question_id}>
+              {showSubHeading && (
+                <div className="px-4 py-2 bg-muted/50 border-b border-border">
+                  <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">{q.sub_heading}</h3>
+                </div>
+              )}
+              <StandardQuestionBlock
+                question={q}
+                response={responses[q.question_id] || {
+                  question_id: q.question_id,
+                  answer_value: null,
+                  pass_fail_status: null,
+                  severity: null,
+                  comment: null,
+                  photo_urls: [],
+                  defect_flag: false,
+                }}
+                onUpdate={(r) => handleResponseUpdate(q.question_id, r)}
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Section Navigation */}
