@@ -10,6 +10,7 @@ import {
   Plus, Trash2, TrendingUp,
   Send, Calendar, User, Wrench, Package
 } from 'lucide-react';
+import { useApp } from '@/contexts/AppContext';
 
 interface JobDetailPageProps {
   jobId: string;
@@ -69,6 +70,8 @@ const JOB_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
+  const { state } = useApp();
+  const currentUser = state.currentUser;
   const [job, setJob] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'overview' | 'costs' | 'notes' | 'documents'>('overview');
@@ -77,12 +80,14 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [docs, setDocs] = useState<DocItem[]>([]);
   const [newNote, setNewNote] = useState('');
+  const [timeEntries, setTimeEntries] = useState<any[]>([]);
 
   const [showAddCost, setShowAddCost] = useState<'material' | 'labour' | null>(null);
   const [costDesc, setCostDesc] = useState('');
   const [costQty, setCostQty] = useState('1');
   const [costUnitCost, setCostUnitCost] = useState('');
   const [costSupplier, setCostSupplier] = useState('');
+  const [labourChargeRate, setLabourChargeRate] = useState('195');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -91,16 +96,18 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
-      const [jobRes, costsRes, notesRes, docsRes] = await Promise.all([
+      const [jobRes, costsRes, notesRes, docsRes, timeRes] = await Promise.all([
         supabase.from('tasks').select('*').eq('id', jobId).single(),
         supabase.from('job_costs').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
         supabase.from('job_notes').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
         supabase.from('job_documents').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
+        supabase.from('time_entries').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
       ]);
       if (!jobRes.error && jobRes.data) setJob(jobRes.data as Task);
       if (!costsRes.error && costsRes.data) setCosts(costsRes.data as CostItem[]);
       if (!notesRes.error && notesRes.data) setNotes(notesRes.data as NoteItem[]);
       if (!docsRes.error && docsRes.data) setDocs(docsRes.data as DocItem[]);
+      if (!timeRes.error && timeRes.data) setTimeEntries(timeRes.data);
       setLoading(false);
     };
     fetchAll();
@@ -133,7 +140,24 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
     }).select().single();
     if (error) { toast.error('Failed to save cost'); return; }
     setCosts(prev => [data as CostItem, ...prev]);
-    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSupplier('');
+
+    // If labour, also create a time_entry linked to this job
+    if (showAddCost === 'labour' && currentUser) {
+      const today = new Date().toISOString().split('T')[0];
+      const { data: teData } = await supabase.from('time_entries').insert({
+        task_id: jobId,
+        technician_id: currentUser.id,
+        technician_name: currentUser.name,
+        entry_date: today,
+        entry_type: 'repair' as const,
+        hours: qty,
+        description: `${costDesc.trim()} — ${job?.title || 'Job'}`,
+        client_name: job?.client_name || null,
+      }).select().single();
+      if (teData) setTimeEntries(prev => [teData, ...prev]);
+    }
+
+    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSupplier(''); setLabourChargeRate('195');
     setShowAddCost(null);
     toast.success('Cost added');
   };
@@ -307,10 +331,21 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4" /> Time Logged
               </h3>
-              <p className="text-xs text-muted-foreground">No time entries for this job yet.</p>
+              {timeEntries.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No time entries for this job yet.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {timeEntries.map((te: any) => (
+                    <div key={te.id} className="flex items-center justify-between text-xs">
+                      <span className="text-foreground">{te.technician_name} — {te.description || te.entry_type}</span>
+                      <span className="font-semibold text-foreground">{te.hours}h</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Total hours: <strong className="text-foreground">0h</strong></span>
-                <span className="text-xs text-muted-foreground">Labour cost: <strong className="text-foreground">$0</strong></span>
+                <span className="text-xs text-muted-foreground">Total hours: <strong className="text-foreground">{timeEntries.reduce((s: number, t: any) => s + Number(t.hours), 0)}h</strong></span>
+                <span className="text-xs text-muted-foreground">Labour cost: <strong className="text-foreground">${(timeEntries.reduce((s: number, t: any) => s + Number(t.hours), 0) * 117).toLocaleString()}</strong></span>
               </div>
             </div>
           </>
@@ -406,18 +441,27 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
               {showAddCost === 'labour' ? (
                 <div className="bg-background rounded-lg p-3 space-y-2 border border-border">
                   <p className="text-xs font-bold text-foreground">Add Labour</p>
-                  <Input placeholder="Description *" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
+                  <Input placeholder="Description * (e.g. Tech name)" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
                   <div className="flex gap-2">
                     <Input placeholder="Hours" type="number" value={costQty} onChange={e => setCostQty(e.target.value)} className="w-20" />
-                    <Input placeholder="Rate $/hr *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
+                    <Input placeholder="Cost $/hr" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
                   </div>
+                  <div className="flex gap-2 items-center">
+                    <label className="text-[10px] text-muted-foreground whitespace-nowrap">Charge rate:</label>
+                    <Input placeholder="Charge $/hr" type="number" value={labourChargeRate} onChange={e => setLabourChargeRate(e.target.value)} className="flex-1" />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Cost: ${((parseFloat(costQty) || 0) * (parseFloat(costUnitCost) || 0)).toFixed(2)} · 
+                    Charge: ${((parseFloat(costQty) || 0) * (parseFloat(labourChargeRate) || 0)).toFixed(2)} · 
+                    Margin: ${(((parseFloat(costQty) || 0) * (parseFloat(labourChargeRate) || 0)) - ((parseFloat(costQty) || 0) * (parseFloat(costUnitCost) || 0))).toFixed(2)}
+                  </p>
                   <div className="flex gap-2">
                     <Button onClick={addCostItem} size="sm" className="flex-1">Add</Button>
                     <Button onClick={() => setShowAddCost(null)} size="sm" variant="outline">Cancel</Button>
                   </div>
                 </div>
               ) : (
-                <Button onClick={() => setShowAddCost('labour')} variant="outline" size="sm" className="w-full gap-1 text-xs">
+                <Button onClick={() => { setShowAddCost('labour'); setCostUnitCost('117'); setLabourChargeRate('195'); }} variant="outline" size="sm" className="w-full gap-1 text-xs">
                   <Plus className="w-3 h-3" /> Add Labour
                 </Button>
               )}
