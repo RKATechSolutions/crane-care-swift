@@ -1055,6 +1055,7 @@ export type Database = {
           id: string
           job_type: string | null
           priority: string
+          quote_id: string | null
           scheduled_date: string | null
           status: string
           title: string
@@ -1073,6 +1074,7 @@ export type Database = {
           id?: string
           job_type?: string | null
           priority?: string
+          quote_id?: string | null
           scheduled_date?: string | null
           status?: string
           title: string
@@ -1091,12 +1093,21 @@ export type Database = {
           id?: string
           job_type?: string | null
           priority?: string
+          quote_id?: string | null
           scheduled_date?: string | null
           status?: string
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       time_entries: {
         Row: {
