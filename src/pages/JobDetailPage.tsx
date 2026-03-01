@@ -93,8 +93,6 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const materialDocInputRef = useRef<HTMLInputElement>(null);
-  const [materialDocUploading, setMaterialDocUploading] = useState(false);
 
   // Link Quote state
   const [showQuotePicker, setShowQuotePicker] = useState(false);
