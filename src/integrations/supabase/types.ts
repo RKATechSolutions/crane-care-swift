@@ -570,6 +570,7 @@ export type Database = {
       }
       job_costs: {
         Row: {
+          cost_type: string
           created_at: string
           description: string
           id: string
@@ -580,6 +581,7 @@ export type Database = {
           unit_cost: number
         }
         Insert: {
+          cost_type?: string
           created_at?: string
           description: string
           id?: string
@@ -590,6 +592,7 @@ export type Database = {
           unit_cost?: number
         }
         Update: {
+          cost_type?: string
           created_at?: string
           description?: string
           id?: string

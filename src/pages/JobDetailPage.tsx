@@ -39,6 +39,7 @@ interface CostItem {
   unit_cost: number;
   supplier: string | null;
   total: number;
+  cost_type: 'material' | 'labour';
 }
 
 interface NoteItem {
