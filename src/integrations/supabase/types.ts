@@ -1126,6 +1126,7 @@ export type Database = {
           is_auto_logged: boolean
           site_id: string | null
           start_time: string | null
+          task_id: string | null
           technician_id: string
           technician_name: string
           updated_at: string
@@ -1144,6 +1145,7 @@ export type Database = {
           is_auto_logged?: boolean
           site_id?: string | null
           start_time?: string | null
+          task_id?: string | null
           technician_id: string
           technician_name: string
           updated_at?: string
@@ -1162,12 +1164,21 @@ export type Database = {
           is_auto_logged?: boolean
           site_id?: string | null
           start_time?: string | null
+          task_id?: string | null
           technician_id?: string
           technician_name?: string
           updated_at?: string
           xero_synced?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       timesheets: {
         Row: {
