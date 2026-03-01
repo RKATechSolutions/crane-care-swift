@@ -457,12 +457,19 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                     <p className="text-sm font-semibold text-foreground">{c.description}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {c.quantity} × ${c.unit_cost.toFixed(2)} = <strong>${(c.total ?? c.quantity * c.unit_cost).toFixed(2)}</strong>
+                      {c.sell_price != null && <span className="ml-1 text-green-600"> · Sell: ${(c.sell_price * c.quantity).toFixed(2)}</span>}
                     </p>
                     {c.supplier && <p className="text-[10px] text-muted-foreground mt-0.5">Supplier: {c.supplier}</p>}
                   </div>
-                  <button onClick={() => removeCost(c.id)} className="p-1 text-muted-foreground hover:text-destructive">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col gap-1 items-end">
+                    <button onClick={(e) => { e.stopPropagation(); removeCost(c.id); }} className="p-1 text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <label className="cursor-pointer p-1 text-muted-foreground hover:text-foreground">
+                      <Paperclip className="w-3.5 h-3.5" />
+                      <input type="file" className="hidden" onChange={e => { if (e.target.files?.[0]) uploadMaterialDoc(e.target.files[0], c.id); e.target.value = ''; }} />
+                    </label>
+                  </div>
                 </div>
               ))}
 
