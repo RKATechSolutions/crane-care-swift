@@ -353,7 +353,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                 </div>
                 <div className="bg-background rounded-lg p-3 text-center">
                   <p className="text-[10px] text-muted-foreground font-medium">Materials</p>
-                  <p className="text-lg font-bold text-foreground">${totalMaterials.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-foreground">${totalMaterialsCost.toLocaleString()}</p>
                 </div>
                 <div className="bg-background rounded-lg p-3 text-center">
                   <p className="text-[10px] text-muted-foreground font-medium">Labour</p>
