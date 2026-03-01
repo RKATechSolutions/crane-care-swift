@@ -51,6 +51,14 @@ export default function FormBuilder() {
   const [dbSections, setDbSections] = useState<string[]>([]);
   const [selectedDbSection, setSelectedDbSection] = useState<string | null>(null);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [editingDbQuestion, setEditingDbQuestion] = useState<DbQuestion | null>(null);
+  const [dbEditText, setDbEditText] = useState('');
+  const [dbEditAnswerType, setDbEditAnswerType] = useState('');
+  const [dbEditHelpText, setDbEditHelpText] = useState('');
+  const [dbEditStandardRef, setDbEditStandardRef] = useState('');
+  const [dbEditOptions, setDbEditOptions] = useState('');
+  const [dbEditSection, setDbEditSection] = useState('');
+  const [savingDbEdit, setSavingDbEdit] = useState(false);
 
   useEffect(() => {
     fetchDbForms();
@@ -142,6 +150,79 @@ export default function FormBuilder() {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }
   };
+
+  const startEditingDbQuestion = (q: DbQuestion) => {
+    setEditingDbQuestion(q);
+    setDbEditText(q.question_text);
+    setDbEditAnswerType(q.answer_type);
+    setDbEditHelpText(q.help_text || '');
+    setDbEditStandardRef(q.standard_ref || '');
+    setDbEditOptions(q.options ? q.options.join(', ') : '');
+    setDbEditSection(q.section);
+  };
+
+  const cancelDbEdit = () => {
+    setEditingDbQuestion(null);
+    setDbEditText('');
+    setDbEditAnswerType('');
+    setDbEditHelpText('');
+    setDbEditStandardRef('');
+    setDbEditOptions('');
+    setDbEditSection('');
+  };
+
+  const handleSaveDbQuestion = async () => {
+    if (!editingDbQuestion || !dbEditText.trim()) return;
+    setSavingDbEdit(true);
+    try {
+      // Update the question in question_library
+      const updateData: any = {
+        question_text: dbEditText.trim(),
+        answer_type: dbEditAnswerType,
+        help_text: dbEditHelpText.trim() || null,
+        standard_ref: dbEditStandardRef.trim() || null,
+        section: dbEditSection.trim() || editingDbQuestion.section,
+      };
+      if (dbEditAnswerType === 'SingleSelect' || dbEditAnswerType === 'YesPartialNo') {
+        updateData.options = dbEditOptions.split(',').map((o: string) => o.trim()).filter(Boolean);
+      } else {
+        updateData.options = null;
+      }
+
+      const { error } = await supabase
+        .from('question_library')
+        .update(updateData)
+        .eq('question_id', editingDbQuestion.question_id);
+
+      if (error) throw error;
+
+      // Update section_override on bridge table if section changed
+      if (dbEditSection.trim() && dbEditSection.trim() !== editingDbQuestion.section) {
+        await supabase
+          .from('form_template_questions')
+          .update({ section_override: dbEditSection.trim() })
+          .eq('id', editingDbQuestion.id);
+      }
+
+      toast({ title: 'Question Updated' });
+      cancelDbEdit();
+      if (selectedDbFormId) fetchDbFormQuestions(selectedDbFormId);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingDbEdit(false);
+    }
+  };
+
+  const dbAnswerTypes = [
+    { value: 'PassFailNA', label: 'Pass / Fail / NA' },
+    { value: 'YesPartialNo', label: 'Yes / Partial / No' },
+    { value: 'Text', label: 'Text / Notes' },
+    { value: 'Number', label: 'Numeric' },
+    { value: 'Date', label: 'Date' },
+    { value: 'PhotoOnly', label: 'Photo Only' },
+    { value: 'SingleSelect', label: 'Single Select' },
+  ];
 
   const generateFormId = (name: string) => {
     return name
@@ -395,24 +476,135 @@ export default function FormBuilder() {
 
         <div className="space-y-1">
           {sectionQuestions.map((q, idx) => (
-            <div key={q.id} className="flex items-center gap-2 rounded-lg p-3 bg-muted">
-              <span className="text-xs font-bold text-muted-foreground w-6">{idx + 1}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{q.question_text}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {getAnswerTypeLabel(q.answer_type)}
-                  {q.standard_ref && ` • ${q.standard_ref}`}
-                </p>
-                {q.help_text && (
-                  <p className="text-[10px] text-muted-foreground/70 italic truncate">{q.help_text}</p>
-                )}
+            <div key={q.id}>
+              <div className={`flex items-center gap-2 rounded-lg p-3 transition-colors ${
+                editingDbQuestion?.id === q.id ? 'bg-primary/10 ring-2 ring-primary' : 'bg-muted'
+              }`}>
+                <span className="text-xs font-bold text-muted-foreground w-6">{idx + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{q.question_text}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {getAnswerTypeLabel(q.answer_type)}
+                    {q.standard_ref && ` • ${q.standard_ref}`}
+                  </p>
+                  {q.help_text && (
+                    <p className="text-[10px] text-muted-foreground/70 italic truncate">{q.help_text}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => startEditingDbQuestion(q)}
+                  className="p-1.5 text-muted-foreground active:text-primary transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleRemoveDbQuestion(q.id)}
+                  className="p-1.5 text-muted-foreground active:text-destructive transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => handleRemoveDbQuestion(q.id)}
-                className="p-1.5 text-muted-foreground active:text-destructive transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+
+              {/* Inline edit form */}
+              {editingDbQuestion?.id === q.id && (
+                <div className="bg-muted rounded-xl p-4 space-y-3 border-2 border-primary/30 mt-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold">Edit Question</p>
+                    <button onClick={cancelDbEdit} className="p-1 text-muted-foreground">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Question Text</label>
+                    <input
+                      type="text"
+                      value={dbEditText}
+                      onChange={e => setDbEditText(e.target.value)}
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Answer Type</label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {dbAnswerTypes.map(at => (
+                        <button
+                          key={at.value}
+                          onClick={() => setDbEditAnswerType(at.value)}
+                          className={`p-2 rounded-lg border-2 text-center transition-all text-xs font-semibold ${
+                            dbEditAnswerType === at.value ? 'border-primary bg-primary/10' : 'border-border bg-background'
+                          }`}
+                        >
+                          {at.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {(dbEditAnswerType === 'SingleSelect' || dbEditAnswerType === 'YesPartialNo') && (
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Options (comma separated)</label>
+                      <input
+                        type="text"
+                        value={dbEditOptions}
+                        onChange={e => setDbEditOptions(e.target.value)}
+                        placeholder="e.g. Good, Fair, Poor"
+                        className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Section</label>
+                    <input
+                      type="text"
+                      value={dbEditSection}
+                      onChange={e => setDbEditSection(e.target.value)}
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Help Text (optional)</label>
+                    <input
+                      type="text"
+                      value={dbEditHelpText}
+                      onChange={e => setDbEditHelpText(e.target.value)}
+                      placeholder="Guidance shown to technicians"
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Standard Ref (optional)</label>
+                    <input
+                      type="text"
+                      value={dbEditStandardRef}
+                      onChange={e => setDbEditStandardRef(e.target.value)}
+                      placeholder="e.g. AS 2550 Cl 8.3.1"
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveDbQuestion}
+                      disabled={!dbEditText.trim() || savingDbEdit}
+                      className="flex-1 tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {savingDbEdit ? 'Saving...' : <><Save className="w-4 h-4" /> Save Changes</>}
+                    </button>
+                    <button
+                      onClick={cancelDbEdit}
+                      className="px-4 tap-target bg-muted rounded-xl font-semibold text-sm border border-border"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
