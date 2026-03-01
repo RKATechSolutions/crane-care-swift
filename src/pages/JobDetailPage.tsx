@@ -433,7 +433,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-foreground">Job Costs</h3>
               <div className="flex gap-3 text-xs font-bold text-foreground">
-                <span>Materials: ${totalMaterials.toLocaleString()}</span>
+                <span>Materials: ${totalMaterialsCost.toLocaleString()}</span>
                 <span>Labour: ${totalLabour.toLocaleString()}</span>
               </div>
             </div>
