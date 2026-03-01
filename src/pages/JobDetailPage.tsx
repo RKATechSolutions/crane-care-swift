@@ -195,11 +195,11 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   };
 
   const uploadMaterialDoc = async (file: File, costId: string) => {
-    setMaterialDocUploading(true);
+    setUploading(true);
     const ext = file.name.split('.').pop();
     const path = `${jobId}/material-${costId}-${Date.now()}.${ext}`;
     const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
-    if (uploadErr) { toast.error('Upload failed'); setMaterialDocUploading(false); return; }
+    if (uploadErr) { toast.error('Upload failed'); setUploading(false); return; }
     const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
     const { data, error } = await supabase.from('job_documents').insert({
       task_id: jobId,
@@ -208,9 +208,9 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
       file_type: file.type || null,
       uploaded_by: 'You',
     }).select().single();
-    if (error) { toast.error('Failed to save'); setMaterialDocUploading(false); return; }
+    if (error) { toast.error('Failed to save'); setUploading(false); return; }
     setDocs(prev => [data as DocItem, ...prev]);
-    setMaterialDocUploading(false);
+    setUploading(false);
     toast.success('Supplier document uploaded');
   };
 
