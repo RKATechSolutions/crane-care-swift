@@ -350,8 +350,11 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                   <p className="text-lg font-bold text-foreground">${invoiceValue.toLocaleString()}</p>
                 </div>
                 <div className="bg-background rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground font-medium">Materials</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Materials (Cost / Sell)</p>
                   <p className="text-lg font-bold text-foreground">${totalMaterialsCost.toLocaleString()}</p>
+                  {totalMaterialsSell !== totalMaterialsCost && (
+                    <p className="text-[10px] font-medium text-green-600">Sell: ${totalMaterialsSell.toLocaleString()}</p>
+                  )}
                 </div>
                 <div className="bg-background rounded-lg p-3 text-center">
                   <p className="text-[10px] text-muted-foreground font-medium">Labour</p>
