@@ -66,7 +66,7 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
   });
 
   const overdueCount = quotes.filter(q => {
-    if (q.status === 'sent') return false;
+    if (q.status === 'sent' || q.status === 'accepted') return false;
     return (Date.now() - new Date(q.created_at).getTime()) / (1000 * 60 * 60) >= 24;
   }).length;
 
