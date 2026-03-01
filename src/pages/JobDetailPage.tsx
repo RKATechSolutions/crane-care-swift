@@ -331,10 +331,21 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4" /> Time Logged
               </h3>
-              <p className="text-xs text-muted-foreground">No time entries for this job yet.</p>
+              {timeEntries.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No time entries for this job yet.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {timeEntries.map((te: any) => (
+                    <div key={te.id} className="flex items-center justify-between text-xs">
+                      <span className="text-foreground">{te.technician_name} — {te.description || te.entry_type}</span>
+                      <span className="font-semibold text-foreground">{te.hours}h</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Total hours: <strong className="text-foreground">0h</strong></span>
-                <span className="text-xs text-muted-foreground">Labour cost: <strong className="text-foreground">$0</strong></span>
+                <span className="text-xs text-muted-foreground">Total hours: <strong className="text-foreground">{timeEntries.reduce((s: number, t: any) => s + Number(t.hours), 0)}h</strong></span>
+                <span className="text-xs text-muted-foreground">Labour cost: <strong className="text-foreground">${(timeEntries.reduce((s: number, t: any) => s + Number(t.hours), 0) * 117).toLocaleString()}</strong></span>
               </div>
             </div>
           </>
