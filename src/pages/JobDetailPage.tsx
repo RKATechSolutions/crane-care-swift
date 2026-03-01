@@ -89,8 +89,6 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   const [costUnitCost, setCostUnitCost] = useState('');
   const [costSellPrice, setCostSellPrice] = useState('');
   const [costSupplier, setCostSupplier] = useState('');
-  const materialDocRef = useRef<HTMLInputElement>(null);
-  const [pendingMaterialDoc, setPendingMaterialDoc] = useState<File | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
