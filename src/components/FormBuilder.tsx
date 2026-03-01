@@ -264,7 +264,96 @@ export default function FormBuilder() {
   if (!selectedTemplateId) {
     return (
       <div className="p-4 space-y-3">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Select a Form</p>
+        {/* Create New Form */}
+        {!showCreateForm ? (
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+          >
+            <FilePlus className="w-5 h-5" />
+            Create New Form
+          </button>
+        ) : (
+          <div className="bg-muted rounded-xl p-4 space-y-3 border-2 border-primary/30">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold">Create New Form</p>
+              <button onClick={() => { setShowCreateForm(false); setNewFormName(''); setNewFormDescription(''); setNewFormId(''); }} className="p-1 text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Form Name *</label>
+              <input
+                type="text"
+                value={newFormName}
+                onChange={e => { setNewFormName(e.target.value); setNewFormId(generateFormId(e.target.value)); }}
+                placeholder="e.g. Jib Crane Inspection"
+                className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Form ID</label>
+              <input
+                type="text"
+                value={newFormId}
+                onChange={e => setNewFormId(e.target.value)}
+                placeholder="auto-generated"
+                className="w-full p-2.5 border border-border rounded-lg bg-background text-sm font-mono text-xs"
+              />
+              <p className="text-[10px] text-muted-foreground mt-0.5">Unique identifier — auto-generated from name</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Description (optional)</label>
+              <input
+                type="text"
+                value={newFormDescription}
+                onChange={e => setNewFormDescription(e.target.value)}
+                placeholder="e.g. Standard inspection for jib cranes"
+                className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateForm}
+                disabled={!newFormName.trim() || !newFormId.trim() || creatingForm}
+                className="flex-1 tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {creatingForm ? 'Creating...' : 'Create Form'}
+              </button>
+              <button
+                onClick={() => { setShowCreateForm(false); setNewFormName(''); setNewFormDescription(''); setNewFormId(''); }}
+                className="px-4 tap-target bg-muted rounded-xl font-semibold text-sm border border-border"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* DB Forms */}
+        {dbForms.length > 0 && (
+          <>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Database Forms</p>
+            {dbForms.map(f => (
+              <div
+                key={f.form_id}
+                className="w-full bg-muted rounded-xl p-4 text-left flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-sm">{f.form_name}</p>
+                  <p className="text-xs text-muted-foreground">{f.form_id}{f.description ? ` • ${f.description}` : ''}</p>
+                </div>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${f.active ? 'bg-primary/10 text-primary' : 'bg-muted-foreground/10 text-muted-foreground'}`}>
+                  {f.active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* Local templates */}
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Edit Existing Forms</p>
         {state.templates.map(t => (
           <button
             key={t.id}
@@ -278,7 +367,7 @@ export default function FormBuilder() {
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </button>
         ))}
-        {state.templates.length === 0 && (
+        {state.templates.length === 0 && dbForms.length === 0 && (
           <p className="text-center text-muted-foreground py-8 text-sm">No templates available</p>
         )}
       </div>
