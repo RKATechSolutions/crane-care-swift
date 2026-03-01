@@ -4,6 +4,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
 
 export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | 'job-detail' | null;
 
@@ -13,6 +14,30 @@ interface TechDashboardProps {
 
 export default function TechDashboard({ onNavigate }: TechDashboardProps) {
   const { state, dispatch } = useApp();
+  const [todoCount, setTodoCount] = useState(0);
+  const [jobsThisWeek, setJobsThisWeek] = useState(0);
+  const [jobsCompleted, setJobsCompleted] = useState(0);
+
+  useEffect(() => {
+    const now = new Date();
+    const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    Promise.all([
+      // To-do count: overdue quotes + pending tasks
+      supabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sent').lt('created_at', cutoff),
+      supabase.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'completed'),
+      // Jobs scheduled this week (not completed)
+      supabase.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'completed').gte('scheduled_date', weekStart).lte('scheduled_date', weekEnd),
+      // Jobs completed this week
+      supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'completed').gte('completed_at', `${weekStart}T00:00:00`).lte('completed_at', `${weekEnd}T23:59:59`),
+    ]).then(([overdueRes, tasksRes, scheduledRes, completedRes]) => {
+      setTodoCount((overdueRes.count ?? 0) + (tasksRes.count ?? 0));
+      setJobsThisWeek(scheduledRes.count ?? 0);
+      setJobsCompleted(completedRes.count ?? 0);
+    });
+  }, []);
 
   const cards: { id: DashboardView; icon: React.ReactNode; title: string; desc: string; color: string }[] = [
     {
@@ -85,18 +110,18 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
 
         {/* Quick Stats */}
         <div className="flex gap-3">
-          <div className="flex-1 bg-muted rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-foreground">{state.inspections.filter(i => i.status === 'in_progress').length}</p>
-            <p className="text-[10px] text-muted-foreground font-medium">In Progress</p>
-          </div>
-          <div className="flex-1 bg-muted rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-foreground">{state.inspections.filter(i => i.status === 'completed').length}</p>
+          <button onClick={() => onNavigate('todo')} className="flex-1 bg-muted rounded-xl p-3 text-center active:scale-[0.97] transition-all">
+            <p className="text-2xl font-bold text-foreground">{todoCount}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">To-Do</p>
+          </button>
+          <button onClick={() => onNavigate('tasks')} className="flex-1 bg-muted rounded-xl p-3 text-center active:scale-[0.97] transition-all">
+            <p className="text-2xl font-bold text-foreground">{jobsThisWeek}</p>
+            <p className="text-[10px] text-muted-foreground font-medium">Jobs This Week</p>
+          </button>
+          <button onClick={() => onNavigate('tasks')} className="flex-1 bg-muted rounded-xl p-3 text-center active:scale-[0.97] transition-all">
+            <p className="text-2xl font-bold text-foreground">{jobsCompleted}</p>
             <p className="text-[10px] text-muted-foreground font-medium">Completed</p>
-          </div>
-          <div className="flex-1 bg-muted rounded-xl p-3 text-center">
-            <p className="text-2xl font-bold text-foreground">{state.sites.length}</p>
-            <p className="text-[10px] text-muted-foreground font-medium">Sites</p>
-          </div>
+          </button>
         </div>
 
         {/* Navigation Cards */}
@@ -116,7 +141,6 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
               </div>
             </button>
           ))}
-          <ToDoTile onClick={() => onNavigate('todo')} />
         </div>
       </div>
 
