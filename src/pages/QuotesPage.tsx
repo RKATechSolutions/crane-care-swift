@@ -73,6 +73,43 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
   const isOverdue = (createdAt: string) =>
     (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60) >= 24;
 
+  const handleAcceptQuote = async (quote: Quote) => {
+    setAcceptingId(quote.id);
+    try {
+      // Create a job (task) from the accepted quote
+      const { error: taskError } = await supabase.from('tasks').insert({
+        title: `${quote.client_name} — ${quote.asset_name || 'Quoted Works'}`,
+        description: `Accepted quote #${quote.quote_number || 'N/A'} — Total: $${Number(quote.total).toFixed(2)} inc GST`,
+        client_name: quote.client_name,
+        status: 'pending',
+        priority: 'normal',
+        job_type: 'repair',
+        assigned_to_id: 'unassigned',
+        assigned_to_name: 'Unassigned',
+        created_by_id: 'system',
+        created_by_name: 'System',
+        quote_id: quote.id,
+      });
+      if (taskError) throw taskError;
+
+      // Update quote status to accepted
+      const { error: quoteError } = await supabase
+        .from('quotes')
+        .update({ status: 'accepted' })
+        .eq('id', quote.id);
+      if (quoteError) throw quoteError;
+
+      // Update local state
+      setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'accepted' } : q));
+      toast.success('Quote accepted — Job created!');
+    } catch (err: any) {
+      console.error('Accept quote error:', err);
+      toast.error(`Failed to accept quote: ${err.message}`);
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
   const runEstimate = async () => {
     if (!estimateDesc.trim()) {
       toast.error('Please describe the job');
