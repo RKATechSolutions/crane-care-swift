@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import {
   DollarSign, Clock, FileText, StickyNote, Paperclip,
-  Plus, Trash2, TrendingUp, TrendingDown, ChevronRight,
+  Plus, Trash2, TrendingUp, ChevronRight,
   Send, Calendar, User, Wrench, Package
 } from 'lucide-react';
 
@@ -37,7 +37,7 @@ interface CostItem {
   description: string;
   quantity: number;
   unit_cost: number;
-  supplier: string;
+  supplier: string | null;
   total: number;
 }
 
@@ -46,6 +46,15 @@ interface NoteItem {
   text: string;
   created_at: string;
   author: string;
+}
+
+interface DocItem {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string | null;
+  uploaded_by: string;
+  created_at: string;
 }
 
 const JOB_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
@@ -63,74 +72,114 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'overview' | 'costs' | 'notes' | 'documents'>('overview');
 
-  // Local cost items (will be DB-backed later)
   const [costs, setCosts] = useState<CostItem[]>([]);
   const [notes, setNotes] = useState<NoteItem[]>([]);
+  const [docs, setDocs] = useState<DocItem[]>([]);
   const [newNote, setNewNote] = useState('');
 
-  // Add cost form
   const [showAddCost, setShowAddCost] = useState(false);
   const [costDesc, setCostDesc] = useState('');
   const [costQty, setCostQty] = useState('1');
   const [costUnitCost, setCostUnitCost] = useState('');
   const [costSupplier, setCostSupplier] = useState('');
 
-  useEffect(() => {
-    const fetchJob = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('id', jobId)
-        .single();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
-      if (!error && data) setJob(data as Task);
+  // Fetch job + related data
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true);
+      const [jobRes, costsRes, notesRes, docsRes] = await Promise.all([
+        supabase.from('tasks').select('*').eq('id', jobId).single(),
+        supabase.from('job_costs').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
+        supabase.from('job_notes').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
+        supabase.from('job_documents').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
+      ]);
+      if (!jobRes.error && jobRes.data) setJob(jobRes.data as Task);
+      if (!costsRes.error && costsRes.data) setCosts(costsRes.data as CostItem[]);
+      if (!notesRes.error && notesRes.data) setNotes(notesRes.data as NoteItem[]);
+      if (!docsRes.error && docsRes.data) setDocs(docsRes.data as DocItem[]);
       setLoading(false);
     };
-    fetchJob();
+    fetchAll();
   }, [jobId]);
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 
-  // Mock profitability data (will be calculated from quote + costs later)
-  const quoteValue = 0; // Will be linked to quotes table
-  const invoiceValue = 0; // Will be added later
-  const totalCosts = costs.reduce((sum, c) => sum + c.total, 0);
-  const labourCost = 0; // Will come from time_entries
+  const totalCosts = costs.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
+  const quoteValue = 0;
+  const invoiceValue = 0;
+  const labourCost = 0;
   const totalExpenses = totalCosts + labourCost;
   const profit = (invoiceValue || quoteValue) - totalExpenses;
   const margin = (invoiceValue || quoteValue) > 0 ? (profit / (invoiceValue || quoteValue)) * 100 : 0;
 
-  const addCostItem = () => {
+  const addCostItem = async () => {
     if (!costDesc.trim() || !costUnitCost) { toast.error('Description and cost required'); return; }
     const qty = parseFloat(costQty) || 1;
     const uc = parseFloat(costUnitCost) || 0;
-    setCosts(prev => [...prev, {
-      id: `cost-${Date.now()}`,
+    const { data, error } = await supabase.from('job_costs').insert({
+      task_id: jobId,
       description: costDesc.trim(),
       quantity: qty,
       unit_cost: uc,
-      supplier: costSupplier.trim(),
-      total: qty * uc,
-    }]);
+      supplier: costSupplier.trim() || null,
+    }).select().single();
+    if (error) { toast.error('Failed to save cost'); return; }
+    setCosts(prev => [data as CostItem, ...prev]);
     setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSupplier('');
     setShowAddCost(false);
     toast.success('Cost added');
   };
 
-  const removeCost = (id: string) => {
+  const removeCost = async (id: string) => {
+    const { error } = await supabase.from('job_costs').delete().eq('id', id);
+    if (error) { toast.error('Failed to delete'); return; }
     setCosts(prev => prev.filter(c => c.id !== id));
   };
 
-  const addNote = () => {
+  const addNote = async () => {
     if (!newNote.trim()) return;
-    setNotes(prev => [{
-      id: `note-${Date.now()}`,
+    const { data, error } = await supabase.from('job_notes').insert({
+      task_id: jobId,
       text: newNote.trim(),
-      created_at: new Date().toISOString(),
       author: 'You',
-    }, ...prev]);
+    }).select().single();
+    if (error) { toast.error('Failed to save note'); return; }
+    setNotes(prev => [data as NoteItem, ...prev]);
     setNewNote('');
+  };
+
+  const deleteNote = async (id: string) => {
+    const { error } = await supabase.from('job_notes').delete().eq('id', id);
+    if (error) { toast.error('Failed to delete'); return; }
+    setNotes(prev => prev.filter(n => n.id !== id));
+  };
+
+  const uploadDocument = async (file: File) => {
+    setUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `${jobId}/${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
+    if (uploadErr) { toast.error('Upload failed'); setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+    const { data, error } = await supabase.from('job_documents').insert({
+      task_id: jobId,
+      file_name: file.name,
+      file_url: urlData.publicUrl,
+      file_type: file.type || null,
+      uploaded_by: 'You',
+    }).select().single();
+    if (error) { toast.error('Failed to save document record'); setUploading(false); return; }
+    setDocs(prev => [data as DocItem, ...prev]);
+    setUploading(false);
+    toast.success('Document uploaded');
+  };
+
+  const deleteDoc = async (doc: DocItem) => {
+    await supabase.from('job_documents').delete().eq('id', doc.id);
+    setDocs(prev => prev.filter(d => d.id !== doc.id));
   };
 
   if (loading || !job) {
@@ -206,7 +255,6 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
         {/* OVERVIEW TAB */}
         {tab === 'overview' && (
           <>
-            {/* Profitability summary */}
             <div className="bg-muted rounded-xl p-4 space-y-3">
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" /> Profitability
@@ -236,7 +284,6 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
               </div>
             </div>
 
-            {/* Linked Quote */}
             <div className="bg-muted rounded-xl p-4">
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-2">
                 <FileText className="w-4 h-4" /> Linked Quote
@@ -247,7 +294,6 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
               </Button>
             </div>
 
-            {/* Time entries */}
             <div className="bg-muted rounded-xl p-4">
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4" /> Time Logged
@@ -282,7 +328,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground">{c.description}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.quantity} × ${c.unit_cost.toFixed(2)} = <strong>${c.total.toFixed(2)}</strong>
+                    {c.quantity} × ${c.unit_cost.toFixed(2)} = <strong>${(c.total ?? c.quantity * c.unit_cost).toFixed(2)}</strong>
                   </p>
                   {c.supplier && <p className="text-[10px] text-muted-foreground mt-0.5">Supplier: {c.supplier}</p>}
                 </div>
@@ -339,11 +385,14 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
             )}
 
             {notes.map(n => (
-              <div key={n.id} className="bg-muted rounded-xl p-3">
+              <div key={n.id} className="bg-muted rounded-xl p-3 group relative">
                 <p className="text-sm text-foreground">{n.text}</p>
                 <p className="text-[10px] text-muted-foreground mt-1">
                   {n.author} · {formatDate(n.created_at)}
                 </p>
+                <button onClick={() => deleteNote(n.id)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-opacity">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             ))}
           </>
@@ -352,13 +401,35 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
         {/* DOCUMENTS TAB */}
         {tab === 'documents' && (
           <>
-            <div className="text-center py-8 text-muted-foreground">
-              <Paperclip className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm font-medium">No documents attached</p>
-              <p className="text-xs mt-1">Upload invoices, photos or other files</p>
-            </div>
-            <Button variant="outline" className="w-full gap-2">
-              <Plus className="w-4 h-4" /> Upload Document
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={e => { if (e.target.files?.[0]) uploadDocument(e.target.files[0]); e.target.value = ''; }}
+            />
+
+            {docs.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Paperclip className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="text-sm font-medium">No documents attached</p>
+                <p className="text-xs mt-1">Upload invoices, photos or other files</p>
+              </div>
+            )}
+
+            {docs.map(d => (
+              <div key={d.id} className="bg-muted rounded-xl p-3 flex items-center justify-between gap-2">
+                <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{d.file_name}</p>
+                  <p className="text-[10px] text-muted-foreground">{d.uploaded_by} · {formatDate(d.created_at)}</p>
+                </a>
+                <button onClick={() => deleteDoc(d)} className="p-1 text-muted-foreground hover:text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+
+            <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full gap-2" disabled={uploading}>
+              <Plus className="w-4 h-4" /> {uploading ? 'Uploading...' : 'Upload Document'}
             </Button>
           </>
         )}
