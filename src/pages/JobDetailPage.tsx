@@ -38,6 +38,7 @@ interface CostItem {
   description: string;
   quantity: number;
   unit_cost: number;
+  sell_price: number | null;
   supplier: string | null;
   total: number;
   cost_type: 'material' | 'labour';
@@ -86,11 +87,17 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   const [costDesc, setCostDesc] = useState('');
   const [costQty, setCostQty] = useState('1');
   const [costUnitCost, setCostUnitCost] = useState('');
+  const [costSellPrice, setCostSellPrice] = useState('');
   const [costSupplier, setCostSupplier] = useState('');
   const [labourChargeRate, setLabourChargeRate] = useState('195');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Link Quote state
+  const [showQuotePicker, setShowQuotePicker] = useState(false);
+  const [availableQuotes, setAvailableQuotes] = useState<any[]>([]);
+  const [linkedQuote, setLinkedQuote] = useState<any>(null);
 
   // Fetch job + related data
   useEffect(() => {
@@ -103,7 +110,14 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
         supabase.from('job_documents').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
         supabase.from('time_entries').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
       ]);
-      if (!jobRes.error && jobRes.data) setJob(jobRes.data as Task);
+      if (!jobRes.error && jobRes.data) {
+        setJob(jobRes.data as Task);
+        // Load linked quote if exists
+        if ((jobRes.data as any).quote_id) {
+          const { data: q } = await supabase.from('quotes').select('*').eq('id', (jobRes.data as any).quote_id).single();
+          if (q) setLinkedQuote(q);
+        }
+      }
       if (!costsRes.error && costsRes.data) setCosts(costsRes.data as CostItem[]);
       if (!notesRes.error && notesRes.data) setNotes(notesRes.data as NoteItem[]);
       if (!docsRes.error && docsRes.data) setDocs(docsRes.data as DocItem[]);
@@ -117,24 +131,42 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
 
   const materialCosts = costs.filter(c => c.cost_type === 'material');
   const labourCosts = costs.filter(c => c.cost_type === 'labour');
-  const totalMaterials = materialCosts.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
+  const totalMaterialsCost = materialCosts.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
+  const totalMaterialsSell = materialCosts.reduce((sum, c) => sum + (c.sell_price != null ? c.sell_price * c.quantity : (c.total ?? c.quantity * c.unit_cost)), 0);
   const totalLabour = labourCosts.reduce((sum, c) => sum + (c.total ?? c.quantity * c.unit_cost), 0);
-  const totalCosts = totalMaterials + totalLabour;
-  const quoteValue = 0;
+  const totalCosts = totalMaterialsCost + totalLabour;
+  const quoteValue = linkedQuote ? Number(linkedQuote.total) : 0;
   const invoiceValue = 0;
   const totalExpenses = totalCosts;
   const profit = (invoiceValue || quoteValue) - totalExpenses;
   const margin = (invoiceValue || quoteValue) > 0 ? (profit / (invoiceValue || quoteValue)) * 100 : 0;
 
+  const fetchApprovedQuotes = async () => {
+    const { data } = await supabase.from('quotes').select('*').eq('status', 'accepted').order('created_at', { ascending: false });
+    setAvailableQuotes(data || []);
+    setShowQuotePicker(true);
+  };
+
+  const linkQuote = async (quoteId: string) => {
+    const { error } = await supabase.from('tasks').update({ quote_id: quoteId }).eq('id', jobId);
+    if (error) { toast.error('Failed to link quote'); return; }
+    const q = availableQuotes.find(q => q.id === quoteId);
+    setLinkedQuote(q);
+    setShowQuotePicker(false);
+    toast.success('Quote linked');
+  };
+
   const addCostItem = async () => {
     if (!costDesc.trim() || !costUnitCost || !showAddCost) { toast.error('Description and cost required'); return; }
     const qty = parseFloat(costQty) || 1;
     const uc = parseFloat(costUnitCost) || 0;
+    const sp = costSellPrice ? parseFloat(costSellPrice) : null;
     const { data, error } = await supabase.from('job_costs').insert({
       task_id: jobId,
       description: costDesc.trim(),
       quantity: qty,
       unit_cost: uc,
+      sell_price: sp,
       supplier: costSupplier.trim() || null,
       cost_type: showAddCost,
     }).select().single();
@@ -157,9 +189,29 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
       if (teData) setTimeEntries(prev => [teData, ...prev]);
     }
 
-    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSupplier(''); setLabourChargeRate('195');
+    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSellPrice(''); setCostSupplier(''); setLabourChargeRate('195');
     setShowAddCost(null);
     toast.success('Cost added');
+  };
+
+  const uploadMaterialDoc = async (file: File, costId: string) => {
+    setUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `${jobId}/material-${costId}-${Date.now()}.${ext}`;
+    const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
+    if (uploadErr) { toast.error('Upload failed'); setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+    const { data, error } = await supabase.from('job_documents').insert({
+      task_id: jobId,
+      file_name: `Supplier Doc: ${file.name}`,
+      file_url: urlData.publicUrl,
+      file_type: file.type || null,
+      uploaded_by: 'You',
+    }).select().single();
+    if (error) { toast.error('Failed to save'); setUploading(false); return; }
+    setDocs(prev => [data as DocItem, ...prev]);
+    setUploading(false);
+    toast.success('Supplier document uploaded');
   };
 
   const removeCost = async (id: string) => {
@@ -298,8 +350,11 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                   <p className="text-lg font-bold text-foreground">${invoiceValue.toLocaleString()}</p>
                 </div>
                 <div className="bg-background rounded-lg p-3 text-center">
-                  <p className="text-[10px] text-muted-foreground font-medium">Materials</p>
-                  <p className="text-lg font-bold text-foreground">${totalMaterials.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Materials (Cost / Sell)</p>
+                  <p className="text-lg font-bold text-foreground">${totalMaterialsCost.toLocaleString()}</p>
+                  {totalMaterialsSell !== totalMaterialsCost && (
+                    <p className="text-[10px] font-medium text-green-600">Sell: ${totalMaterialsSell.toLocaleString()}</p>
+                  )}
                 </div>
                 <div className="bg-background rounded-lg p-3 text-center">
                   <p className="text-[10px] text-muted-foreground font-medium">Labour</p>
@@ -321,10 +376,32 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2 mb-2">
                 <FileText className="w-4 h-4" /> Linked Quote
               </h3>
-              <p className="text-xs text-muted-foreground">No quote linked yet. Link a quote to track revenue.</p>
-              <Button variant="outline" size="sm" className="mt-2 text-xs gap-1">
-                <Plus className="w-3 h-3" /> Link Quote
-              </Button>
+              {linkedQuote ? (
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">{linkedQuote.client_name} — ${Number(linkedQuote.total).toLocaleString()}</p>
+                  {linkedQuote.quote_number && <p className="text-[10px] text-muted-foreground">Quote #{linkedQuote.quote_number}</p>}
+                  <p className="text-[10px] text-muted-foreground">Status: {linkedQuote.status}</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">No quote linked yet. Link a quote to track revenue.</p>
+                  <Button variant="outline" size="sm" className="mt-2 text-xs gap-1" onClick={fetchApprovedQuotes}>
+                    <Plus className="w-3 h-3" /> Link Quote
+                  </Button>
+                  {showQuotePicker && (
+                    <div className="mt-2 space-y-1.5 max-h-40 overflow-y-auto">
+                      {availableQuotes.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No accepted quotes available</p>
+                      ) : availableQuotes.map(q => (
+                        <button key={q.id} onClick={() => linkQuote(q.id)} className="w-full text-left bg-background rounded-lg p-2.5 hover:bg-accent transition-colors">
+                          <p className="text-sm font-semibold text-foreground">{q.client_name} — ${Number(q.total).toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">{q.quote_number ? `#${q.quote_number} · ` : ''}{formatDate(q.created_at)}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="bg-muted rounded-xl p-4">
@@ -357,7 +434,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-foreground">Job Costs</h3>
               <div className="flex gap-3 text-xs font-bold text-foreground">
-                <span>Materials: ${totalMaterials.toLocaleString()}</span>
+                <span>Materials: ${totalMaterialsCost.toLocaleString()}</span>
                 <span>Labour: ${totalLabour.toLocaleString()}</span>
               </div>
             </div>
@@ -368,7 +445,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                 <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5" /> Materials & Parts
                 </h4>
-                <span className="text-[10px] font-semibold text-muted-foreground">${totalMaterials.toLocaleString()}</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">${totalMaterialsCost.toLocaleString()}</span>
               </div>
 
               {materialCosts.length === 0 && showAddCost !== 'material' && (
@@ -381,12 +458,19 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                     <p className="text-sm font-semibold text-foreground">{c.description}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {c.quantity} × ${c.unit_cost.toFixed(2)} = <strong>${(c.total ?? c.quantity * c.unit_cost).toFixed(2)}</strong>
+                      {c.sell_price != null && <span className="ml-1 text-green-600"> · Sell: ${(c.sell_price * c.quantity).toFixed(2)}</span>}
                     </p>
                     {c.supplier && <p className="text-[10px] text-muted-foreground mt-0.5">Supplier: {c.supplier}</p>}
                   </div>
-                  <button onClick={() => removeCost(c.id)} className="p-1 text-muted-foreground hover:text-destructive">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col gap-1 items-end">
+                    <button onClick={(e) => { e.stopPropagation(); removeCost(c.id); }} className="p-1 text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <label className="cursor-pointer p-1 text-muted-foreground hover:text-foreground">
+                      <Paperclip className="w-3.5 h-3.5" />
+                      <input type="file" className="hidden" onChange={e => { if (e.target.files?.[0]) uploadMaterialDoc(e.target.files[0], c.id); e.target.value = ''; }} />
+                    </label>
+                  </div>
                 </div>
               ))}
 
@@ -396,9 +480,17 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                   <Input placeholder="Description *" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
                   <div className="flex gap-2">
                     <Input placeholder="Qty" type="number" value={costQty} onChange={e => setCostQty(e.target.value)} className="w-20" />
-                    <Input placeholder="Unit Cost *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
+                    <Input placeholder="Cost (ea) *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
                   </div>
+                  <Input placeholder="Sell Price (ea)" type="number" value={costSellPrice} onChange={e => setCostSellPrice(e.target.value)} />
                   <Input placeholder="Supplier" value={costSupplier} onChange={e => setCostSupplier(e.target.value)} />
+                  {costUnitCost && costSellPrice && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Cost: ${((parseFloat(costQty) || 1) * (parseFloat(costUnitCost) || 0)).toFixed(2)} · 
+                      Sell: ${((parseFloat(costQty) || 1) * (parseFloat(costSellPrice) || 0)).toFixed(2)} · 
+                      Margin: ${(((parseFloat(costQty) || 1) * (parseFloat(costSellPrice) || 0)) - ((parseFloat(costQty) || 1) * (parseFloat(costUnitCost) || 0))).toFixed(2)}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <Button onClick={addCostItem} size="sm" className="flex-1">Add</Button>
                     <Button onClick={() => setShowAddCost(null)} size="sm" variant="outline">Cancel</Button>

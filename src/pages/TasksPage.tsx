@@ -167,22 +167,13 @@ export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-1">
-                  {tab === 'open' ? (
-                    <>
-                      <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs h-8" onClick={() => completeTask(task.id)}>
-                        <Check className="w-3 h-3" /> Done
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-8 px-2 text-muted-foreground" onClick={() => deleteTask(task.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </>
-                  ) : (
-                    <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs h-8" onClick={() => reopenTask(task.id)}>
+                {tab === 'finished' && (
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs h-8" onClick={(e) => { e.stopPropagation(); reopenTask(task.id); }}>
                       Reopen
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })

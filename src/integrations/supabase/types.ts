@@ -575,6 +575,7 @@ export type Database = {
           description: string
           id: string
           quantity: number
+          sell_price: number | null
           supplier: string | null
           task_id: string
           total: number | null
@@ -586,6 +587,7 @@ export type Database = {
           description: string
           id?: string
           quantity?: number
+          sell_price?: number | null
           supplier?: string | null
           task_id: string
           total?: number | null
@@ -597,6 +599,7 @@ export type Database = {
           description?: string
           id?: string
           quantity?: number
+          sell_price?: number | null
           supplier?: string | null
           task_id?: string
           total?: number | null
