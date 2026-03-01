@@ -188,7 +188,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
       if (teData) setTimeEntries(prev => [teData, ...prev]);
     }
 
-    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSellPrice(''); setCostSupplier(''); setLabourChargeRate('195');
+    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSellPrice(''); setCostSupplier('');
     setShowAddCost(null);
     toast.success('Cost added');
   };
