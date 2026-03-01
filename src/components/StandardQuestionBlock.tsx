@@ -11,6 +11,8 @@ export interface QuestionConfig {
   requires_photo_on_fail: boolean;
   requires_comment_on_fail: boolean;
   severity_required_on_fail: boolean;
+  optional_photo?: boolean;
+  optional_comment?: boolean;
   required: boolean;
   section: string;
 }

@@ -88,6 +88,8 @@ export default function DbInspectionForm({
           requires_photo_on_fail: q.requires_photo_on_fail,
           requires_comment_on_fail: q.requires_comment_on_fail,
           severity_required_on_fail: q.severity_required_on_fail,
+          optional_photo: (q as any).optional_photo ?? false,
+          optional_comment: (q as any).optional_comment ?? false,
           required: bridge.required,
           section: bridge.section_override || q.section,
           override_sort_order: bridge.override_sort_order,
