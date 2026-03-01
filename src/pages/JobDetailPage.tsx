@@ -78,7 +78,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   const [docs, setDocs] = useState<DocItem[]>([]);
   const [newNote, setNewNote] = useState('');
 
-  const [showAddCost, setShowAddCost] = useState(false);
+  const [showAddCost, setShowAddCost] = useState<'material' | 'labour' | null>(null);
   const [costDesc, setCostDesc] = useState('');
   const [costQty, setCostQty] = useState('1');
   const [costUnitCost, setCostUnitCost] = useState('');
