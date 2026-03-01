@@ -51,6 +51,14 @@ export default function FormBuilder() {
   const [dbSections, setDbSections] = useState<string[]>([]);
   const [selectedDbSection, setSelectedDbSection] = useState<string | null>(null);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [editingDbQuestion, setEditingDbQuestion] = useState<DbQuestion | null>(null);
+  const [dbEditText, setDbEditText] = useState('');
+  const [dbEditAnswerType, setDbEditAnswerType] = useState('');
+  const [dbEditHelpText, setDbEditHelpText] = useState('');
+  const [dbEditStandardRef, setDbEditStandardRef] = useState('');
+  const [dbEditOptions, setDbEditOptions] = useState('');
+  const [dbEditSection, setDbEditSection] = useState('');
+  const [savingDbEdit, setSavingDbEdit] = useState(false);
 
   useEffect(() => {
     fetchDbForms();
