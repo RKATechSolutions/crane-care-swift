@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { AppHeader } from '@/components/AppHeader';
-import { Send, Clock, AlertTriangle, Sparkles, Loader2, Plus } from 'lucide-react';
+import { Send, Clock, AlertTriangle, Sparkles, Loader2, Plus, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,6 +37,7 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
   const [filter, setFilter] = useState<QuoteFilter>('draft');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
 
   // AI estimate state
   const [estimateDesc, setEstimateDesc] = useState('');
@@ -59,18 +60,55 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
   }, []);
 
   const filtered = quotes.filter(q => {
-    if (filter === 'sent') return q.status === 'sent';
-    if (filter === 'draft') return q.status !== 'sent';
+    if (filter === 'sent') return q.status === 'sent' || q.status === 'accepted';
+    if (filter === 'draft') return q.status !== 'sent' && q.status !== 'accepted';
     return false;
   });
 
   const overdueCount = quotes.filter(q => {
-    if (q.status === 'sent') return false;
+    if (q.status === 'sent' || q.status === 'accepted') return false;
     return (Date.now() - new Date(q.created_at).getTime()) / (1000 * 60 * 60) >= 24;
   }).length;
 
   const isOverdue = (createdAt: string) =>
     (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60) >= 24;
+
+  const handleAcceptQuote = async (quote: Quote) => {
+    setAcceptingId(quote.id);
+    try {
+      // Create a job (task) from the accepted quote
+      const { error: taskError } = await supabase.from('tasks').insert({
+        title: `${quote.client_name} — ${quote.asset_name || 'Quoted Works'}`,
+        description: `Accepted quote #${quote.quote_number || 'N/A'} — Total: $${Number(quote.total).toFixed(2)} inc GST`,
+        client_name: quote.client_name,
+        status: 'pending',
+        priority: 'normal',
+        job_type: 'repair',
+        assigned_to_id: 'unassigned',
+        assigned_to_name: 'Unassigned',
+        created_by_id: 'system',
+        created_by_name: 'System',
+        quote_id: quote.id,
+      });
+      if (taskError) throw taskError;
+
+      // Update quote status to accepted
+      const { error: quoteError } = await supabase
+        .from('quotes')
+        .update({ status: 'accepted' })
+        .eq('id', quote.id);
+      if (quoteError) throw quoteError;
+
+      // Update local state
+      setQuotes(prev => prev.map(q => q.id === quote.id ? { ...q, status: 'accepted' } : q));
+      toast.success('Quote accepted — Job created!');
+    } catch (err: any) {
+      console.error('Accept quote error:', err);
+      toast.error(`Failed to accept quote: ${err.message}`);
+    } finally {
+      setAcceptingId(null);
+    }
+  };
 
   const runEstimate = async () => {
     if (!estimateDesc.trim()) {
@@ -258,30 +296,48 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
           filtered.map(quote => (
             <div
               key={quote.id}
-              onClick={() => quote.status !== 'sent' && onEditQuote?.(quote)}
-              className={`bg-muted rounded-xl p-4 flex items-center justify-between ${
-                quote.status !== 'sent' ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''
+              onClick={() => quote.status !== 'sent' && quote.status !== 'accepted' && onEditQuote?.(quote)}
+              className={`bg-muted rounded-xl p-4 ${
+                quote.status !== 'sent' && quote.status !== 'accepted' ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''
               } ${
-                quote.status !== 'sent' && isOverdue(quote.created_at) ? 'ring-2 ring-amber-500/40' : ''
+                quote.status !== 'sent' && quote.status !== 'accepted' && isOverdue(quote.created_at) ? 'ring-2 ring-amber-500/40' : ''
               }`}
             >
-              <div className="space-y-1 flex-1 min-w-0">
-                <p className="font-semibold text-sm text-foreground truncate">{quote.client_name}</p>
-                {quote.asset_name && <p className="text-xs text-muted-foreground truncate">{quote.asset_name}</p>}
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-muted-foreground">{new Date(quote.created_at).toLocaleDateString()}</p>
-                  <p className="text-xs font-semibold text-foreground">${Number(quote.total).toFixed(2)}</p>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground truncate">{quote.client_name}</p>
+                  {quote.asset_name && <p className="text-xs text-muted-foreground truncate">{quote.asset_name}</p>}
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">{new Date(quote.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs font-semibold text-foreground">${Number(quote.total).toFixed(2)}</p>
+                  </div>
+                  {quote.quote_number && <p className="text-[10px] text-muted-foreground">#{quote.quote_number}</p>}
                 </div>
-                {quote.quote_number && <p className="text-[10px] text-muted-foreground">#{quote.quote_number}</p>}
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant={quote.status === 'sent' ? 'default' : quote.status === 'accepted' ? 'default' : 'secondary'}
+                    className={quote.status === 'accepted' ? 'bg-green-600 hover:bg-green-600' : ''}>
+                    {quote.status === 'sent' ? 'Sent' : quote.status === 'accepted' ? 'Accepted' : 'Draft'}
+                  </Badge>
+                  {quote.status !== 'sent' && quote.status !== 'accepted' && isOverdue(quote.created_at) && (
+                    <span className="text-[10px] font-bold text-amber-600">⚠️ Overdue</span>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col items-end gap-1">
-                <Badge variant={quote.status === 'sent' ? 'default' : 'secondary'}>
-                  {quote.status === 'sent' ? 'Sent' : 'Draft'}
-                </Badge>
-                {quote.status !== 'sent' && isOverdue(quote.created_at) && (
-                  <span className="text-[10px] font-bold text-amber-600">⚠️ Overdue</span>
-                )}
-              </div>
+              {/* Accept Quote button for sent quotes */}
+              {quote.status === 'sent' && (
+                <Button
+                  onClick={(e) => { e.stopPropagation(); handleAcceptQuote(quote); }}
+                  disabled={acceptingId === quote.id}
+                  className="w-full mt-3 gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  size="sm"
+                >
+                  {acceptingId === quote.id ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Converting to Job...</>
+                  ) : (
+                    <><CheckCircle className="w-3.5 h-3.5" /> Accept Quote & Create Job</>
+                  )}
+                </Button>
+              )}
             </div>
           ))
         )}

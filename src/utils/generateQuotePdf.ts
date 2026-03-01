@@ -267,6 +267,40 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
     y += 4;
   });
 
+  // Acceptance section
+  y += 6;
+  doc.setDrawColor(...BORDER_GRAY);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 6;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...DARK);
+  doc.text('ACCEPTANCE', margin, y);
+  y += 6;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('I accept this quotation and authorise RKA to proceed with the works described above.', margin, y);
+  y += 8;
+
+  // Signature line
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...DARK);
+  doc.text('Name:', margin, y);
+  doc.setDrawColor(...BORDER_GRAY);
+  doc.line(margin + 18, y, margin + 80, y);
+
+  doc.text('Date:', pageWidth / 2, y);
+  doc.line(pageWidth / 2 + 15, y, pageWidth / 2 + 60, y);
+  y += 8;
+
+  doc.text('Signature:', margin, y);
+  doc.line(margin + 24, y, margin + 80, y);
+
   // Footer image
   if (footerImg) {
     const ratio = footerImg.width / footerImg.height;
