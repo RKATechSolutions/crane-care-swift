@@ -70,6 +70,8 @@ const JOB_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
+  const { state } = useApp();
+  const currentUser = state.currentUser;
   const [job, setJob] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'overview' | 'costs' | 'notes' | 'documents'>('overview');
@@ -78,12 +80,14 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   const [notes, setNotes] = useState<NoteItem[]>([]);
   const [docs, setDocs] = useState<DocItem[]>([]);
   const [newNote, setNewNote] = useState('');
+  const [timeEntries, setTimeEntries] = useState<any[]>([]);
 
   const [showAddCost, setShowAddCost] = useState<'material' | 'labour' | null>(null);
   const [costDesc, setCostDesc] = useState('');
   const [costQty, setCostQty] = useState('1');
   const [costUnitCost, setCostUnitCost] = useState('');
   const [costSupplier, setCostSupplier] = useState('');
+  const [labourChargeRate, setLabourChargeRate] = useState('195');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
