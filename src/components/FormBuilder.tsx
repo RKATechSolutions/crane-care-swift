@@ -1,14 +1,76 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { TemplateItemType, TemplateItem } from '@/types/inspection';
-import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2, Calendar, Type, Camera, ToggleLeft, Pencil, X, Save } from 'lucide-react';
+import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2, Calendar, Type, Camera, ToggleLeft, Pencil, X, Save, FilePlus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface DbFormTemplate {
+  form_id: string;
+  form_name: string;
+  description: string | null;
+  active: boolean;
+}
 
 export default function FormBuilder() {
   const { state, dispatch } = useApp();
+  const { toast } = useToast();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItem, setEditingItem] = useState<TemplateItem | null>(null);
+
+  // Create new form state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newFormName, setNewFormName] = useState('');
+  const [newFormDescription, setNewFormDescription] = useState('');
+  const [newFormId, setNewFormId] = useState('');
+  const [creatingForm, setCreatingForm] = useState(false);
+  const [dbForms, setDbForms] = useState<DbFormTemplate[]>([]);
+
+  useEffect(() => {
+    fetchDbForms();
+  }, []);
+
+  const fetchDbForms = async () => {
+    const { data } = await supabase
+      .from('form_templates')
+      .select('form_id, form_name, description, active')
+      .order('created_at', { ascending: true });
+    if (data) setDbForms(data);
+  };
+
+  const generateFormId = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 30);
+  };
+
+  const handleCreateForm = async () => {
+    if (!newFormName.trim() || !newFormId.trim()) return;
+    setCreatingForm(true);
+    try {
+      const { error } = await supabase.from('form_templates').insert({
+        form_id: newFormId.trim(),
+        form_name: newFormName.trim(),
+        description: newFormDescription.trim() || null,
+        active: true,
+      });
+      if (error) throw error;
+      toast({ title: 'Form Created', description: `"${newFormName.trim()}" has been created successfully.` });
+      setShowCreateForm(false);
+      setNewFormName('');
+      setNewFormDescription('');
+      setNewFormId('');
+      fetchDbForms();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to create form', variant: 'destructive' });
+    } finally {
+      setCreatingForm(false);
+    }
+  };
 
   // Form state (shared for add + edit)
   const [formLabel, setFormLabel] = useState('');
