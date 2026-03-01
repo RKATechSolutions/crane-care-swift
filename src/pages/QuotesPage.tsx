@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { AppHeader } from '@/components/AppHeader';
-import { Send, Clock, AlertTriangle, Sparkles, Loader2, Plus } from 'lucide-react';
+import { Send, Clock, AlertTriangle, Sparkles, Loader2, Plus, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
