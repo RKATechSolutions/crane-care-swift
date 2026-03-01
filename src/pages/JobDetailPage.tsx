@@ -479,9 +479,17 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                   <Input placeholder="Description *" value={costDesc} onChange={e => setCostDesc(e.target.value)} />
                   <div className="flex gap-2">
                     <Input placeholder="Qty" type="number" value={costQty} onChange={e => setCostQty(e.target.value)} className="w-20" />
-                    <Input placeholder="Unit Cost *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
+                    <Input placeholder="Cost (ea) *" type="number" value={costUnitCost} onChange={e => setCostUnitCost(e.target.value)} className="flex-1" />
                   </div>
+                  <Input placeholder="Sell Price (ea)" type="number" value={costSellPrice} onChange={e => setCostSellPrice(e.target.value)} />
                   <Input placeholder="Supplier" value={costSupplier} onChange={e => setCostSupplier(e.target.value)} />
+                  {costUnitCost && costSellPrice && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Cost: ${((parseFloat(costQty) || 1) * (parseFloat(costUnitCost) || 0)).toFixed(2)} · 
+                      Sell: ${((parseFloat(costQty) || 1) * (parseFloat(costSellPrice) || 0)).toFixed(2)} · 
+                      Margin: ${(((parseFloat(costQty) || 1) * (parseFloat(costSellPrice) || 0)) - ((parseFloat(costQty) || 1) * (parseFloat(costUnitCost) || 0))).toFixed(2)}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <Button onClick={addCostItem} size="sm" className="flex-1">Add</Button>
                     <Button onClick={() => setShowAddCost(null)} size="sm" variant="outline">Cancel</Button>
