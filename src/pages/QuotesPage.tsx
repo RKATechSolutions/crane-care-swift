@@ -258,30 +258,48 @@ export default function QuotesPage({ onBack, onCreateQuote, onEditQuote, onPushE
           filtered.map(quote => (
             <div
               key={quote.id}
-              onClick={() => quote.status !== 'sent' && onEditQuote?.(quote)}
-              className={`bg-muted rounded-xl p-4 flex items-center justify-between ${
-                quote.status !== 'sent' ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''
+              onClick={() => quote.status !== 'sent' && quote.status !== 'accepted' && onEditQuote?.(quote)}
+              className={`bg-muted rounded-xl p-4 ${
+                quote.status !== 'sent' && quote.status !== 'accepted' ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''
               } ${
-                quote.status !== 'sent' && isOverdue(quote.created_at) ? 'ring-2 ring-amber-500/40' : ''
+                quote.status !== 'sent' && quote.status !== 'accepted' && isOverdue(quote.created_at) ? 'ring-2 ring-amber-500/40' : ''
               }`}
             >
-              <div className="space-y-1 flex-1 min-w-0">
-                <p className="font-semibold text-sm text-foreground truncate">{quote.client_name}</p>
-                {quote.asset_name && <p className="text-xs text-muted-foreground truncate">{quote.asset_name}</p>}
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-muted-foreground">{new Date(quote.created_at).toLocaleDateString()}</p>
-                  <p className="text-xs font-semibold text-foreground">${Number(quote.total).toFixed(2)}</p>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-foreground truncate">{quote.client_name}</p>
+                  {quote.asset_name && <p className="text-xs text-muted-foreground truncate">{quote.asset_name}</p>}
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">{new Date(quote.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs font-semibold text-foreground">${Number(quote.total).toFixed(2)}</p>
+                  </div>
+                  {quote.quote_number && <p className="text-[10px] text-muted-foreground">#{quote.quote_number}</p>}
                 </div>
-                {quote.quote_number && <p className="text-[10px] text-muted-foreground">#{quote.quote_number}</p>}
+                <div className="flex flex-col items-end gap-1">
+                  <Badge variant={quote.status === 'sent' ? 'default' : quote.status === 'accepted' ? 'default' : 'secondary'}
+                    className={quote.status === 'accepted' ? 'bg-green-600 hover:bg-green-600' : ''}>
+                    {quote.status === 'sent' ? 'Sent' : quote.status === 'accepted' ? 'Accepted' : 'Draft'}
+                  </Badge>
+                  {quote.status !== 'sent' && quote.status !== 'accepted' && isOverdue(quote.created_at) && (
+                    <span className="text-[10px] font-bold text-amber-600">⚠️ Overdue</span>
+                  )}
+                </div>
               </div>
-              <div className="flex flex-col items-end gap-1">
-                <Badge variant={quote.status === 'sent' ? 'default' : 'secondary'}>
-                  {quote.status === 'sent' ? 'Sent' : 'Draft'}
-                </Badge>
-                {quote.status !== 'sent' && isOverdue(quote.created_at) && (
-                  <span className="text-[10px] font-bold text-amber-600">⚠️ Overdue</span>
-                )}
-              </div>
+              {/* Accept Quote button for sent quotes */}
+              {quote.status === 'sent' && (
+                <Button
+                  onClick={(e) => { e.stopPropagation(); handleAcceptQuote(quote); }}
+                  disabled={acceptingId === quote.id}
+                  className="w-full mt-3 gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  size="sm"
+                >
+                  {acceptingId === quote.id ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Converting to Job...</>
+                  ) : (
+                    <><CheckCircle className="w-3.5 h-3.5" /> Accept Quote & Create Job</>
+                  )}
+                </Button>
+              )}
             </div>
           ))
         )}
