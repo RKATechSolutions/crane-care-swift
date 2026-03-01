@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { TemplateItemType, TemplateItem } from '@/types/inspection';
-import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2, Calendar, Type, Camera, ToggleLeft, Pencil, X, Save, FilePlus } from 'lucide-react';
+import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2, Calendar, Type, Camera, ToggleLeft, Pencil, X, Save, FilePlus, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -10,6 +10,22 @@ interface DbFormTemplate {
   form_name: string;
   description: string | null;
   active: boolean;
+}
+
+interface DbQuestion {
+  id: string; // form_template_questions.id
+  question_id: string;
+  question_text: string;
+  section: string;
+  answer_type: string;
+  sort_order: number;
+  help_text: string | null;
+  standard_ref: string | null;
+  options: string[] | null;
+  override_sort_order: number | null;
+  override_help_text: string | null;
+  override_standard_ref: string | null;
+  section_override: string | null;
 }
 
 export default function FormBuilder() {
@@ -28,6 +44,14 @@ export default function FormBuilder() {
   const [creatingForm, setCreatingForm] = useState(false);
   const [dbForms, setDbForms] = useState<DbFormTemplate[]>([]);
 
+  // DB form drill-down state
+  const [selectedDbFormId, setSelectedDbFormId] = useState<string | null>(null);
+  const [selectedDbFormName, setSelectedDbFormName] = useState('');
+  const [dbQuestions, setDbQuestions] = useState<DbQuestion[]>([]);
+  const [dbSections, setDbSections] = useState<string[]>([]);
+  const [selectedDbSection, setSelectedDbSection] = useState<string | null>(null);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
   useEffect(() => {
     fetchDbForms();
   }, []);
@@ -38,6 +62,85 @@ export default function FormBuilder() {
       .select('form_id, form_name, description, active')
       .order('created_at', { ascending: true });
     if (data) setDbForms(data);
+  };
+
+  const fetchDbFormQuestions = async (formId: string) => {
+    setLoadingQuestions(true);
+    try {
+      const { data, error } = await supabase
+        .from('form_template_questions')
+        .select(`
+          id,
+          question_id,
+          override_sort_order,
+          override_help_text,
+          override_standard_ref,
+          section_override,
+          question_library!inner (
+            question_text,
+            section,
+            answer_type,
+            sort_order,
+            help_text,
+            standard_ref,
+            options
+          )
+        `)
+        .eq('form_id', formId)
+        .order('override_sort_order', { ascending: true, nullsFirst: false });
+
+      if (error) throw error;
+
+      const questions: DbQuestion[] = (data || []).map((row: any) => ({
+        id: row.id,
+        question_id: row.question_id,
+        question_text: row.question_library.question_text,
+        section: row.section_override || row.question_library.section,
+        answer_type: row.question_library.answer_type,
+        sort_order: row.override_sort_order ?? row.question_library.sort_order,
+        help_text: row.override_help_text || row.question_library.help_text,
+        standard_ref: row.override_standard_ref || row.question_library.standard_ref,
+        options: row.question_library.options,
+        override_sort_order: row.override_sort_order,
+        override_help_text: row.override_help_text,
+        override_standard_ref: row.override_standard_ref,
+        section_override: row.section_override,
+      }));
+
+      // Sort by sort_order
+      questions.sort((a, b) => a.sort_order - b.sort_order);
+
+      setDbQuestions(questions);
+
+      // Extract unique sections
+      const sections = [...new Set(questions.map(q => q.section))];
+      setDbSections(sections);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  const handleSelectDbForm = (form: DbFormTemplate) => {
+    setSelectedDbFormId(form.form_id);
+    setSelectedDbFormName(form.form_name);
+    setSelectedDbSection(null);
+    fetchDbFormQuestions(form.form_id);
+  };
+
+  const handleRemoveDbQuestion = async (ftqId: string) => {
+    try {
+      const { error } = await supabase
+        .from('form_template_questions')
+        .delete()
+        .eq('id', ftqId);
+      if (error) throw error;
+      toast({ title: 'Question Removed' });
+      if (selectedDbFormId) fetchDbFormQuestions(selectedDbFormId);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
   };
 
   const generateFormId = (name: string) => {
@@ -72,7 +175,7 @@ export default function FormBuilder() {
     }
   };
 
-  // Form state (shared for add + edit)
+  // Form state (shared for add + edit) — local templates only
   const [formLabel, setFormLabel] = useState('');
   const [formType, setFormType] = useState<TemplateItemType>('checklist');
   const [formOptions, setFormOptions] = useState('');
@@ -103,12 +206,11 @@ export default function FormBuilder() {
   const startEditing = (item: TemplateItem) => {
     setEditingItem(item);
     setFormLabel(item.label);
-    // Determine display type
     const isYesNoNa = item.type === 'single_select' && item.options?.join(',') === 'Yes,No,N/A';
     setFormType(isYesNoNa ? 'yes_no_na' : (item.type || 'checklist'));
     setFormOptions(item.type === 'single_select' && !isYesNoNa ? (item.options || []).join(', ') : '');
     setFormConditionalOn(item.conditionalCommentOn || '');
-    setShowAddForm(false); // close add form if open
+    setShowAddForm(false);
   };
 
   const buildItemPayload = (id: string, sortOrder: number): TemplateItem => {
@@ -164,7 +266,20 @@ export default function FormBuilder() {
     if (editingItem?.id === itemId) resetForm();
   };
 
-  // Shared question form (used for both add and edit)
+  const getAnswerTypeLabel = (type: string) => {
+    switch (type) {
+      case 'PassFailNA': return 'Pass / Fail / NA';
+      case 'YesPartialNo': return 'Yes / Partial / No';
+      case 'Text': return 'Text / Notes';
+      case 'Number': return 'Numeric';
+      case 'Date': return 'Date picker';
+      case 'PhotoOnly': return 'Photo required';
+      case 'SingleSelect': return 'Single select';
+      default: return type;
+    }
+  };
+
+  // Shared question form (used for both add and edit) — local templates
   const renderQuestionForm = (mode: 'add' | 'edit') => (
     <div className="bg-muted rounded-xl p-4 space-y-3 border-2 border-primary/30">
       <div className="flex items-center justify-between">
@@ -260,7 +375,104 @@ export default function FormBuilder() {
     </div>
   );
 
-  // Step 1: Select template
+  // ====== DB Form: Section question list ======
+  if (selectedDbFormId && selectedDbSection !== null) {
+    const sectionQuestions = dbQuestions.filter(q => q.section === selectedDbSection);
+    return (
+      <div className="p-4 space-y-3">
+        <button onClick={() => setSelectedDbSection(null)} className="text-sm text-primary font-medium mb-2">
+          ← Back to Sections
+        </button>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">{selectedDbFormName}</p>
+            <p className="font-bold text-base">{selectedDbSection}</p>
+          </div>
+          <span className="text-xs bg-muted px-2 py-1 rounded-full font-medium">
+            {sectionQuestions.length} questions
+          </span>
+        </div>
+
+        <div className="space-y-1">
+          {sectionQuestions.map((q, idx) => (
+            <div key={q.id} className="flex items-center gap-2 rounded-lg p-3 bg-muted">
+              <span className="text-xs font-bold text-muted-foreground w-6">{idx + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{q.question_text}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {getAnswerTypeLabel(q.answer_type)}
+                  {q.standard_ref && ` • ${q.standard_ref}`}
+                </p>
+                {q.help_text && (
+                  <p className="text-[10px] text-muted-foreground/70 italic truncate">{q.help_text}</p>
+                )}
+              </div>
+              <button
+                onClick={() => handleRemoveDbQuestion(q.id)}
+                className="p-1.5 text-muted-foreground active:text-destructive transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {sectionQuestions.length === 0 && (
+          <p className="text-center text-muted-foreground py-6 text-sm">No questions in this section</p>
+        )}
+      </div>
+    );
+  }
+
+  // ====== DB Form: Section list ======
+  if (selectedDbFormId && selectedDbSection === null) {
+    return (
+      <div className="p-4 space-y-3">
+        <button onClick={() => { setSelectedDbFormId(null); setSelectedDbFormName(''); setDbQuestions([]); setDbSections([]); }} className="text-sm text-primary font-medium mb-2">
+          ← Back to Forms
+        </button>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          {selectedDbFormName} — Sections
+        </p>
+
+        {loadingQuestions ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : dbSections.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="font-medium">No questions linked yet</p>
+            <p className="text-sm">Add questions via the Question Library</p>
+          </div>
+        ) : (
+          dbSections.map(sec => {
+            const count = dbQuestions.filter(q => q.section === sec).length;
+            return (
+              <button
+                key={sec}
+                onClick={() => setSelectedDbSection(sec)}
+                className="w-full bg-muted rounded-xl p-4 text-left active:bg-foreground/10 transition-colors flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-sm">{sec}</p>
+                  <p className="text-xs text-muted-foreground">{count} question{count !== 1 ? 's' : ''}</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            );
+          })
+        )}
+
+        <div className="bg-muted/50 rounded-xl p-3 mt-2">
+          <p className="text-xs text-muted-foreground">
+            <strong>Total:</strong> {dbQuestions.length} questions across {dbSections.length} sections
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ====== Step 1: Select template ======
   if (!selectedTemplateId) {
     return (
       <div className="p-4 space-y-3">
@@ -334,39 +546,48 @@ export default function FormBuilder() {
         {/* DB Forms */}
         {dbForms.length > 0 && (
           <>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Database Forms</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Forms</p>
             {dbForms.map(f => (
-              <div
+              <button
                 key={f.form_id}
-                className="w-full bg-muted rounded-xl p-4 text-left flex items-center justify-between"
+                onClick={() => handleSelectDbForm(f)}
+                className="w-full bg-muted rounded-xl p-4 text-left active:bg-foreground/10 transition-colors flex items-center justify-between"
               >
                 <div>
                   <p className="font-semibold text-sm">{f.form_name}</p>
                   <p className="text-xs text-muted-foreground">{f.form_id}{f.description ? ` • ${f.description}` : ''}</p>
                 </div>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${f.active ? 'bg-primary/10 text-primary' : 'bg-muted-foreground/10 text-muted-foreground'}`}>
-                  {f.active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${f.active ? 'bg-primary/10 text-primary' : 'bg-muted-foreground/10 text-muted-foreground'}`}>
+                    {f.active ? 'Active' : 'Inactive'}
+                  </span>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              </button>
             ))}
           </>
         )}
 
-        {/* Local templates */}
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Edit Existing Forms</p>
-        {state.templates.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setSelectedTemplateId(t.id)}
-            className="w-full bg-muted rounded-xl p-4 text-left active:bg-foreground/10 transition-colors flex items-center justify-between"
-          >
-            <div>
-              <p className="font-semibold text-sm">{t.craneType}</p>
-              <p className="text-xs text-muted-foreground">{t.inspectionType} • v{t.version} • {t.sections.length} sections</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </button>
-        ))}
+        {/* Local templates (legacy) */}
+        {state.templates.length > 0 && (
+          <>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Local Templates</p>
+            {state.templates.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setSelectedTemplateId(t.id)}
+                className="w-full bg-muted rounded-xl p-4 text-left active:bg-foreground/10 transition-colors flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-sm">{t.craneType}</p>
+                  <p className="text-xs text-muted-foreground">{t.inspectionType} • v{t.version} • {t.sections.length} sections</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            ))}
+          </>
+        )}
+
         {state.templates.length === 0 && dbForms.length === 0 && (
           <p className="text-center text-muted-foreground py-8 text-sm">No templates available</p>
         )}
@@ -374,7 +595,7 @@ export default function FormBuilder() {
     );
   }
 
-  // Step 2: Select section
+  // Step 2: Select section (local templates)
   if (!selectedSectionId && selectedTemplate) {
     return (
       <div className="p-4 space-y-3">
@@ -401,7 +622,7 @@ export default function FormBuilder() {
     );
   }
 
-  // Step 3: View section items + add/edit
+  // Step 3: View section items + add/edit (local templates)
   if (selectedSection && selectedTemplate) {
     return (
       <div className="p-4 space-y-3">
@@ -418,7 +639,6 @@ export default function FormBuilder() {
           </span>
         </div>
 
-        {/* Existing items */}
         <div className="space-y-1">
           {selectedSection.items.map((item, idx) => (
             <div
@@ -455,10 +675,8 @@ export default function FormBuilder() {
           ))}
         </div>
 
-        {/* Edit form */}
         {editingItem && renderQuestionForm('edit')}
 
-        {/* Add question */}
         {!editingItem && !showAddForm && (
           <button
             onClick={() => setShowAddForm(true)}
