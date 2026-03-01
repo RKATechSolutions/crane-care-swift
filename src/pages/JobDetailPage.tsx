@@ -96,16 +96,18 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
-      const [jobRes, costsRes, notesRes, docsRes] = await Promise.all([
+      const [jobRes, costsRes, notesRes, docsRes, timeRes] = await Promise.all([
         supabase.from('tasks').select('*').eq('id', jobId).single(),
         supabase.from('job_costs').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
         supabase.from('job_notes').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
         supabase.from('job_documents').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
+        supabase.from('time_entries').select('*').eq('task_id', jobId).order('created_at', { ascending: false }),
       ]);
       if (!jobRes.error && jobRes.data) setJob(jobRes.data as Task);
       if (!costsRes.error && costsRes.data) setCosts(costsRes.data as CostItem[]);
       if (!notesRes.error && notesRes.data) setNotes(notesRes.data as NoteItem[]);
       if (!docsRes.error && docsRes.data) setDocs(docsRes.data as DocItem[]);
+      if (!timeRes.error && timeRes.data) setTimeEntries(timeRes.data);
       setLoading(false);
     };
     fetchAll();
