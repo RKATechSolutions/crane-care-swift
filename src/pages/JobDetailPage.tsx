@@ -120,7 +120,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
   const margin = (invoiceValue || quoteValue) > 0 ? (profit / (invoiceValue || quoteValue)) * 100 : 0;
 
   const addCostItem = async () => {
-    if (!costDesc.trim() || !costUnitCost) { toast.error('Description and cost required'); return; }
+    if (!costDesc.trim() || !costUnitCost || !showAddCost) { toast.error('Description and cost required'); return; }
     const qty = parseFloat(costQty) || 1;
     const uc = parseFloat(costUnitCost) || 0;
     const { data, error } = await supabase.from('job_costs').insert({
@@ -129,11 +129,12 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
       quantity: qty,
       unit_cost: uc,
       supplier: costSupplier.trim() || null,
+      cost_type: showAddCost,
     }).select().single();
     if (error) { toast.error('Failed to save cost'); return; }
     setCosts(prev => [data as CostItem, ...prev]);
     setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSupplier('');
-    setShowAddCost(false);
+    setShowAddCost(null);
     toast.success('Cost added');
   };
 
