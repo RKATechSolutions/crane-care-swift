@@ -250,6 +250,43 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
           </div>
         )}
 
+        {/* === Optional comment (always visible when configured) === */}
+        {question.optional_comment && !isFail && question.answer_type !== 'Text' && (
+          <textarea
+            value={response.comment || ''}
+            onChange={(e) => update({ comment: e.target.value || null })}
+            placeholder="Optional comment…"
+            rows={2}
+            className="w-full p-2.5 border border-border rounded-lg bg-background text-sm resize-none"
+          />
+        )}
+
+        {/* === Optional photo (always visible when configured) === */}
+        {question.optional_photo && !isFail && question.answer_type !== 'PhotoOnly' && (
+          <div className="space-y-2">
+            {response.photo_urls.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {response.photo_urls.map((p, i) => (
+                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+                    <img src={p} alt="" className="w-full h-full object-cover" />
+                    <button onClick={() => removePhoto(i)} className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="w-full h-10 bg-primary/10 text-primary rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed border-primary/30"
+            >
+              <Camera className="w-4 h-4" />
+              {response.photo_urls.length > 0 ? 'Add Photo' : 'Add Photo (Optional)'}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+          </div>
+        )}
+
         {/* === Conditional fields on Fail === */}
         {isFail && (
           <div className="space-y-2 pt-1">
@@ -276,18 +313,18 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
             )}
 
             {/* Comment */}
-            {question.requires_comment_on_fail && (
+            {(question.requires_comment_on_fail || question.optional_comment) && (
               <textarea
                 value={response.comment || ''}
                 onChange={(e) => update({ comment: e.target.value || null })}
-                placeholder="Comment (required for defect)…"
+                placeholder={question.requires_comment_on_fail ? "Comment (required for defect)…" : "Optional comment…"}
                 rows={2}
-                className="w-full p-2.5 border border-rka-red/30 rounded-lg bg-background text-sm resize-none"
+                className={`w-full p-2.5 border rounded-lg bg-background text-sm resize-none ${question.requires_comment_on_fail ? 'border-rka-red/30' : 'border-border'}`}
               />
             )}
 
             {/* Photo upload on fail */}
-            {question.requires_photo_on_fail && question.answer_type !== 'PhotoOnly' && (
+            {(question.requires_photo_on_fail || question.optional_photo) && question.answer_type !== 'PhotoOnly' && (
               <div className="space-y-2">
                 {response.photo_urls.length > 0 && (
                   <div className="flex gap-2 flex-wrap">
@@ -303,10 +340,12 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 )}
                 <button
                   onClick={() => fileRef.current?.click()}
-                  className="w-full h-10 bg-rka-red/10 text-rka-red rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed border-rka-red/30"
+                  className={`w-full h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${
+                    question.requires_photo_on_fail ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
+                  }`}
                 >
                   <Camera className="w-4 h-4" />
-                  {response.photo_urls.length > 0 ? 'Add Photo' : 'Photo Required'}
+                  {response.photo_urls.length > 0 ? 'Add Photo' : question.requires_photo_on_fail ? 'Photo Required' : 'Add Photo (Optional)'}
                 </button>
                 <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
               </div>
