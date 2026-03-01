@@ -444,7 +444,7 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
                 <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5" /> Materials & Parts
                 </h4>
-                <span className="text-[10px] font-semibold text-muted-foreground">${totalMaterials.toLocaleString()}</span>
+                <span className="text-[10px] font-semibold text-muted-foreground">${totalMaterialsCost.toLocaleString()}</span>
               </div>
 
               {materialCosts.length === 0 && showAddCost !== 'material' && (
