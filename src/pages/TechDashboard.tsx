@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
-import { ToDoTile } from '@/components/ToDoTile';
 import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | 'job-detail' | null;
 
