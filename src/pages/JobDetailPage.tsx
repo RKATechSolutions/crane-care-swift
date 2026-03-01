@@ -140,7 +140,24 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
     }).select().single();
     if (error) { toast.error('Failed to save cost'); return; }
     setCosts(prev => [data as CostItem, ...prev]);
-    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSupplier('');
+
+    // If labour, also create a time_entry linked to this job
+    if (showAddCost === 'labour' && currentUser) {
+      const today = new Date().toISOString().split('T')[0];
+      const { data: teData } = await supabase.from('time_entries').insert({
+        task_id: jobId,
+        technician_id: currentUser.id,
+        technician_name: currentUser.name,
+        entry_date: today,
+        entry_type: 'repair' as const,
+        hours: qty,
+        description: `${costDesc.trim()} — ${job?.title || 'Job'}`,
+        client_name: job?.client_name || null,
+      }).select().single();
+      if (teData) setTimeEntries(prev => [teData, ...prev]);
+    }
+
+    setCostDesc(''); setCostQty('1'); setCostUnitCost(''); setCostSupplier(''); setLabourChargeRate('195');
     setShowAddCost(null);
     toast.success('Cost added');
   };
