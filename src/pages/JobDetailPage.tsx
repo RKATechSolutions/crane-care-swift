@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import {
   DollarSign, Clock, FileText, StickyNote, Paperclip,
   Plus, Trash2, TrendingUp, ChevronRight,
-  Send, Calendar, User, Wrench, Package
+  Send, Calendar, User, Wrench, Package, HardHat
 } from 'lucide-react';
 
 interface JobDetailPageProps {
