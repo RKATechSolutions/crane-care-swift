@@ -4,7 +4,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, ClipboardCheck } from 'lucide-react';
+import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
 import { format } from 'date-fns';
@@ -15,6 +15,7 @@ interface LiftingRegisterListProps {
   clientName?: string;
   onBack: () => void;
   onAddNew: () => void;
+  onInspect?: () => void;
 }
 
 interface RegisterItem {
@@ -40,7 +41,7 @@ interface RegisterItem {
   span_m: number | null;
 }
 
-export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew }: LiftingRegisterListProps) {
+export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew, onInspect }: LiftingRegisterListProps) {
   const [items, setItems] = useState<RegisterItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -127,25 +128,44 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   };
 
   const handleDownloadPdf = async () => {
-    if (items.length === 0) {
-      toast.error('No items to export');
-      return;
-    }
+    if (items.length === 0) { toast.error('No items to export'); return; }
     try {
-      const pdf = await generateLiftingRegisterPdf({
-        siteName,
-        clientName: clientName || siteName,
-        technicianName: 'Technician',
-        items,
-      });
+      const pdf = await generateLiftingRegisterPdf({ siteName, clientName: clientName || siteName, technicianName: 'Technician', items });
       const safeName = (clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_');
       const dateStr = format(new Date(), 'yyyyMMdd');
       pdf.save(`${safeName}_LiftingRegister_${dateStr}.pdf`);
       toast.success('PDF downloaded');
-    } catch (err) {
-      console.error('PDF error:', err);
-      toast.error('Failed to generate PDF');
-    }
+    } catch (err) { console.error('PDF error:', err); toast.error('Failed to generate PDF'); }
+  };
+
+  const handleDownloadCsv = () => {
+    if (items.length === 0) { toast.error('No items to export'); return; }
+    const headers = ['Equipment Type', 'Serial Number', 'Asset Tag', 'WLL', 'Unit', 'Manufacturer', 'Model', 'Grade', 'Length (m)', 'Status', 'Tag Present', 'Registered By', 'Date'];
+    const rows = items.map(item => [
+      item.equipment_type,
+      item.serial_number || '',
+      item.asset_tag || '',
+      item.wll_value ?? '',
+      item.wll_unit || '',
+      item.manufacturer || '',
+      item.model || '',
+      item.grade || '',
+      item.length_m ?? '',
+      item.equipment_status || '',
+      item.tag_present || '',
+      item.registered_by_name,
+      new Date(item.created_at).toLocaleDateString('en-AU'),
+    ]);
+    const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeName = (clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_');
+    a.download = `${safeName}_LiftingRegister_${format(new Date(), 'yyyyMMdd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('CSV downloaded');
   };
 
   // Group by equipment type
