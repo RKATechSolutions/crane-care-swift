@@ -940,6 +940,150 @@ export type Database = {
         }
         Relationships: []
       }
+      repair_jobs: {
+        Row: {
+          admin_alert_reasons: string[] | null
+          admin_alert_triggered: boolean | null
+          arrival_status_comment: string | null
+          arrival_status_photos: string[] | null
+          asset_id: string | null
+          asset_name: string | null
+          asset_status_on_arrival: string | null
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          customer_reported_issue: string | null
+          defect_closures: Json | null
+          diagnosis_summary: string | null
+          fault_source: string | null
+          followup_date: string | null
+          followup_required: boolean | null
+          functional_testing_checklist: Json | null
+          functional_testing_completed: string | null
+          functional_testing_explanation: string | null
+          id: string
+          internal_note: string | null
+          internal_photos: string[] | null
+          job_type: string | null
+          linked_defect_ids: string[] | null
+          no_access_photos: string[] | null
+          no_access_reason: string | null
+          parts_data: Json | null
+          parts_replaced: boolean | null
+          recommendation: string | null
+          return_to_service: string | null
+          return_to_service_explanation: string | null
+          site_name: string | null
+          started_at: string | null
+          status: string
+          technician_id: string
+          technician_name: string
+          updated_at: string
+          urgency_assessment: string | null
+          work_comment: string | null
+          work_completed_type: string | null
+        }
+        Insert: {
+          admin_alert_reasons?: string[] | null
+          admin_alert_triggered?: boolean | null
+          arrival_status_comment?: string | null
+          arrival_status_photos?: string[] | null
+          asset_id?: string | null
+          asset_name?: string | null
+          asset_status_on_arrival?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_reported_issue?: string | null
+          defect_closures?: Json | null
+          diagnosis_summary?: string | null
+          fault_source?: string | null
+          followup_date?: string | null
+          followup_required?: boolean | null
+          functional_testing_checklist?: Json | null
+          functional_testing_completed?: string | null
+          functional_testing_explanation?: string | null
+          id?: string
+          internal_note?: string | null
+          internal_photos?: string[] | null
+          job_type?: string | null
+          linked_defect_ids?: string[] | null
+          no_access_photos?: string[] | null
+          no_access_reason?: string | null
+          parts_data?: Json | null
+          parts_replaced?: boolean | null
+          recommendation?: string | null
+          return_to_service?: string | null
+          return_to_service_explanation?: string | null
+          site_name?: string | null
+          started_at?: string | null
+          status?: string
+          technician_id: string
+          technician_name: string
+          updated_at?: string
+          urgency_assessment?: string | null
+          work_comment?: string | null
+          work_completed_type?: string | null
+        }
+        Update: {
+          admin_alert_reasons?: string[] | null
+          admin_alert_triggered?: boolean | null
+          arrival_status_comment?: string | null
+          arrival_status_photos?: string[] | null
+          asset_id?: string | null
+          asset_name?: string | null
+          asset_status_on_arrival?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          customer_reported_issue?: string | null
+          defect_closures?: Json | null
+          diagnosis_summary?: string | null
+          fault_source?: string | null
+          followup_date?: string | null
+          followup_required?: boolean | null
+          functional_testing_checklist?: Json | null
+          functional_testing_completed?: string | null
+          functional_testing_explanation?: string | null
+          id?: string
+          internal_note?: string | null
+          internal_photos?: string[] | null
+          job_type?: string | null
+          linked_defect_ids?: string[] | null
+          no_access_photos?: string[] | null
+          no_access_reason?: string | null
+          parts_data?: Json | null
+          parts_replaced?: boolean | null
+          recommendation?: string | null
+          return_to_service?: string | null
+          return_to_service_explanation?: string | null
+          site_name?: string | null
+          started_at?: string | null
+          status?: string
+          technician_id?: string
+          technician_name?: string
+          updated_at?: string
+          urgency_assessment?: string | null
+          work_comment?: string | null
+          work_completed_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_jobs_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repair_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_assessments: {
         Row: {
           ai_executive_summary: string | null
