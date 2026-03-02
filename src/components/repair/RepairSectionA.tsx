@@ -19,7 +19,7 @@ interface OpenDefect {
   defect_types: string[];
 }
 
-const JOB_TYPES = ['Breakdown (Emergency)', 'Urgent Repair', 'Scheduled Repair', 'Defect Rectification (Inspection)', 'Warranty', 'Upgrade / Modification'];
+const JOB_TYPES = ['Breakdown', 'Urgent Repair', 'Scheduled Repair', 'Defect Rectification (Inspection)', 'Warranty', 'Upgrade / Modification'];
 const FAULT_SOURCES = ['Inspection Defect', 'Operator Report', 'Site Management Report', 'Preventative Maintenance', 'Other'];
 const ARRIVAL_STATUSES = ['Operational', 'Restricted Use', 'Isolated / Out of Service', 'Unknown'];
 const URGENCY_OPTIONS = ['Immediate – Unsafe', 'Urgent', 'Scheduled', 'Non-critical'];
@@ -35,21 +35,38 @@ export function RepairSectionA({ formData, updateForm, assetId }: Props) {
   const [defectSearch, setDefectSearch] = useState('');
   const [defectFilter, setDefectFilter] = useState<string | null>(null);
 
+  // Auto-set fault_source when Defect Rectification job type is selected
+  useEffect(() => {
+    if (formData.job_type === 'Defect Rectification (Inspection)' && formData.fault_source !== 'Inspection Defect') {
+      updateForm({ fault_source: 'Inspection Defect' });
+    }
+  }, [formData.job_type]);
+
   // Load open defects when "Inspection Defect" is selected
   useEffect(() => {
     if (formData.fault_source !== 'Inspection Defect' || !assetId) return;
     const loadDefects = async () => {
       setLoadingDefects(true);
+      
+      // First get all inspections for this asset
+      const { data: inspections } = await supabase
+        .from('db_inspections')
+        .select('id')
+        .eq('asset_id', assetId);
+      
+      const inspectionIds = inspections?.map(d => d.id) || [];
+      
+      if (inspectionIds.length === 0) {
+        setOpenDefects([]);
+        setLoadingDefects(false);
+        return;
+      }
+
       const { data } = await supabase
         .from('inspection_responses')
         .select('id, question_id, urgency, comment, created_at, defect_types')
         .eq('defect_flag', true)
-        .in('inspection_id', (
-          await supabase
-            .from('db_inspections')
-            .select('id')
-            .eq('asset_id', assetId)
-        ).data?.map(d => d.id) || []);
+        .in('inspection_id', inspectionIds);
 
       if (data) {
         // Get question texts

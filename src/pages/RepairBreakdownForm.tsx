@@ -47,6 +47,7 @@ export interface RepairFormData {
   // Section D
   return_to_service: string | null;
   return_to_service_explanation: string;
+  return_to_service_photos: string[];
   // Section E
   internal_note: string;
   internal_photos: string[];
@@ -85,6 +86,7 @@ const initialFormData: RepairFormData = {
   defect_closures: [],
   return_to_service: null,
   return_to_service_explanation: '',
+  return_to_service_photos: [],
   internal_note: '',
   internal_photos: [],
 };
