@@ -146,6 +146,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       console.error('PDF error:', err);
       toast.error('Failed to generate PDF');
     }
+  };
 
   // Group by equipment type
   const grouped = items.reduce((acc, item) => {
