@@ -468,6 +468,14 @@ export default function DbInspectionForm({
       {/* Action Buttons */}
       <div className="p-4 border-t border-border space-y-2 bg-background">
         <button
+          onClick={handlePreviewPdf}
+          disabled={generatingPreview || totalAnswered === 0}
+          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+        >
+          {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+          {generatingPreview ? 'Generating Preview…' : 'Preview Report'}
+        </button>
+        <button
           onClick={() => saveInspection('Draft')}
           disabled={saving}
           className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
