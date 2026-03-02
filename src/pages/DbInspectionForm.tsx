@@ -255,6 +255,10 @@ export default function DbInspectionForm({
           comment: r.comment,
           photo_urls: r.photo_urls,
           defect_flag: r.defect_flag,
+          urgency: r.urgency || null,
+          defect_types: r.defect_types || [],
+          advanced_defect_detail: r.advanced_defect_detail || [],
+          internal_note: r.internal_note || null,
           updated_at: new Date().toISOString(),
         }));
 
