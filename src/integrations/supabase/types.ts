@@ -751,8 +751,10 @@ export type Database = {
       question_library: {
         Row: {
           active: boolean
+          advanced_defect_options: string[] | null
           answer_type: string
           asset_types: string[]
+          auto_defect_types: string[] | null
           category: string
           created_at: string
           help_text: string | null
@@ -772,8 +774,10 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          advanced_defect_options?: string[] | null
           answer_type?: string
           asset_types?: string[]
+          auto_defect_types?: string[] | null
           category?: string
           created_at?: string
           help_text?: string | null
@@ -793,8 +797,10 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          advanced_defect_options?: string[] | null
           answer_type?: string
           asset_types?: string[]
+          auto_defect_types?: string[] | null
           category?: string
           created_at?: string
           help_text?: string | null
