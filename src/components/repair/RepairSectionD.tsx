@@ -34,7 +34,7 @@ export function RepairSectionD({ formData, updateForm }: Props) {
         const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(fileName);
         newPhotos.push(urlData.publicUrl);
       }
-      updateForm({ return_to_service_photos: [...formData.return_to_service_photos, ...newPhotos] });
+      updateForm({ return_to_service_photos: [...(formData.return_to_service_photos || []), ...newPhotos] });
     } catch (err: any) {
       toast.error('Upload failed: ' + err.message);
     } finally {
