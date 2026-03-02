@@ -12,6 +12,7 @@ import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspect
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
 import { LiftingRegisterList } from '@/components/LiftingRegisterList';
+import { LiftingRegisterInspectionForm } from '@/components/LiftingRegisterInspectionForm';
 
 interface DbAsset {
   id: string;
@@ -46,6 +47,7 @@ export default function CraneList() {
   const [activeDbForm, setActiveDbForm] = useState<{ formId: string; crane: Crane; assetId?: string } | null>(null);
   const [showLiftingRegister, setShowLiftingRegister] = useState(false);
   const [showLiftingRegisterList, setShowLiftingRegisterList] = useState(false);
+  const [showLiftingInspection, setShowLiftingInspection] = useState(false);
   const site = state.selectedSite;
 
   // Fetch DB form templates
@@ -253,6 +255,19 @@ export default function CraneList() {
     return acc;
   }, {} as Record<string, DbAsset[]>);
 
+  // Show lifting inspection form
+  if (showLiftingInspection) {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+    return (
+      <LiftingRegisterInspectionForm
+        clientId={clientId}
+        siteName={site.name}
+        clientName={site.name}
+        onBack={() => { setShowLiftingInspection(false); setShowLiftingRegisterList(true); }}
+      />
+    );
+  }
+
   // Show lifting register list
   if (showLiftingRegisterList) {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
@@ -265,6 +280,10 @@ export default function CraneList() {
         onAddNew={() => {
           setShowLiftingRegisterList(false);
           setShowLiftingRegister(true);
+        }}
+        onInspect={() => {
+          setShowLiftingRegisterList(false);
+          setShowLiftingInspection(true);
         }}
       />
     );
