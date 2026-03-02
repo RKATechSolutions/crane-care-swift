@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 interface LiftingRegisterListProps {
   clientId?: string;
   siteName: string;
+  clientName?: string;
   onBack: () => void;
   onAddNew: () => void;
 }
@@ -39,7 +40,7 @@ interface RegisterItem {
   span_m: number | null;
 }
 
-export function LiftingRegisterList({ clientId, siteName, onBack, onAddNew }: LiftingRegisterListProps) {
+export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew }: LiftingRegisterListProps) {
   const [items, setItems] = useState<RegisterItem[]>([]);
   const [loading, setLoading] = useState(true);
 
