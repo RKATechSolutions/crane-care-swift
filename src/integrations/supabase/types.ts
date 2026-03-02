@@ -516,43 +516,55 @@ export type Database = {
       }
       inspection_responses: {
         Row: {
+          advanced_defect_detail: string[] | null
           answer_value: string | null
           comment: string | null
           created_at: string
           defect_flag: boolean
+          defect_types: string[] | null
           id: string
           inspection_id: string
+          internal_note: string | null
           pass_fail_status: string | null
           photo_urls: string[] | null
           question_id: string
           severity: string | null
           updated_at: string
+          urgency: string | null
         }
         Insert: {
+          advanced_defect_detail?: string[] | null
           answer_value?: string | null
           comment?: string | null
           created_at?: string
           defect_flag?: boolean
+          defect_types?: string[] | null
           id?: string
           inspection_id: string
+          internal_note?: string | null
           pass_fail_status?: string | null
           photo_urls?: string[] | null
           question_id: string
           severity?: string | null
           updated_at?: string
+          urgency?: string | null
         }
         Update: {
+          advanced_defect_detail?: string[] | null
           answer_value?: string | null
           comment?: string | null
           created_at?: string
           defect_flag?: boolean
+          defect_types?: string[] | null
           id?: string
           inspection_id?: string
+          internal_note?: string | null
           pass_fail_status?: string | null
           photo_urls?: string[] | null
           question_id?: string
           severity?: string | null
           updated_at?: string
+          urgency?: string | null
         }
         Relationships: [
           {
