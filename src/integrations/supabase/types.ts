@@ -870,6 +870,66 @@ export type Database = {
           },
         ]
       }
+      lifting_register_inspections: {
+        Row: {
+          client_id: string | null
+          comment: string | null
+          created_at: string
+          id: string
+          inspection_date: string
+          photo_urls: string[] | null
+          register_item_id: string
+          result: string
+          site_name: string | null
+          technician_id: string
+          technician_name: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          inspection_date?: string
+          photo_urls?: string[] | null
+          register_item_id: string
+          result?: string
+          site_name?: string | null
+          technician_id: string
+          technician_name: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          inspection_date?: string
+          photo_urls?: string[] | null
+          register_item_id?: string
+          result?: string
+          site_name?: string | null
+          technician_id?: string
+          technician_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifting_register_inspections_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lifting_register_inspections_register_item_id_fkey"
+            columns: ["register_item_id"]
+            isOneToOne: false
+            referencedRelation: "lifting_register"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lifting_register_scans: {
         Row: {
           ai_raw_response: Json | null
