@@ -100,7 +100,7 @@ type SectionKey = 'a' | 'b' | 'c' | 'd' | 'e';
 export default function RepairBreakdownForm({
   assetName, assetId, clientId, siteName, onBack
 }: RepairBreakdownFormProps) {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const [formData, setFormData] = useState<RepairFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
