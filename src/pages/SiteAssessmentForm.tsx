@@ -11,6 +11,8 @@ import {
   facetNames,
 } from '@/data/siteAssessmentQuestions';
 import { generateAssessmentPdf } from '@/utils/generateAssessmentPdf';
+import { PdfPreviewModal } from '@/components/PdfPreviewModal';
+import type jsPDF from 'jspdf';
 import {
   ChevronRight,
   ChevronLeft,
@@ -19,6 +21,7 @@ import {
   FileText,
   Sparkles,
   Download,
+  Eye,
 } from 'lucide-react';
 
 type Answers = Record<string, number>;
@@ -53,6 +56,8 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
   const [assessmentId, setAssessmentId] = useState(existingId || '');
   const [status, setStatus] = useState<'in_progress' | 'completed'>('in_progress');
   const [clientDetails, setClientDetails] = useState<{ address?: string; contactName?: string; phone?: string; email?: string }>({});
+  const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
 
   // Fetch client details from DB
   useEffect(() => {
