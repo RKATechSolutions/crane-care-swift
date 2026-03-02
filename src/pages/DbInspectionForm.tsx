@@ -236,6 +236,40 @@ export default function DbInspectionForm({
     .filter(q => q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA')
     .every(q => responses[q.question_id]?.pass_fail_status === 'Pass') || false;
 
+  const handlePreviewPdf = async () => {
+    setGeneratingPreview(true);
+    try {
+      const pdfSections = sections.map(s => ({
+        name: s.name,
+        questions: s.questions.map(q => ({
+          question_text: q.question_text,
+          section: q.section,
+          answer_value: responses[q.question_id]?.answer_value || null,
+          pass_fail_status: responses[q.question_id]?.pass_fail_status || null,
+          severity: responses[q.question_id]?.severity || null,
+          comment: responses[q.question_id]?.comment || null,
+          defect_flag: responses[q.question_id]?.defect_flag || false,
+          photo_urls: responses[q.question_id]?.photo_urls || [],
+        })),
+      }));
+
+      const pdf = await generateInspectionPdf({
+        formName,
+        assetName,
+        siteName,
+        technicianName: state.currentUser?.name || 'Technician',
+        inspectionDate: new Date().toISOString(),
+        sections: pdfSections,
+      });
+      setPreviewPdfDoc(pdf);
+    } catch (err: any) {
+      console.error('Preview error:', err);
+      toast.error('Failed to generate preview');
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
+
   // Save to database
   const saveInspection = async (status: string = 'Draft') => {
     setSaving(true);
