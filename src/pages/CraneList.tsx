@@ -6,6 +6,7 @@ import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, Fil
 import { supabase } from '@/integrations/supabase/client';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
 import DbInspectionForm from '@/pages/DbInspectionForm';
+import RepairBreakdownForm from '@/pages/RepairBreakdownForm';
 import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
@@ -251,6 +252,20 @@ export default function CraneList() {
   // Show DB-driven inspection form
   if (activeDbForm) {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+
+    // Route repair/breakdown form to dedicated component
+    if (activeDbForm.formId === 'FORM-RB1') {
+      return (
+        <RepairBreakdownForm
+          assetName={activeDbForm.crane.name}
+          assetId={activeDbForm.assetId}
+          clientId={clientId}
+          siteName={site.name}
+          onBack={() => setActiveDbForm(null)}
+        />
+      );
+    }
+
     return (
       <DbInspectionForm
         formId={activeDbForm.formId}
