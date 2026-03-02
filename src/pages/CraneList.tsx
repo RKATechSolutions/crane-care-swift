@@ -45,6 +45,7 @@ export default function CraneList() {
   const [dbFormTemplates, setDbFormTemplates] = useState<{ form_id: string; form_name: string; description: string | null }[]>([]);
   const [activeDbForm, setActiveDbForm] = useState<{ formId: string; crane: Crane; assetId?: string } | null>(null);
   const [showLiftingRegister, setShowLiftingRegister] = useState(false);
+  const [showLiftingRegisterList, setShowLiftingRegisterList] = useState(false);
   const site = state.selectedSite;
 
   // Fetch DB form templates
