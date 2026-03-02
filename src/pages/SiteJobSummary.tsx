@@ -56,7 +56,8 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   const [sending, setSending] = useState(false);
   const [sendingToAroflo, setSendingToAroflo] = useState(false);
   const [arofloQuoteSent, setArofloQuoteSent] = useState(false);
-
+  const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [clientContacts, setClientContacts] = useState<any[]>([]);
