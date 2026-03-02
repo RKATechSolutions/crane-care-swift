@@ -138,6 +138,10 @@ export default function DbInspectionForm({
               comment: sr.comment,
               photo_urls: sr.photo_urls || [],
               defect_flag: sr.defect_flag,
+              urgency: (sr as any).urgency || null,
+              defect_types: (sr as any).defect_types || [],
+              advanced_defect_detail: (sr as any).advanced_defect_detail || [],
+              internal_note: (sr as any).internal_note || null,
             };
           });
         }
