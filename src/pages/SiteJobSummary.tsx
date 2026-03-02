@@ -821,10 +821,14 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
                 {/* Save defects button */}
                 <button
                   onClick={handleSaveDefects}
+                  disabled={creatingDraftQuote}
                   className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                 >
-                  <Check className="w-5 h-5" />
-                  Save Defect Details
+                  {creatingDraftQuote ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> Creating Draft Quote...</>
+                  ) : (
+                    <><Check className="w-5 h-5" /> Save Defect Details{dbDefects.filter(d => d.quoteStatus === 'Quote Now').length > 0 ? ` & Create Draft Quote (${dbDefects.filter(d => d.quoteStatus === 'Quote Now').length})` : ''}</>
+                  )}
                 </button>
 
                 {/* Send Quote Now defects to AroFlo */}
