@@ -238,6 +238,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
         span_m: isBeam && form.span_m ? Number(form.span_m) : null,
         notes: form.notes || null,
         site_name: form.site_name || null,
+        client_id: clientId || null,
         tag_photo_url: tagPhoto || null,
         overall_photo_url: overallPhoto || null,
         stamp_photo_url: stampPhoto || null,
