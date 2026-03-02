@@ -126,6 +126,27 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (items.length === 0) {
+      toast.error('No items to export');
+      return;
+    }
+    try {
+      const pdf = await generateLiftingRegisterPdf({
+        siteName,
+        clientName: clientName || siteName,
+        technicianName: 'Technician',
+        items,
+      });
+      const safeName = (clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_');
+      const dateStr = format(new Date(), 'yyyyMMdd');
+      pdf.save(`${safeName}_LiftingRegister_${dateStr}.pdf`);
+      toast.success('PDF downloaded');
+    } catch (err) {
+      console.error('PDF error:', err);
+      toast.error('Failed to generate PDF');
+    }
+
   // Group by equipment type
   const grouped = items.reduce((acc, item) => {
     const key = item.equipment_type;
