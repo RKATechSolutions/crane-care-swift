@@ -68,13 +68,13 @@ export function LiftingRegisterList({ clientId, siteName, onBack, onAddNew }: Li
 
   const statusIcon = (status: string | null) => {
     if (status === 'In Service') return <CheckCircle className="w-4 h-4 text-green-600" />;
-    if (status === 'Quarantined') return <XCircle className="w-4 h-4 text-destructive" />;
+    if (status === 'Failed') return <XCircle className="w-4 h-4 text-destructive" />;
     return <AlertTriangle className="w-4 h-4 text-amber-500" />;
   };
 
   const statusColor = (status: string | null) => {
     if (status === 'In Service') return 'bg-green-100 text-green-800 border-green-200';
-    if (status === 'Quarantined') return 'bg-red-100 text-red-800 border-red-200';
+    if (status === 'Failed') return 'bg-red-100 text-red-800 border-red-200';
     return 'bg-amber-100 text-amber-800 border-amber-200';
   };
 
