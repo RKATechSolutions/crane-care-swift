@@ -356,6 +356,7 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
         template,
         summary: summaryPayload,
         customerDefectComments,
+        liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
       });
 
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
