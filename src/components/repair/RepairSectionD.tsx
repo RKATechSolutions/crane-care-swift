@@ -76,9 +76,9 @@ export function RepairSectionD({ formData, updateForm }: Props) {
         <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Photos (Optional)</label>
 
         {/* Photo grid */}
-        {formData.return_to_service_photos.length > 0 && (
+        {photos.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">
-            {formData.return_to_service_photos.map((url, idx) => (
+            {photos.map((url, idx) => (
               <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
                 <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                 <button
