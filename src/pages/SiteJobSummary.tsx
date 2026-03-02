@@ -1274,6 +1274,14 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
       )}
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
+
+      <PdfPreviewModal
+        open={!!previewPdfDoc}
+        onClose={() => setPreviewPdfDoc(null)}
+        pdfDoc={previewPdfDoc}
+        onDownload={handleDownloadPreviewPdf}
+        title="Service Report Preview"
+      />
     </div>
   );
 }
