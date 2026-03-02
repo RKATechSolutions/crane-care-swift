@@ -11,6 +11,7 @@ import LiftingRegisterForm from '@/pages/LiftingRegisterForm';
 import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
+import { LiftingRegisterList } from '@/components/LiftingRegisterList';
 
 interface DbAsset {
   id: string;
@@ -44,6 +45,7 @@ export default function CraneList() {
   const [dbFormTemplates, setDbFormTemplates] = useState<{ form_id: string; form_name: string; description: string | null }[]>([]);
   const [activeDbForm, setActiveDbForm] = useState<{ formId: string; crane: Crane; assetId?: string } | null>(null);
   const [showLiftingRegister, setShowLiftingRegister] = useState(false);
+  const [showLiftingRegisterList, setShowLiftingRegisterList] = useState(false);
   const site = state.selectedSite;
 
   // Fetch DB form templates
@@ -251,10 +253,26 @@ export default function CraneList() {
     return acc;
   }, {} as Record<string, DbAsset[]>);
 
+  // Show lifting register list
+  if (showLiftingRegisterList) {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+    return (
+      <LiftingRegisterList
+        clientId={clientId}
+        siteName={site.name}
+        onBack={() => setShowLiftingRegisterList(false)}
+        onAddNew={() => {
+          setShowLiftingRegisterList(false);
+          setShowLiftingRegister(true);
+        }}
+      />
+    );
+  }
+
   // Show lifting register form
   if (showLiftingRegister) {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
-    return <LiftingRegisterForm onBack={() => setShowLiftingRegister(false)} clientId={clientId} siteName={site.name} />;
+    return <LiftingRegisterForm onBack={() => { setShowLiftingRegister(false); setShowLiftingRegisterList(true); }} clientId={clientId} siteName={site.name} />;
   }
 
   // Show DB-driven inspection form
@@ -356,7 +374,7 @@ export default function CraneList() {
         )}
 
         <button
-          onClick={() => setShowLiftingRegister(true)}
+          onClick={() => setShowLiftingRegisterList(true)}
           className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
         >
           <ClipboardList className="w-4 h-4" />
