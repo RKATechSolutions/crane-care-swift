@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { CraneOperationalStatus } from '@/types/inspection';
-import { AlertTriangle, ZoomIn, X } from 'lucide-react';
+import { AlertTriangle, ZoomIn, X, Check } from 'lucide-react';
 
 export default function DefectSummary() {
   const { state, dispatch } = useApp();
@@ -52,7 +52,7 @@ export default function DefectSummary() {
           {defects.map((item) => {
             const defectPhotos = item.defect?.photos || [];
             return (
-              <div key={item.templateItemId} className="border-b border-border p-4">
+              <div key={item.templateItemId} className="border-b border-border p-4 space-y-3">
                 <div className="flex items-start gap-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     item.defect!.severity === 'Critical' ? 'bg-rka-red-light' :
@@ -103,6 +103,55 @@ export default function DefectSummary() {
                     </div>
                   )}
                 </div>
+
+                {/* Fix Now / Quote Later */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Now' } })}
+                    className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
+                      item.defect!.quoteStatus === 'Quote Now'
+                        ? 'bg-rka-green text-primary-foreground'
+                        : 'bg-muted text-foreground active:bg-foreground/10'
+                    }`}
+                  >
+                    {item.defect!.quoteStatus === 'Quote Now' && <Check className="w-4 h-4 inline mr-1" />}
+                    Fix Now
+                  </button>
+                  <button
+                    onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Later' } })}
+                    className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
+                      item.defect!.quoteStatus === 'Quote Later'
+                        ? 'bg-foreground text-background'
+                        : 'bg-muted text-foreground active:bg-foreground/10'
+                    }`}
+                  >
+                    {item.defect!.quoteStatus === 'Quote Later' && <Check className="w-4 h-4 inline mr-1" />}
+                    Quote Later
+                  </button>
+                </div>
+
+                {/* Per-defect comment */}
+                <textarea
+                  value={item.defect!.customerComment || ''}
+                  onChange={(e) => dispatch({ type: 'UPDATE_DEFECT_DETAIL', payload: { itemId: item.templateItemId, updates: { customerComment: e.target.value } } })}
+                  placeholder="Comment on this defect (optional)..."
+                  className="w-full p-2.5 border border-border rounded-lg bg-background text-sm resize-none"
+                  rows={2}
+                />
+
+                {/* Internal quote instructions - admin only */}
+                <div className="p-2.5 rounded-lg bg-rka-orange-light border border-rka-orange/20">
+                  <label className="text-[10px] font-bold text-rka-orange uppercase tracking-wide flex items-center gap-1 mb-1">
+                    <AlertTriangle className="w-3 h-3" /> Internal — Quote Instructions (Admin Only)
+                  </label>
+                  <textarea
+                    value={item.defect!.quoteInstructions || ''}
+                    onChange={(e) => dispatch({ type: 'UPDATE_DEFECT_DETAIL', payload: { itemId: item.templateItemId, updates: { quoteInstructions: e.target.value } } })}
+                    placeholder="Parts needed, access notes, pricing guidance..."
+                    className="w-full p-2 border border-rka-orange/20 rounded-lg bg-background text-sm resize-none"
+                    rows={2}
+                  />
+                </div>
               </div>
             );
           })}
@@ -132,7 +181,7 @@ export default function DefectSummary() {
         </button>
       </div>
 
-      {/* Status picker modal - shown when defects exist but no status set */}
+      {/* Status picker modal */}
       {showStatusPicker && (
         <div className="fixed inset-0 z-[100] bg-foreground/50 flex items-end justify-center">
           <div className="bg-background w-full max-w-lg rounded-t-2xl p-4 space-y-3">

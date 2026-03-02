@@ -515,8 +515,8 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
                         </div>
                       )}
 
-                      {/* Quote buttons always visible */}
-                      <div className="flex gap-2 px-4 pb-3">
+                      {/* Fix Now / Quote Later buttons */}
+                      <div className="flex gap-2 px-4 pb-2">
                         <button
                           onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Now', inspectionId: insp.id } })}
                           className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
@@ -526,7 +526,7 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
                           }`}
                         >
                           {item.defect!.quoteStatus === 'Quote Now' && <Check className="w-4 h-4 inline mr-1" />}
-                          Quote Now
+                          Fix Now
                         </button>
                         <button
                           onClick={() => dispatch({ type: 'UPDATE_DEFECT_QUOTE', payload: { itemId: item.templateItemId, quoteStatus: 'Quote Later', inspectionId: insp.id } })}
@@ -539,6 +539,33 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
                           {item.defect!.quoteStatus === 'Quote Later' && <Check className="w-4 h-4 inline mr-1" />}
                           Quote Later
                         </button>
+                      </div>
+
+                      {/* Per-defect customer comment */}
+                      <div className="px-4 pb-2">
+                        <textarea
+                          value={item.defect!.customerComment || ''}
+                          onChange={(e) => dispatch({ type: 'UPDATE_DEFECT_DETAIL', payload: { itemId: item.templateItemId, updates: { customerComment: e.target.value }, inspectionId: insp.id } })}
+                          placeholder="Customer comment on this defect (optional)..."
+                          className="w-full p-2.5 border border-border rounded-lg bg-background text-sm resize-none"
+                          rows={2}
+                        />
+                      </div>
+
+                      {/* Internal quote instructions - admin only, not on customer report */}
+                      <div className="px-4 pb-3">
+                        <div className="p-2.5 rounded-lg bg-rka-orange-light border border-rka-orange/20">
+                          <label className="text-[10px] font-bold text-rka-orange uppercase tracking-wide flex items-center gap-1 mb-1">
+                            <AlertTriangle className="w-3 h-3" /> Internal — Quote Instructions (Admin Only)
+                          </label>
+                          <textarea
+                            value={item.defect!.quoteInstructions || ''}
+                            onChange={(e) => dispatch({ type: 'UPDATE_DEFECT_DETAIL', payload: { itemId: item.templateItemId, updates: { quoteInstructions: e.target.value }, inspectionId: insp.id } })}
+                            placeholder="Parts needed, access notes, pricing guidance, scope of work details..."
+                            className="w-full p-2 border border-rka-orange/20 rounded-lg bg-background text-sm resize-none"
+                            rows={2}
+                          />
+                        </div>
                       </div>
                     </div>
                   );
