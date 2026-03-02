@@ -213,6 +213,10 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
     setDbDefects(prev => prev.map(d => d.responseId === responseId ? { ...d, ...updates } : d));
   };
 
+  const updateLiftingDefect = (id: string, updates: Partial<LiftingDefect>) => {
+    setLiftingDefects(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+  };
+
   const toggleDefect = (id: string) => {
     setExpandedDefects(prev => {
       const next = new Set(prev);
