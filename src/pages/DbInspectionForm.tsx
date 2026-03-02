@@ -91,6 +91,8 @@ export default function DbInspectionForm({
           severity_required_on_fail: q.severity_required_on_fail,
           optional_photo: (q as any).optional_photo ?? false,
           optional_comment: (q as any).optional_comment ?? false,
+          auto_defect_types: (q as any).auto_defect_types ?? [],
+          advanced_defect_options: (q as any).advanced_defect_options ?? [],
           required: bridge.required,
           section: bridge.section_override || q.section,
           override_sort_order: bridge.override_sort_order,
