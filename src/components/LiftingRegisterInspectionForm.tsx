@@ -20,6 +20,14 @@ interface RegisterItem {
   wll_unit: string | null;
   equipment_status: string | null;
   tag_present: string | null;
+  overall_photo_url: string | null;
+  grade: string | null;
+  length_m: number | null;
+  sling_configuration: string | null;
+  sling_leg_count: number | null;
+  lift_height_m: number | null;
+  span_m: number | null;
+  notes: string | null;
 }
 
 interface InspectionResult {
@@ -49,7 +57,7 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
   useEffect(() => {
     const fetchItems = async () => {
       setLoading(true);
-      let query = supabase.from('lifting_register').select('id, equipment_type, manufacturer, model, serial_number, asset_tag, wll_value, wll_unit, equipment_status, tag_present').order('equipment_type');
+      let query = supabase.from('lifting_register').select('id, equipment_type, manufacturer, model, serial_number, asset_tag, wll_value, wll_unit, equipment_status, tag_present, overall_photo_url, grade, length_m, sling_configuration, sling_leg_count, lift_height_m, span_m, notes').order('equipment_type');
       if (clientId) query = query.eq('client_id', clientId);
       else query = query.eq('site_name', siteName);
 
@@ -193,16 +201,40 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
     return (
       <Card className={`mx-4 my-2 overflow-hidden border ${r?.result === 'fail' ? 'border-destructive/40' : r?.result === 'pass' ? 'border-green-500/40' : ''}`}>
         <div className="p-3">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-3">
+            {/* Item photo */}
+            {item.overall_photo_url ? (
+              <div className="w-16 h-16 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                <img src={item.overall_photo_url} alt={item.equipment_type} className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                <span className="text-[10px] text-muted-foreground">No Photo</span>
+              </div>
+            )}
+
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-bold text-sm">{item.equipment_type}</p>
                 {isFailed && <Badge variant="destructive" className="text-[10px]">Must Assess</Badge>}
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5">
-                {item.serial_number && <span>SN: {item.serial_number} </span>}
-                {item.asset_tag && <span>Tag: {item.asset_tag} </span>}
-                {item.wll_value && <span className="font-medium text-foreground">WLL: {item.wll_value}{item.wll_unit || 'kg'}</span>}
+              <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
+                {item.serial_number && <p>SN: {item.serial_number}</p>}
+                {item.asset_tag && <p>Tag: {item.asset_tag}</p>}
+                {item.wll_value && (
+                  <p className="font-medium text-foreground">WLL: {item.wll_value} {item.wll_unit || 'kg'}</p>
+                )}
+                {item.manufacturer && <p>{item.manufacturer}{item.model ? ` — ${item.model}` : ''}</p>}
+                {item.grade && <p>Grade: {item.grade}</p>}
+                {item.length_m && <p>Length: {item.length_m}m</p>}
+                {item.sling_configuration && <p>Config: {item.sling_configuration}</p>}
+                {item.sling_leg_count && <p>Legs: {item.sling_leg_count}</p>}
+                {item.lift_height_m && <p>Lift Height: {item.lift_height_m}m</p>}
+                {item.span_m && <p>Span: {item.span_m}m</p>}
+                {item.tag_present === 'false' && (
+                  <p className="text-amber-600 font-medium">⚠️ Tag Missing</p>
+                )}
+                {item.notes && <p className="italic truncate">Note: {item.notes}</p>}
               </div>
               {lastInsp && (
                 <p className="text-[10px] text-muted-foreground mt-0.5">
