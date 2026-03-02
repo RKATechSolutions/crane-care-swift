@@ -1,9 +1,10 @@
 import { useState, useCallback } from 'react';
+import { format } from 'date-fns';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, CheckCircle, ChevronDown, ChevronUp, Eye, Send, Loader2 } from 'lucide-react';
+import { Save, ChevronDown, ChevronUp, Eye, Send, Loader2 } from 'lucide-react';
 import { generateRepairPdf } from '@/utils/generateRepairPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import type jsPDF from 'jspdf';
