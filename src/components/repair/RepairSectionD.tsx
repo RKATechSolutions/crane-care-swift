@@ -34,7 +34,7 @@ export function RepairSectionD({ formData, updateForm }: Props) {
         const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(fileName);
         newPhotos.push(urlData.publicUrl);
       }
-      updateForm({ return_to_service_photos: [...formData.return_to_service_photos, ...newPhotos] });
+      updateForm({ return_to_service_photos: [...(formData.return_to_service_photos || []), ...newPhotos] });
     } catch (err: any) {
       toast.error('Upload failed: ' + err.message);
     } finally {
@@ -44,8 +44,10 @@ export function RepairSectionD({ formData, updateForm }: Props) {
   };
 
   const removePhoto = (idx: number) => {
-    updateForm({ return_to_service_photos: formData.return_to_service_photos.filter((_, i) => i !== idx) });
+    updateForm({ return_to_service_photos: (formData.return_to_service_photos || []).filter((_, i) => i !== idx) });
   };
+
+  const photos = formData.return_to_service_photos || [];
 
   return (
     <div className="px-4 py-3 space-y-4">
@@ -74,9 +76,9 @@ export function RepairSectionD({ formData, updateForm }: Props) {
         <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Photos (Optional)</label>
 
         {/* Photo grid */}
-        {formData.return_to_service_photos.length > 0 && (
+        {photos.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">
-            {formData.return_to_service_photos.map((url, idx) => (
+            {photos.map((url, idx) => (
               <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
                 <img src={url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                 <button
