@@ -145,7 +145,11 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       <div className="px-4 py-2 border-b border-border flex gap-2">
         <Button onClick={handleShare} variant="outline" className="flex-1 gap-2">
           <Share2 className="w-4 h-4" />
-          Share Register
+          Share
+        </Button>
+        <Button onClick={handleDownloadPdf} variant="outline" className="flex-1 gap-2">
+          <FileText className="w-4 h-4" />
+          PDF
         </Button>
         <Button onClick={onAddNew} className="flex-1 gap-2">
           + Add Item
