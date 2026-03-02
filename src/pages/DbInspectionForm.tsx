@@ -22,6 +22,7 @@ interface FormQuestion extends QuestionConfig {
   override_sort_order: number | null;
   section_override: string | null;
   sub_heading: string | null;
+  conditional_rule: string | null;
 }
 
 export default function DbInspectionForm({
@@ -54,7 +55,7 @@ export default function DbInspectionForm({
       // Get questions via bridge table
       const { data: bridgeData } = await supabase
         .from('form_template_questions')
-        .select('question_id, required, override_sort_order, override_help_text, override_standard_ref, section_override, sub_heading')
+        .select('question_id, required, override_sort_order, override_help_text, override_standard_ref, section_override, sub_heading, conditional_rule')
         .eq('form_id', formId)
         .order('override_sort_order');
 
@@ -98,6 +99,7 @@ export default function DbInspectionForm({
           override_sort_order: bridge.override_sort_order,
           section_override: bridge.section_override,
           sub_heading: bridge.sub_heading || null,
+          conditional_rule: bridge.conditional_rule || null,
         };
       }).filter(Boolean) as FormQuestion[];
 
@@ -154,11 +156,23 @@ export default function DbInspectionForm({
     loadForm();
   }, [formId, existingInspectionId]);
 
-  // Group questions by section
+  // Evaluate conditional_rule against current responses
+  const evaluateRule = useCallback((rule: string | null): boolean => {
+    if (!rule) return true;
+    const match = rule.match(/^show_if:([^=]+)=(.+)$/);
+    if (!match) return true;
+    const [, questionId, valuesStr] = match;
+    const allowedValues = valuesStr.split(',');
+    const currentValue = responses[questionId]?.answer_value;
+    return currentValue ? allowedValues.includes(currentValue) : false;
+  }, [responses]);
+
+  // Group questions by section, filtering by conditional rules
   const sections = useMemo(() => {
     const sectionMap: Record<string, FormQuestion[]> = {};
     const sectionOrder: string[] = [];
     questions.forEach(q => {
+      if (!evaluateRule(q.conditional_rule)) return;
       if (!sectionMap[q.section]) {
         sectionMap[q.section] = [];
         sectionOrder.push(q.section);
@@ -169,14 +183,22 @@ export default function DbInspectionForm({
       name,
       questions: sectionMap[name].sort((a, b) => (a.override_sort_order || 0) - (b.override_sort_order || 0)),
     }));
-  }, [questions]);
+  }, [questions, evaluateRule]);
 
-  const currentSection = sections[currentSectionIdx];
+  const currentSection = sections[Math.min(currentSectionIdx, sections.length - 1)];
 
-  // Stats
-  const totalAnswered = Object.values(responses).filter(r => r.answer_value || r.pass_fail_status).length;
-  const totalQuestions = questions.length;
-  const defectCount = Object.values(responses).filter(r => r.defect_flag).length;
+  // Clamp section index when sections change (e.g. conditional sections hidden)
+  useEffect(() => {
+    if (currentSectionIdx >= sections.length && sections.length > 0) {
+      setCurrentSectionIdx(sections.length - 1);
+    }
+  }, [sections.length, currentSectionIdx]);
+
+  // Stats – only count visible questions
+  const visibleQuestionIds = useMemo(() => new Set(sections.flatMap(s => s.questions.map(q => q.question_id))), [sections]);
+  const totalAnswered = Object.values(responses).filter(r => visibleQuestionIds.has(r.question_id) && (r.answer_value || r.pass_fail_status)).length;
+  const totalQuestions = visibleQuestionIds.size;
+  const defectCount = Object.values(responses).filter(r => visibleQuestionIds.has(r.question_id) && r.defect_flag).length;
 
   const handleResponseUpdate = useCallback((questionId: string, response: ResponseData) => {
     setResponses(prev => ({ ...prev, [questionId]: response }));
