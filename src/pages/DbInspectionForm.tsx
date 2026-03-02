@@ -22,6 +22,7 @@ interface FormQuestion extends QuestionConfig {
   override_sort_order: number | null;
   section_override: string | null;
   sub_heading: string | null;
+  conditional_rule: string | null;
 }
 
 export default function DbInspectionForm({
