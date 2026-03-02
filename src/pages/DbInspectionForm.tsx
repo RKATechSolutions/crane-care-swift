@@ -5,8 +5,11 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { StandardQuestionBlock, QuestionConfig, ResponseData } from '@/components/StandardQuestionBlock';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, CheckCircle, Check, AlertTriangle } from 'lucide-react';
+import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
+import { PdfPreviewModal } from '@/components/PdfPreviewModal';
+import type jsPDF from 'jspdf';
 
 interface DbInspectionFormProps {
   formId: string;
@@ -38,6 +41,8 @@ export default function DbInspectionForm({
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [formName, setFormName] = useState('');
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
 
   // Load questions for this form
   useEffect(() => {
@@ -230,6 +235,40 @@ export default function DbInspectionForm({
   const allChecklistPassed = currentSection?.questions
     .filter(q => q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA')
     .every(q => responses[q.question_id]?.pass_fail_status === 'Pass') || false;
+
+  const handlePreviewPdf = async () => {
+    setGeneratingPreview(true);
+    try {
+      const pdfSections = sections.map(s => ({
+        name: s.name,
+        questions: s.questions.map(q => ({
+          question_text: q.question_text,
+          section: q.section,
+          answer_value: responses[q.question_id]?.answer_value || null,
+          pass_fail_status: responses[q.question_id]?.pass_fail_status || null,
+          severity: responses[q.question_id]?.severity || null,
+          comment: responses[q.question_id]?.comment || null,
+          defect_flag: responses[q.question_id]?.defect_flag || false,
+          photo_urls: responses[q.question_id]?.photo_urls || [],
+        })),
+      }));
+
+      const pdf = await generateInspectionPdf({
+        formName,
+        assetName,
+        siteName,
+        technicianName: state.currentUser?.name || 'Technician',
+        inspectionDate: new Date().toISOString(),
+        sections: pdfSections,
+      });
+      setPreviewPdfDoc(pdf);
+    } catch (err: any) {
+      console.error('Preview error:', err);
+      toast.error('Failed to generate preview');
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
 
   // Save to database
   const saveInspection = async (status: string = 'Draft') => {
@@ -429,6 +468,14 @@ export default function DbInspectionForm({
       {/* Action Buttons */}
       <div className="p-4 border-t border-border space-y-2 bg-background">
         <button
+          onClick={handlePreviewPdf}
+          disabled={generatingPreview || totalAnswered === 0}
+          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+        >
+          {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+          {generatingPreview ? 'Generating Preview…' : 'Preview Report'}
+        </button>
+        <button
           onClick={() => saveInspection('Draft')}
           disabled={saving}
           className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
@@ -488,6 +535,19 @@ export default function DbInspectionForm({
       )}
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
+
+      <PdfPreviewModal
+        open={!!previewPdfDoc}
+        onClose={() => setPreviewPdfDoc(null)}
+        pdfDoc={previewPdfDoc}
+        onDownload={() => {
+          if (!previewPdfDoc) return;
+          const safeName = assetName.replace(/[^a-zA-Z0-9]/g, '_');
+          const dateStr = new Date().toISOString().slice(0, 10);
+          previewPdfDoc.save(`${safeName}_Inspection_${dateStr}.pdf`);
+        }}
+        title="Inspection Report Preview"
+      />
     </div>
   );
 }

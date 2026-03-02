@@ -11,6 +11,8 @@ import { toast } from 'sonner';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
 import { supabase } from '@/integrations/supabase/client';
 import { generateJobPdf } from '@/utils/generateJobPdf';
+import { PdfPreviewModal } from '@/components/PdfPreviewModal';
+import type jsPDF from 'jspdf';
 import { FileText } from 'lucide-react';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
@@ -54,7 +56,8 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   const [sending, setSending] = useState(false);
   const [sendingToAroflo, setSendingToAroflo] = useState(false);
   const [arofloQuoteSent, setArofloQuoteSent] = useState(false);
-
+  const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
+  const [generatingPreview, setGeneratingPreview] = useState(false);
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [clientContacts, setClientContacts] = useState<any[]>([]);
@@ -400,22 +403,34 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   };
 
   const handlePreviewPdf = async () => {
-    const template = state.templates[0];
-    const pdf = await generateJobPdf({
-      site,
-      clientInfo: clientInfo || undefined,
-      technicianName: state.currentUser?.name || 'Technician',
-      jobType,
-      inspections: completedInspections,
-      template,
-      summary: buildSummaryPayload(),
-      customerDefectComments,
-      liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
-    });
-    // Download PDF directly (avoids Chrome popup blocker)
+    setGeneratingPreview(true);
+    try {
+      const template = state.templates[0];
+      const pdf = await generateJobPdf({
+        site,
+        clientInfo: clientInfo || undefined,
+        technicianName: state.currentUser?.name || 'Technician',
+        jobType,
+        inspections: completedInspections,
+        template,
+        summary: buildSummaryPayload(),
+        customerDefectComments,
+        liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
+      });
+      setPreviewPdfDoc(pdf);
+    } catch (err: any) {
+      console.error('Preview PDF error:', err);
+      toast.error('Failed to generate preview');
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
+
+  const handleDownloadPreviewPdf = () => {
+    if (!previewPdfDoc) return;
     const clientName = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
     const dateStr = format(new Date(), 'yyyyMMdd');
-    pdf.save(`${clientName}_ServiceReport_${dateStr}.pdf`);
+    previewPdfDoc.save(`${clientName}_ServiceReport_${dateStr}.pdf`);
   };
 
   if (submitted) {
@@ -1222,10 +1237,11 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
       <div className="p-4 border-t border-border space-y-2">
         <button
           onClick={handlePreviewPdf}
+          disabled={generatingPreview}
           className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
         >
-          <FileText className="w-4 h-4" />
-          Preview PDF Report
+          {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          {generatingPreview ? 'Generating Preview…' : 'Preview PDF Report'}
         </button>
         <button
           onClick={handleSubmit}
@@ -1258,6 +1274,14 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
       )}
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
+
+      <PdfPreviewModal
+        open={!!previewPdfDoc}
+        onClose={() => setPreviewPdfDoc(null)}
+        pdfDoc={previewPdfDoc}
+        onDownload={handleDownloadPreviewPdf}
+        title="Service Report Preview"
+      />
     </div>
   );
 }

@@ -7,9 +7,10 @@ interface PdfPreviewModalProps {
   onClose: () => void;
   pdfDoc: jsPDF | null;
   onDownload?: () => void;
+  title?: string;
 }
 
-export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload }: PdfPreviewModalProps) {
+export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload, title = 'Report Preview' }: PdfPreviewModalProps) {
   const blobUrl = useMemo(() => {
     if (!pdfDoc || !open) return null;
     return URL.createObjectURL(pdfDoc.output('blob'));
@@ -26,7 +27,7 @@ export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload }: PdfPrevie
     <div className="fixed inset-0 z-[100] flex flex-col bg-background">
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background">
-        <p className="text-sm font-bold">Quote Preview</p>
+        <p className="text-sm font-bold">{title}</p>
         <div className="flex items-center gap-2">
           {onDownload && (
             <button
