@@ -99,6 +99,7 @@ export default function DbInspectionForm({
           override_sort_order: bridge.override_sort_order,
           section_override: bridge.section_override,
           sub_heading: bridge.sub_heading || null,
+          conditional_rule: bridge.conditional_rule || null,
         };
       }).filter(Boolean) as FormQuestion[];
 
