@@ -38,6 +38,7 @@ type Action =
   | { type: 'BACK_TO_SITES' }
   | { type: 'BACK_TO_CRANES' }
   | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } }
+  | { type: 'UPDATE_DEFECT_DETAIL'; payload: { itemId: string; updates: Partial<Pick<import('@/types/inspection').DefectDetail, 'customerComment' | 'quoteInstructions'>>; inspectionId?: string } }
   | { type: 'UPDATE_INSPECTION_META'; payload: Partial<Pick<Inspection, 'suggestedQuestions' | 'nextInspectionDate'>> }
   | { type: 'UPDATE_SUGGESTION_STATUS'; payload: { inspectionId: string; suggestionId: string; status: 'approved' | 'rejected' } }
   | { type: 'ADD_SENT_REPORT'; payload: SentReport }
@@ -185,6 +186,25 @@ function reducer(state: AppState, action: Action): AppState {
         : state.currentInspection;
 
       return { ...state, inspections: updatedInspections, currentInspection: updatedCurrent };
+    }
+    case 'UPDATE_DEFECT_DETAIL': {
+      const updateDetailItems = (items: InspectionItemResult[]) =>
+        items.map(item => {
+          if (item.templateItemId === action.payload.itemId && item.defect) {
+            return { ...item, defect: { ...item.defect, ...action.payload.updates } };
+          }
+          return item;
+        });
+      const updatedInspections4 = state.inspections.map(insp => {
+        if (action.payload.inspectionId && insp.id === action.payload.inspectionId) {
+          return { ...insp, items: updateDetailItems(insp.items) };
+        }
+        return insp;
+      });
+      const updatedCurrent4 = state.currentInspection
+        ? { ...state.currentInspection, items: updateDetailItems(state.currentInspection.items) }
+        : state.currentInspection;
+      return { ...state, inspections: updatedInspections4, currentInspection: updatedCurrent4 };
     }
     case 'UPDATE_INSPECTION_META':
       if (!state.currentInspection) return state;
