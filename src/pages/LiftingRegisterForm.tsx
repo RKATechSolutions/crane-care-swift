@@ -532,7 +532,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="In Service">In Service</SelectItem>
-                <SelectItem value="Quarantined">Quarantined</SelectItem>
+                <SelectItem value="Failed">Failed</SelectItem>
                 <SelectItem value="Removed From Service">Removed From Service</SelectItem>
                 <SelectItem value="Pending Inspection">Pending Inspection</SelectItem>
               </SelectContent>

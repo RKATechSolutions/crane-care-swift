@@ -4,12 +4,15 @@ import { AppHeader } from '@/components/AppHeader';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
+import { format } from 'date-fns';
 
 interface LiftingRegisterListProps {
   clientId?: string;
   siteName: string;
+  clientName?: string;
   onBack: () => void;
   onAddNew: () => void;
 }
@@ -37,7 +40,7 @@ interface RegisterItem {
   span_m: number | null;
 }
 
-export function LiftingRegisterList({ clientId, siteName, onBack, onAddNew }: LiftingRegisterListProps) {
+export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew }: LiftingRegisterListProps) {
   const [items, setItems] = useState<RegisterItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,13 +71,13 @@ export function LiftingRegisterList({ clientId, siteName, onBack, onAddNew }: Li
 
   const statusIcon = (status: string | null) => {
     if (status === 'In Service') return <CheckCircle className="w-4 h-4 text-green-600" />;
-    if (status === 'Quarantined') return <XCircle className="w-4 h-4 text-destructive" />;
+    if (status === 'Failed') return <XCircle className="w-4 h-4 text-destructive" />;
     return <AlertTriangle className="w-4 h-4 text-amber-500" />;
   };
 
   const statusColor = (status: string | null) => {
     if (status === 'In Service') return 'bg-green-100 text-green-800 border-green-200';
-    if (status === 'Quarantined') return 'bg-red-100 text-red-800 border-red-200';
+    if (status === 'Failed') return 'bg-red-100 text-red-800 border-red-200';
     return 'bg-amber-100 text-amber-800 border-amber-200';
   };
 
@@ -123,6 +126,28 @@ export function LiftingRegisterList({ clientId, siteName, onBack, onAddNew }: Li
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (items.length === 0) {
+      toast.error('No items to export');
+      return;
+    }
+    try {
+      const pdf = await generateLiftingRegisterPdf({
+        siteName,
+        clientName: clientName || siteName,
+        technicianName: 'Technician',
+        items,
+      });
+      const safeName = (clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_');
+      const dateStr = format(new Date(), 'yyyyMMdd');
+      pdf.save(`${safeName}_LiftingRegister_${dateStr}.pdf`);
+      toast.success('PDF downloaded');
+    } catch (err) {
+      console.error('PDF error:', err);
+      toast.error('Failed to generate PDF');
+    }
+  };
+
   // Group by equipment type
   const grouped = items.reduce((acc, item) => {
     const key = item.equipment_type;
@@ -142,7 +167,11 @@ export function LiftingRegisterList({ clientId, siteName, onBack, onAddNew }: Li
       <div className="px-4 py-2 border-b border-border flex gap-2">
         <Button onClick={handleShare} variant="outline" className="flex-1 gap-2">
           <Share2 className="w-4 h-4" />
-          Share Register
+          Share
+        </Button>
+        <Button onClick={handleDownloadPdf} variant="outline" className="flex-1 gap-2">
+          <FileText className="w-4 h-4" />
+          PDF
         </Button>
         <Button onClick={onAddNew} className="flex-1 gap-2">
           + Add Item

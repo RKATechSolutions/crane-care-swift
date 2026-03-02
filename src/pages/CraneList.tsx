@@ -260,6 +260,7 @@ export default function CraneList() {
       <LiftingRegisterList
         clientId={clientId}
         siteName={site.name}
+        clientName={site.name}
         onBack={() => setShowLiftingRegisterList(false)}
         onAddNew={() => {
           setShowLiftingRegisterList(false);

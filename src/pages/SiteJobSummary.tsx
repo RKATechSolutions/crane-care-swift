@@ -4,8 +4,9 @@ import { AppHeader } from '@/components/AppHeader';
 import { SignaturePad } from '@/components/SignaturePad';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User, Loader2, ExternalLink } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Building2, Phone, Mail, User, Loader2, ExternalLink, Package, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +78,25 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   const [dbDefects, setDbDefects] = useState<DbDefect[]>([]);
   const [dbDefectsLoading, setDbDefectsLoading] = useState(true);
 
+  // Failed lifting register items
+  interface LiftingDefect {
+    id: string;
+    equipment_type: string;
+    serial_number: string | null;
+    asset_tag: string | null;
+    wll_value: number | null;
+    wll_unit: string | null;
+    equipment_status: string | null;
+    tag_present: string | null;
+    notes: string | null;
+    manufacturer: string | null;
+    quoteStatus?: 'Quote Now' | 'Quote Later';
+    customerComment?: string;
+    quoteInstructions?: string;
+  }
+  const [liftingDefects, setLiftingDefects] = useState<LiftingDefect[]>([]);
+  const [liftingDefectsLoading, setLiftingDefectsLoading] = useState(true);
+
   // Load defects from database for this site
   useEffect(() => {
     const loadDbDefects = async () => {
@@ -140,6 +160,33 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
     loadDbDefects();
   }, [site.name]);
 
+  // Load failed/non-service lifting register items for this site
+  useEffect(() => {
+    const loadLiftingDefects = async () => {
+      setLiftingDefectsLoading(true);
+      try {
+        const { data } = await supabase
+          .from('lifting_register')
+          .select('id, equipment_type, serial_number, asset_tag, wll_value, wll_unit, equipment_status, tag_present, notes, manufacturer')
+          .eq('site_name', site.name)
+          .or('equipment_status.eq.Failed,equipment_status.eq.Removed From Service,tag_present.eq.false,tag_present.eq.illegible');
+        
+        if (data && data.length > 0) {
+          setLiftingDefects(data.map(d => ({
+            ...d,
+            quoteStatus: undefined,
+            customerComment: undefined,
+            quoteInstructions: undefined,
+          })));
+        }
+      } catch (err) {
+        console.error('Error loading lifting defects:', err);
+      }
+      setLiftingDefectsLoading(false);
+    };
+    loadLiftingDefects();
+  }, [site.name]);
+
   // Also keep legacy context defects as fallback
   const allDefects = completedInspections.flatMap(insp => {
     const template = state.templates.find(t => t.id === insp.templateId);
@@ -164,6 +211,10 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
 
   const updateDbDefect = (responseId: string, updates: Partial<DbDefect>) => {
     setDbDefects(prev => prev.map(d => d.responseId === responseId ? { ...d, ...updates } : d));
+  };
+
+  const updateLiftingDefect = (id: string, updates: Partial<LiftingDefect>) => {
+    setLiftingDefects(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
   };
 
   const toggleDefect = (id: string) => {
@@ -305,6 +356,7 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
         template,
         summary: summaryPayload,
         customerDefectComments,
+        liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
       });
 
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
@@ -358,6 +410,7 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
       template,
       summary: buildSummaryPayload(),
       customerDefectComments,
+      liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
     });
     // Download PDF directly (avoids Chrome popup blocker)
     const clientName = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
@@ -874,7 +927,123 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
           </div>
         )}
 
-        {/* Crane Status Summary */}
+        {/* Lifting Equipment Defects */}
+        {(liftingDefects.length > 0 || liftingDefectsLoading) && (
+          <div className="px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <Package className="w-4 h-4 text-destructive" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Lifting Equipment — Failed / Flagged Items ({liftingDefects.length})
+              </p>
+            </div>
+
+            {liftingDefectsLoading && (
+              <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading lifting equipment…
+              </div>
+            )}
+
+            {!liftingDefectsLoading && liftingDefects.map((item) => (
+              <div key={item.id} className="mb-3 border border-border rounded-xl overflow-hidden bg-background">
+                <div className="px-4 py-3 flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-red-100">
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm">{item.equipment_type}</p>
+                    <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
+                      {item.serial_number && <p>SN: {item.serial_number}</p>}
+                      {item.asset_tag && <p>Tag: {item.asset_tag}</p>}
+                      {item.wll_value && <p className="font-medium text-foreground">WLL: {item.wll_value} {item.wll_unit || 'kg'}</p>}
+                      {item.manufacturer && <p>{item.manufacturer}</p>}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {item.equipment_status === 'Failed' && (
+                        <Badge variant="destructive" className="text-[10px]">Failed</Badge>
+                      )}
+                      {item.equipment_status === 'Removed From Service' && (
+                        <Badge variant="destructive" className="text-[10px]">Removed From Service</Badge>
+                      )}
+                      {(item.tag_present === 'false' || item.tag_present === 'illegible') && (
+                        <Badge variant="outline" className="text-[10px] bg-amber-100 text-amber-800 border-amber-200">
+                          Tag {item.tag_present === 'false' ? 'Missing' : 'Illegible'}
+                        </Badge>
+                      )}
+                    </div>
+                    {item.notes && (
+                      <p className="text-xs text-muted-foreground mt-1.5 italic">"{item.notes}"</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quote Now / Quote Later */}
+                <div className="flex gap-2 px-4 pb-2">
+                  <button
+                    onClick={() => updateLiftingDefect(item.id, { quoteStatus: 'Quote Now' })}
+                    className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
+                      item.quoteStatus === 'Quote Now'
+                        ? 'bg-rka-green text-primary-foreground'
+                        : 'bg-muted text-foreground active:bg-foreground/10'
+                    }`}
+                  >
+                    {item.quoteStatus === 'Quote Now' && <Check className="w-4 h-4 inline mr-1" />}
+                    Quote Now
+                  </button>
+                  <button
+                    onClick={() => updateLiftingDefect(item.id, { quoteStatus: 'Quote Later' })}
+                    className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
+                      item.quoteStatus === 'Quote Later'
+                        ? 'bg-foreground text-background'
+                        : 'bg-muted text-foreground active:bg-foreground/10'
+                    }`}
+                  >
+                    {item.quoteStatus === 'Quote Later' && <Check className="w-4 h-4 inline mr-1" />}
+                    Quote Later
+                  </button>
+                </div>
+
+                {/* Customer comment */}
+                <div className="px-4 pb-2">
+                  <textarea
+                    value={item.customerComment || ''}
+                    onChange={(e) => updateLiftingDefect(item.id, { customerComment: e.target.value })}
+                    placeholder="Customer comment (optional)..."
+                    className="w-full p-2.5 border border-border rounded-lg bg-background text-sm resize-none"
+                    rows={2}
+                  />
+                </div>
+
+                {/* Internal instructions */}
+                <div className="px-4 pb-3">
+                  <div className="p-2.5 rounded-lg bg-rka-orange-light border border-rka-orange/20">
+                    <label className="text-[10px] font-bold text-rka-orange uppercase tracking-wide flex items-center gap-1 mb-1">
+                      <AlertTriangle className="w-3 h-3" /> Internal — Quote Instructions
+                    </label>
+                    <textarea
+                      value={item.quoteInstructions || ''}
+                      onChange={(e) => updateLiftingDefect(item.id, { quoteInstructions: e.target.value })}
+                      placeholder="Replacement item details, supplier info, shop link..."
+                      className="w-full p-2 border border-rka-orange/20 rounded-lg bg-background text-sm resize-none"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                {/* Future: Shop link placeholder */}
+                <div className="px-4 pb-3">
+                  <button
+                    disabled
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-muted/50 text-muted-foreground text-xs font-medium opacity-60"
+                  >
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                    Link to Shop Item (Coming Soon)
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {completedInspections.some(i => i.craneStatus) && (
           <div className="px-4 py-3 border-b border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asset Operational Status</p>

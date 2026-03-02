@@ -22,6 +22,18 @@ interface JobPdfData {
   template: InspectionTemplate;
   summary: SiteJobSummary;
   customerDefectComments?: string;
+  liftingDefects?: {
+    equipment_type: string;
+    serial_number: string | null;
+    asset_tag: string | null;
+    wll_value: number | null;
+    wll_unit: string | null;
+    equipment_status: string | null;
+    tag_present: string | null;
+    manufacturer: string | null;
+    notes: string | null;
+    quoteStatus?: string;
+  }[];
 }
 
 // RKA brand colours (from Brand Guidelines)
@@ -144,7 +156,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
-  const { site, clientInfo, technicianName, jobType, inspections, template, summary, customerDefectComments } = data;
+  const { site, clientInfo, technicianName, jobType, inspections, template, summary, customerDefectComments, liftingDefects } = data;
   
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
@@ -319,6 +331,61 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
     y += 12;
   }
   
+  // Lifting Equipment Defects section
+  if (liftingDefects && liftingDefects.length > 0) {
+    if (y > 220) {
+      doc.addPage();
+      y = addHeader(doc, 'Lifting Equipment Defects', imgs);
+    }
+    
+    y = addSectionTitle(doc, y, `Lifting Equipment — Failed / Flagged (${liftingDefects.length})`);
+    
+    const liftingRows = liftingDefects.map(item => {
+      const issues: string[] = [];
+      if (item.equipment_status === 'Failed') issues.push('FAILED');
+      if (item.equipment_status === 'Removed From Service') issues.push('Removed');
+      if (item.tag_present === 'false') issues.push('Tag Missing');
+      if (item.tag_present === 'illegible') issues.push('Tag Illegible');
+      
+      return [
+        item.equipment_type,
+        item.serial_number || item.asset_tag || '—',
+        item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
+        item.manufacturer || '—',
+        issues.join(', ') || item.equipment_status || '—',
+        item.quoteStatus || '—',
+        item.notes || '—',
+      ];
+    });
+    
+    autoTable(doc, {
+      startY: y,
+      head: [['Type', 'Serial/Tag', 'WLL', 'Manufacturer', 'Issue', 'Quote', 'Notes']],
+      body: liftingRows,
+      margin: { left: 14, right: 14 },
+      styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+      headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        6: { cellWidth: 35 },
+      },
+      didParseCell(data) {
+        if (data.section === 'body' && data.column.index === 4) {
+          const val = data.cell.raw as string;
+          if (val.includes('FAILED')) {
+            data.cell.styles.textColor = RKA_RED;
+            data.cell.styles.fontStyle = 'bold';
+          } else if (val.includes('Tag')) {
+            data.cell.styles.textColor = RKA_ORANGE;
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      },
+    });
+    
+    y = (doc as any).lastAutoTable.finalY + 4;
+  }
+
   // Recommendations section
   y = addSectionTitle(doc, y, 'Recommendations');
   
