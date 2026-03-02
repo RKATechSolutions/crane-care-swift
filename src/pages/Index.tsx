@@ -75,7 +75,7 @@ const Index = () => {
   if (dashboardView === 'receipts') return <ReceiptsPage onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
   if (dashboardView === 'tasks') return <TasksPage onBack={() => setDashboardView(null)} onOpenJob={(id) => setSelectedJobId(id)} />;
-  if (dashboardView === 'lifting-register') return <LiftingRegisterForm onBack={() => setDashboardView(null)} />;
+  
 
   return <TechDashboard onNavigate={setDashboardView} />;
 };

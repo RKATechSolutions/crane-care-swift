@@ -2,11 +2,12 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X } from 'lucide-react';
+import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X, ClipboardList } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
 import DbInspectionForm from '@/pages/DbInspectionForm';
 import RepairBreakdownForm from '@/pages/RepairBreakdownForm';
+import LiftingRegisterForm from '@/pages/LiftingRegisterForm';
 import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
@@ -42,6 +43,7 @@ export default function CraneList() {
   const [templatePickerCrane, setTemplatePickerCrane] = useState<Crane | null>(null);
   const [dbFormTemplates, setDbFormTemplates] = useState<{ form_id: string; form_name: string; description: string | null }[]>([]);
   const [activeDbForm, setActiveDbForm] = useState<{ formId: string; crane: Crane; assetId?: string } | null>(null);
+  const [showLiftingRegister, setShowLiftingRegister] = useState(false);
   const site = state.selectedSite;
 
   // Fetch DB form templates
@@ -249,6 +251,12 @@ export default function CraneList() {
     return acc;
   }, {} as Record<string, DbAsset[]>);
 
+  // Show lifting register form
+  if (showLiftingRegister) {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+    return <LiftingRegisterForm onBack={() => setShowLiftingRegister(false)} clientId={clientId} siteName={site.name} />;
+  }
+
   // Show DB-driven inspection form
   if (activeDbForm) {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
@@ -346,6 +354,14 @@ export default function CraneList() {
             Annual Site Review
           </button>
         )}
+
+        <button
+          onClick={() => setShowLiftingRegister(true)}
+          className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+        >
+          <ClipboardList className="w-4 h-4" />
+          Lifting Equipment Register
+        </button>
 
         <button
           onClick={() => setShowAddAsset(!showAddAsset)}
