@@ -78,6 +78,25 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   const [dbDefects, setDbDefects] = useState<DbDefect[]>([]);
   const [dbDefectsLoading, setDbDefectsLoading] = useState(true);
 
+  // Failed lifting register items
+  interface LiftingDefect {
+    id: string;
+    equipment_type: string;
+    serial_number: string | null;
+    asset_tag: string | null;
+    wll_value: number | null;
+    wll_unit: string | null;
+    equipment_status: string | null;
+    tag_present: string | null;
+    notes: string | null;
+    manufacturer: string | null;
+    quoteStatus?: 'Quote Now' | 'Quote Later';
+    customerComment?: string;
+    quoteInstructions?: string;
+  }
+  const [liftingDefects, setLiftingDefects] = useState<LiftingDefect[]>([]);
+  const [liftingDefectsLoading, setLiftingDefectsLoading] = useState(true);
+
   // Load defects from database for this site
   useEffect(() => {
     const loadDbDefects = async () => {
