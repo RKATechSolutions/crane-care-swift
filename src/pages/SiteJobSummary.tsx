@@ -160,6 +160,33 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
     loadDbDefects();
   }, [site.name]);
 
+  // Load failed/non-service lifting register items for this site
+  useEffect(() => {
+    const loadLiftingDefects = async () => {
+      setLiftingDefectsLoading(true);
+      try {
+        const { data } = await supabase
+          .from('lifting_register')
+          .select('id, equipment_type, serial_number, asset_tag, wll_value, wll_unit, equipment_status, tag_present, notes, manufacturer')
+          .eq('site_name', site.name)
+          .or('equipment_status.eq.Failed,equipment_status.eq.Removed From Service,tag_present.eq.false,tag_present.eq.illegible');
+        
+        if (data && data.length > 0) {
+          setLiftingDefects(data.map(d => ({
+            ...d,
+            quoteStatus: undefined,
+            customerComment: undefined,
+            quoteInstructions: undefined,
+          })));
+        }
+      } catch (err) {
+        console.error('Error loading lifting defects:', err);
+      }
+      setLiftingDefectsLoading(false);
+    };
+    loadLiftingDefects();
+  }, [site.name]);
+
   // Also keep legacy context defects as fallback
   const allDefects = completedInspections.flatMap(insp => {
     const template = state.templates.find(t => t.id === insp.templateId);
