@@ -174,7 +174,56 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
     });
   };
 
-  const handleSaveDefects = () => {
+  const [creatingDraftQuote, setCreatingDraftQuote] = useState(false);
+  const [draftQuoteCreated, setDraftQuoteCreated] = useState(false);
+
+  const handleSaveDefects = async () => {
+    // Get Fix Now defects from DB defects
+    const fixNowDefects = dbDefects.filter(d => d.quoteStatus === 'Quote Now');
+
+    if (fixNowDefects.length > 0) {
+      setCreatingDraftQuote(true);
+      try {
+        const LABOUR_COST_RATE = 117;
+        const LABOUR_SELL_RATE = 195;
+
+        const lineItems = fixNowDefects.map((d, i) => ({
+          id: `defect-${i}`,
+          category: 'labour' as const,
+          description: `${d.assetName} — ${d.questionText}${d.comment ? ': ' + d.comment : ''}${d.quoteInstructions ? ' [Internal: ' + d.quoteInstructions + ']' : ''}`,
+          quantity: 1,
+          costPrice: LABOUR_COST_RATE,
+          sellPrice: LABOUR_SELL_RATE,
+          gstIncluded: false,
+        }));
+
+        const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.sellPrice), 0);
+        const gst = subtotal * 0.10;
+        const total = subtotal + gst;
+
+        const { error } = await supabase.from('quotes').insert({
+          client_name: clientInfo?.client_name || site.name,
+          site_name: site.name,
+          technician_id: state.currentUser?.id || 'unknown',
+          technician_name: state.currentUser?.name || 'Technician',
+          subtotal,
+          gst,
+          total,
+          status: 'not_sent',
+          items: lineItems as any,
+        });
+
+        if (error) throw error;
+        setDraftQuoteCreated(true);
+        toast.success(`Draft quote created with ${fixNowDefects.length} Fix Now defect${fixNowDefects.length !== 1 ? 's' : ''} — check Quotes page to review & send`);
+      } catch (err: any) {
+        console.error('Draft quote error:', err);
+        toast.error(`Failed to create draft quote: ${err.message}`);
+      } finally {
+        setCreatingDraftQuote(false);
+      }
+    }
+
     setDefectsSaved(true);
     setDefectsExpanded(false);
     setTimeout(() => {
@@ -772,10 +821,14 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
                 {/* Save defects button */}
                 <button
                   onClick={handleSaveDefects}
+                  disabled={creatingDraftQuote}
                   className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                 >
-                  <Check className="w-5 h-5" />
-                  Save Defect Details
+                  {creatingDraftQuote ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> Creating Draft Quote...</>
+                  ) : (
+                    <><Check className="w-5 h-5" /> Save Defect Details{dbDefects.filter(d => d.quoteStatus === 'Quote Now').length > 0 ? ` & Create Draft Quote (${dbDefects.filter(d => d.quoteStatus === 'Quote Now').length})` : ''}</>
+                  )}
                 </button>
 
                 {/* Send Quote Now defects to AroFlo */}
