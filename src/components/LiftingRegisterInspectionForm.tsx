@@ -36,7 +36,7 @@ interface LiftingRegisterInspectionFormProps {
   onBack: () => void;
 }
 
-export function LiftingRegisterInspectionForm({ clientId, siteName, clientName, onBack }: LiftingRegisterInspectionFormProps) {
+export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: LiftingRegisterInspectionFormProps) {
   const { state } = useApp();
   const [items, setItems] = useState<RegisterItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +128,7 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, clientName, 
   const failedItems = items.filter(isFailedItem);
   const otherItems = items.filter(i => !isFailedItem(i));
 
-  const allAssessed = items.every(item => results[item.id]?.result !== 'pending');
+  const _allAssessed = items.every(item => results[item.id]?.result !== 'pending');
   const failedAssessed = failedItems.every(item => results[item.id]?.result !== 'pending');
 
   const handleSubmit = async () => {
