@@ -145,6 +145,8 @@ export interface DefectDetail {
   notes: string;
   photos: string[];
   quoteStatus?: QuoteStatus;
+  customerComment?: string;
+  quoteInstructions?: string; // internal admin-only instructions for quoting
 }
 
 // ===== Site Job Summary =====
