@@ -185,12 +185,20 @@ export default function DbInspectionForm({
     }));
   }, [questions, evaluateRule]);
 
-  const currentSection = sections[currentSectionIdx];
+  const currentSection = sections[Math.min(currentSectionIdx, sections.length - 1)];
 
-  // Stats
-  const totalAnswered = Object.values(responses).filter(r => r.answer_value || r.pass_fail_status).length;
-  const totalQuestions = questions.length;
-  const defectCount = Object.values(responses).filter(r => r.defect_flag).length;
+  // Clamp section index when sections change (e.g. conditional sections hidden)
+  useEffect(() => {
+    if (currentSectionIdx >= sections.length && sections.length > 0) {
+      setCurrentSectionIdx(sections.length - 1);
+    }
+  }, [sections.length, currentSectionIdx]);
+
+  // Stats – only count visible questions
+  const visibleQuestionIds = useMemo(() => new Set(sections.flatMap(s => s.questions.map(q => q.question_id))), [sections]);
+  const totalAnswered = Object.values(responses).filter(r => visibleQuestionIds.has(r.question_id) && (r.answer_value || r.pass_fail_status)).length;
+  const totalQuestions = visibleQuestionIds.size;
+  const defectCount = Object.values(responses).filter(r => visibleQuestionIds.has(r.question_id) && r.defect_flag).length;
 
   const handleResponseUpdate = useCallback((questionId: string, response: ResponseData) => {
     setResponses(prev => ({ ...prev, [questionId]: response }));
