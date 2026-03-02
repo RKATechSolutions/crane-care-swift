@@ -114,6 +114,10 @@ export default function DbInspectionForm({
           comment: null,
           photo_urls: [],
           defect_flag: false,
+          urgency: null,
+          defect_types: [],
+          advanced_defect_detail: [],
+          internal_note: null,
         };
       });
 
