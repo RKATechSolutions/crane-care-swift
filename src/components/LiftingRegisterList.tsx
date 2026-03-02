@@ -184,18 +184,32 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
         onBack={onBack}
       />
 
-      <div className="px-4 py-2 border-b border-border flex gap-2">
-        <Button onClick={handleShare} variant="outline" className="flex-1 gap-2">
-          <Share2 className="w-4 h-4" />
-          Share
-        </Button>
-        <Button onClick={handleDownloadPdf} variant="outline" className="flex-1 gap-2">
-          <FileText className="w-4 h-4" />
-          PDF
-        </Button>
-        <Button onClick={onAddNew} className="flex-1 gap-2">
-          + Add Item
-        </Button>
+      <div className="px-4 py-2 border-b border-border space-y-2">
+        <div className="flex gap-2">
+          <Button onClick={handleShare} variant="outline" className="flex-1 gap-1 text-xs">
+            <Share2 className="w-3.5 h-3.5" />
+            Share
+          </Button>
+          <Button onClick={handleDownloadPdf} variant="outline" className="flex-1 gap-1 text-xs">
+            <FileText className="w-3.5 h-3.5" />
+            PDF
+          </Button>
+          <Button onClick={handleDownloadCsv} variant="outline" className="flex-1 gap-1 text-xs">
+            <Download className="w-3.5 h-3.5" />
+            CSV
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          {onInspect && (
+            <Button onClick={onInspect} variant="secondary" className="flex-1 gap-2">
+              <CheckCircle className="w-4 h-4" />
+              Inspect All
+            </Button>
+          )}
+          <Button onClick={onAddNew} className="flex-1 gap-2">
+            + Add Item
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto">
