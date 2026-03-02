@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
-import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench, ClipboardList } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | 'job-detail' | 'lifting-register' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | 'job-detail' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
@@ -95,13 +95,6 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       title: 'Jobs',
       desc: 'Create & manage jobs',
       color: 'bg-indigo-500/10 text-indigo-600',
-    },
-    {
-      id: 'lifting-register',
-      icon: <ClipboardList className="w-8 h-8" />,
-      title: 'Lifting Register',
-      desc: 'Register lifting equipment',
-      color: 'bg-orange-500/10 text-orange-600',
     },
   ];
 
