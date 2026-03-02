@@ -15,6 +15,8 @@ import { Camera, Check, Pencil, AlertTriangle, Loader2, ScanLine, X, ImagePlus, 
 
 interface LiftingRegisterFormProps {
   onBack: () => void;
+  clientId?: string;
+  siteName?: string;
 }
 
 const EQUIPMENT_TYPES = [

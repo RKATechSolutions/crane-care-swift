@@ -17,7 +17,7 @@ import ToDoPage from './ToDoPage';
 import ReceiptsPage from './ReceiptsPage';
 import TasksPage from './TasksPage';
 import JobDetailPage from './JobDetailPage';
-import LiftingRegisterForm from './LiftingRegisterForm';
+
 
 const Index = () => {
   const { state, dispatch } = useApp();
