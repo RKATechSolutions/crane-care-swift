@@ -44,8 +44,10 @@ export function RepairSectionD({ formData, updateForm }: Props) {
   };
 
   const removePhoto = (idx: number) => {
-    updateForm({ return_to_service_photos: formData.return_to_service_photos.filter((_, i) => i !== idx) });
+    updateForm({ return_to_service_photos: (formData.return_to_service_photos || []).filter((_, i) => i !== idx) });
   };
+
+  const photos = formData.return_to_service_photos || [];
 
   return (
     <div className="px-4 py-3 space-y-4">
