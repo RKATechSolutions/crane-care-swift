@@ -263,23 +263,23 @@ export default function LiftingRegisterForm({ onBack }: LiftingRegisterFormProps
 
       // Save audit scan record if AI was used
       if (aiResult && inserted) {
-        await supabase.from('lifting_register_scans').insert({
+        await supabase.from('lifting_register_scans').insert([{
           register_id: inserted.id,
           technician_id: state.currentUser.id,
           technician_name: state.currentUser.name,
-          photos: [tagPhoto, overallPhoto, stampPhoto].filter(Boolean),
-          ai_raw_response: aiResult,
+          photos: [tagPhoto, overallPhoto, stampPhoto].filter(Boolean) as any,
+          ai_raw_response: aiResult as any,
           fields_accepted: Object.entries(fieldStatuses)
-            .filter(([, s]) => s.accepted && !s.edited)
-            .map(([k]) => k),
+            .filter(([, st]) => st.accepted && !st.edited)
+            .map(([k]) => k) as any,
           fields_edited: Object.entries(fieldStatuses)
-            .filter(([, s]) => s.edited)
-            .map(([k]) => ({ key: k, original: s.original })),
+            .filter(([, st]) => st.edited)
+            .map(([k, st]) => ({ key: k, original: st.original })) as any,
           fields_discarded: Object.entries(fieldStatuses)
-            .filter(([, s]) => !s.accepted && !s.edited)
-            .map(([k]) => k),
+            .filter(([, st]) => !st.accepted && !st.edited)
+            .map(([k]) => k) as any,
           overall_confidence: aiResult.overall_confidence,
-        });
+        }]);
       }
 
       toast.success('Equipment registered successfully');
@@ -348,9 +348,7 @@ export default function LiftingRegisterForm({ onBack }: LiftingRegisterFormProps
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader title="Register Lifting Equipment" rightContent={
-        <Button variant="ghost" size="sm" onClick={onBack}><ArrowLeft className="w-4 h-4 mr-1" /> Back</Button>
-      } />
+      <AppHeader title="Register Lifting Equipment" onBack={onBack} />
 
       <div className="flex-1 p-4 space-y-4 pb-24">
         {/* Section 1: AI Scan */}
