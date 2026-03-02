@@ -8,7 +8,7 @@ interface Props {
 export function RepairSectionE({ formData, updateForm }: Props) {
   return (
     <div className="px-4 py-3 space-y-4">
-      <p className="text-xs text-muted-foreground italic">These notes are internal only — not visible on the customer report.</p>
+      <p className="text-xs text-muted-foreground italic">These notes are internal only — not visible on the customer report. Use this section to capture improvement opportunities, lessons learned, or training observations.</p>
       <textarea
         placeholder="Internal notes (optional)…"
         value={formData.internal_note}
