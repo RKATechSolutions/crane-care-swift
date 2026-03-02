@@ -410,6 +410,7 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
       template,
       summary: buildSummaryPayload(),
       customerDefectComments,
+      liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
     });
     // Download PDF directly (avoids Chrome popup blocker)
     const clientName = (clientInfo?.client_name || site.name).replace(/[^a-zA-Z0-9]/g, '_');
