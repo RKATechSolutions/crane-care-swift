@@ -192,11 +192,11 @@ export default function DbInspectionForm({
     if (!currentSection) return;
     const updates = { ...responses };
     currentSection.questions.forEach(q => {
-      if (q.answer_type === 'PassFailNA' && !updates[q.question_id]?.pass_fail_status) {
+      if ((q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') && !updates[q.question_id]?.pass_fail_status) {
         updates[q.question_id] = {
           ...updates[q.question_id],
           pass_fail_status: 'Pass',
-          answer_value: 'Pass',
+          answer_value: q.answer_type === 'YesNoNA' ? 'Yes' : 'Pass',
           defect_flag: false,
         };
       }
@@ -204,9 +204,9 @@ export default function DbInspectionForm({
     setResponses(updates);
   }, [currentSection, responses]);
 
-  const hasChecklistItems = currentSection?.questions.some(q => q.answer_type === 'PassFailNA') || false;
+  const hasChecklistItems = currentSection?.questions.some(q => q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') || false;
   const allChecklistPassed = currentSection?.questions
-    .filter(q => q.answer_type === 'PassFailNA')
+    .filter(q => q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA')
     .every(q => responses[q.question_id]?.pass_fail_status === 'Pass') || false;
 
   // Save to database
