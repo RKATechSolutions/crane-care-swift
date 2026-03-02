@@ -374,7 +374,7 @@ export default function CraneList() {
         )}
 
         <button
-          onClick={() => setShowLiftingRegister(true)}
+          onClick={() => setShowLiftingRegisterList(true)}
           className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
         >
           <ClipboardList className="w-4 h-4" />
