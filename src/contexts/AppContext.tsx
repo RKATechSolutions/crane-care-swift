@@ -187,6 +187,25 @@ function reducer(state: AppState, action: Action): AppState {
 
       return { ...state, inspections: updatedInspections, currentInspection: updatedCurrent };
     }
+    case 'UPDATE_DEFECT_DETAIL': {
+      const updateDetailItems = (items: InspectionItemResult[]) =>
+        items.map(item => {
+          if (item.templateItemId === action.payload.itemId && item.defect) {
+            return { ...item, defect: { ...item.defect, ...action.payload.updates } };
+          }
+          return item;
+        });
+      const updatedInspections4 = state.inspections.map(insp => {
+        if (action.payload.inspectionId && insp.id === action.payload.inspectionId) {
+          return { ...insp, items: updateDetailItems(insp.items) };
+        }
+        return insp;
+      });
+      const updatedCurrent4 = state.currentInspection
+        ? { ...state.currentInspection, items: updateDetailItems(state.currentInspection.items) }
+        : state.currentInspection;
+      return { ...state, inspections: updatedInspections4, currentInspection: updatedCurrent4 };
+    }
     case 'UPDATE_INSPECTION_META':
       if (!state.currentInspection) return state;
       return {
