@@ -535,6 +535,19 @@ export default function DbInspectionForm({
       )}
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
+
+      <PdfPreviewModal
+        open={!!previewPdfDoc}
+        onClose={() => setPreviewPdfDoc(null)}
+        pdfDoc={previewPdfDoc}
+        onDownload={() => {
+          if (!previewPdfDoc) return;
+          const safeName = assetName.replace(/[^a-zA-Z0-9]/g, '_');
+          const dateStr = new Date().toISOString().slice(0, 10);
+          previewPdfDoc.save(`${safeName}_Inspection_${dateStr}.pdf`);
+        }}
+        title="Inspection Report Preview"
+      />
     </div>
   );
 }
