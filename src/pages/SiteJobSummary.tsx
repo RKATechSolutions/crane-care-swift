@@ -58,47 +58,89 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [clientContacts, setClientContacts] = useState<any[]>([]);
 
+  // Database-driven defects
+  interface DbDefect {
+    responseId: string;
+    inspectionId: string;
+    questionText: string;
+    assetName: string;
+    severity: string | null;
+    urgency: string | null;
+    defectTypes: string[];
+    comment: string | null;
+    photoUrls: string[];
+    advancedDefectDetail: string[];
+    quoteStatus?: 'Quote Now' | 'Quote Later';
+    customerComment?: string;
+    quoteInstructions?: string;
+  }
+  const [dbDefects, setDbDefects] = useState<DbDefect[]>([]);
+  const [dbDefectsLoading, setDbDefectsLoading] = useState(true);
+
+  // Load defects from database for this site
   useEffect(() => {
-    const fetchClient = async () => {
-      // Try exact match first, then progressively broader matches
-      const searchTerms = [
-        site.name,
-        site.name.split(' - ')[0], // e.g. "Bluescope Steel" from "Bluescope Steel - Western Port"
-        site.name.split(' ')[0],   // e.g. "Bluescope"
-      ];
+    const loadDbDefects = async () => {
+      setDbDefectsLoading(true);
+      try {
+        // Find inspections for this site
+        const { data: inspections } = await supabase
+          .from('db_inspections')
+          .select('id, asset_name, site_name, status')
+          .eq('site_name', site.name);
 
-      let matched: any = null;
-      for (const term of searchTerms) {
-        if (!term || term.length < 3) continue;
-        const { data: clients } = await supabase
-          .from('clients')
-          .select('*')
-          .ilike('client_name', `%${term}%`)
-          .limit(1);
-
-        if (clients && clients.length > 0) {
-          matched = clients[0];
-          break;
+        if (!inspections || inspections.length === 0) {
+          setDbDefectsLoading(false);
+          return;
         }
+
+        const inspectionIds = inspections.map(i => i.id);
+
+        // Get defect responses
+        const { data: responses } = await supabase
+          .from('inspection_responses')
+          .select('id, inspection_id, question_id, severity, urgency, defect_types, comment, photo_urls, advanced_defect_detail, defect_flag')
+          .in('inspection_id', inspectionIds)
+          .eq('defect_flag', true);
+
+        if (!responses || responses.length === 0) {
+          setDbDefectsLoading(false);
+          return;
+        }
+
+        // Get question texts
+        const qIds = [...new Set(responses.map(r => r.question_id))];
+        const { data: questions } = await supabase
+          .from('question_library')
+          .select('question_id, question_text')
+          .in('question_id', qIds);
+        const qMap = Object.fromEntries((questions || []).map(q => [q.question_id, q.question_text]));
+
+        // Map inspections
+        const inspMap = Object.fromEntries(inspections.map(i => [i.id, i]));
+
+        const defects: DbDefect[] = responses.map(r => ({
+          responseId: r.id,
+          inspectionId: r.inspection_id,
+          questionText: qMap[r.question_id] || r.question_id,
+          assetName: inspMap[r.inspection_id]?.asset_name || 'Unknown',
+          severity: r.severity,
+          urgency: r.urgency,
+          defectTypes: r.defect_types || [],
+          comment: r.comment,
+          photoUrls: r.photo_urls || [],
+          advancedDefectDetail: r.advanced_defect_detail || [],
+        }));
+
+        setDbDefects(defects);
+      } catch (err) {
+        console.error('Error loading defects:', err);
       }
-
-      if (matched) {
-        setClientInfo(matched);
-        setCustomerName(matched.primary_contact_name || site.contactName);
-
-        const { data: contacts } = await supabase
-          .from('client_contacts')
-          .select('*')
-          .eq('client_id', matched.id)
-          .eq('status', 'Active');
-
-        if (contacts) setClientContacts(contacts);
-      }
+      setDbDefectsLoading(false);
     };
-    fetchClient();
+    loadDbDefects();
   }, [site.name]);
 
-  // Gather all defects across completed inspections
+  // Also keep legacy context defects as fallback
   const allDefects = completedInspections.flatMap(insp => {
     const template = state.templates.find(t => t.id === insp.templateId);
     const crane = site.cranes.find(c => c.id === insp.craneId);
@@ -115,6 +157,14 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
         return { inspection: insp, item, crane, itemLabel };
       });
   });
+
+  // Use DB defects if available, otherwise fallback to context
+  const hasDbDefects = dbDefects.length > 0;
+  const totalDefectCount = hasDbDefects ? dbDefects.length : allDefects.length;
+
+  const updateDbDefect = (responseId: string, updates: Partial<DbDefect>) => {
+    setDbDefects(prev => prev.map(d => d.responseId === responseId ? { ...d, ...updates } : d));
+  };
 
   const toggleDefect = (id: string) => {
     setExpandedDefects(prev => {
