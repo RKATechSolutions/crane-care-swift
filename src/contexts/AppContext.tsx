@@ -38,6 +38,7 @@ type Action =
   | { type: 'BACK_TO_SITES' }
   | { type: 'BACK_TO_CRANES' }
   | { type: 'UPDATE_DEFECT_QUOTE'; payload: { itemId: string; quoteStatus: 'Quote Now' | 'Quote Later'; inspectionId?: string } }
+  | { type: 'UPDATE_DEFECT_DETAIL'; payload: { itemId: string; updates: Partial<Pick<import('@/types/inspection').DefectDetail, 'customerComment' | 'quoteInstructions'>>; inspectionId?: string } }
   | { type: 'UPDATE_INSPECTION_META'; payload: Partial<Pick<Inspection, 'suggestedQuestions' | 'nextInspectionDate'>> }
   | { type: 'UPDATE_SUGGESTION_STATUS'; payload: { inspectionId: string; suggestionId: string; status: 'approved' | 'rejected' } }
   | { type: 'ADD_SENT_REPORT'; payload: SentReport }
