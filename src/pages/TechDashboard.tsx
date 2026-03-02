@@ -6,7 +6,7 @@ import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, 
 import { supabase } from '@/integrations/supabase/client';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 
-export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | 'job-detail' | 'lifting-register' | null;
+export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | 'job-detail' | null;
 
 interface TechDashboardProps {
   onNavigate: (view: DashboardView) => void;
