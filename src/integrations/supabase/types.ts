@@ -760,6 +760,166 @@ export type Database = {
         }
         Relationships: []
       }
+      lifting_register: {
+        Row: {
+          ai_confidence_summary: Json | null
+          ai_scan_timestamp: string | null
+          ai_scan_used: boolean | null
+          asset_tag: string | null
+          client_id: string | null
+          confirmed_by_id: string | null
+          confirmed_by_name: string | null
+          created_at: string
+          equipment_status: string | null
+          equipment_type: string
+          grade: string | null
+          id: string
+          length_m: number | null
+          lift_height_m: number | null
+          manufacturer: string | null
+          model: string | null
+          notes: string | null
+          overall_photo_url: string | null
+          registered_by_id: string
+          registered_by_name: string
+          serial_number: string | null
+          site_name: string | null
+          sling_configuration: string | null
+          sling_leg_count: number | null
+          span_m: number | null
+          stamp_photo_url: string | null
+          tag_photo_url: string | null
+          tag_present: string | null
+          updated_at: string
+          wll_unit: string | null
+          wll_value: number | null
+        }
+        Insert: {
+          ai_confidence_summary?: Json | null
+          ai_scan_timestamp?: string | null
+          ai_scan_used?: boolean | null
+          asset_tag?: string | null
+          client_id?: string | null
+          confirmed_by_id?: string | null
+          confirmed_by_name?: string | null
+          created_at?: string
+          equipment_status?: string | null
+          equipment_type: string
+          grade?: string | null
+          id?: string
+          length_m?: number | null
+          lift_height_m?: number | null
+          manufacturer?: string | null
+          model?: string | null
+          notes?: string | null
+          overall_photo_url?: string | null
+          registered_by_id: string
+          registered_by_name: string
+          serial_number?: string | null
+          site_name?: string | null
+          sling_configuration?: string | null
+          sling_leg_count?: number | null
+          span_m?: number | null
+          stamp_photo_url?: string | null
+          tag_photo_url?: string | null
+          tag_present?: string | null
+          updated_at?: string
+          wll_unit?: string | null
+          wll_value?: number | null
+        }
+        Update: {
+          ai_confidence_summary?: Json | null
+          ai_scan_timestamp?: string | null
+          ai_scan_used?: boolean | null
+          asset_tag?: string | null
+          client_id?: string | null
+          confirmed_by_id?: string | null
+          confirmed_by_name?: string | null
+          created_at?: string
+          equipment_status?: string | null
+          equipment_type?: string
+          grade?: string | null
+          id?: string
+          length_m?: number | null
+          lift_height_m?: number | null
+          manufacturer?: string | null
+          model?: string | null
+          notes?: string | null
+          overall_photo_url?: string | null
+          registered_by_id?: string
+          registered_by_name?: string
+          serial_number?: string | null
+          site_name?: string | null
+          sling_configuration?: string | null
+          sling_leg_count?: number | null
+          span_m?: number | null
+          stamp_photo_url?: string | null
+          tag_photo_url?: string | null
+          tag_present?: string | null
+          updated_at?: string
+          wll_unit?: string | null
+          wll_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifting_register_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lifting_register_scans: {
+        Row: {
+          ai_raw_response: Json | null
+          created_at: string
+          fields_accepted: Json | null
+          fields_discarded: Json | null
+          fields_edited: Json | null
+          id: string
+          overall_confidence: number | null
+          photos: Json | null
+          register_id: string | null
+          technician_id: string
+          technician_name: string
+        }
+        Insert: {
+          ai_raw_response?: Json | null
+          created_at?: string
+          fields_accepted?: Json | null
+          fields_discarded?: Json | null
+          fields_edited?: Json | null
+          id?: string
+          overall_confidence?: number | null
+          photos?: Json | null
+          register_id?: string | null
+          technician_id: string
+          technician_name: string
+        }
+        Update: {
+          ai_raw_response?: Json | null
+          created_at?: string
+          fields_accepted?: Json | null
+          fields_discarded?: Json | null
+          fields_edited?: Json | null
+          id?: string
+          overall_confidence?: number | null
+          photos?: Json | null
+          register_id?: string | null
+          technician_id?: string
+          technician_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifting_register_scans_register_id_fkey"
+            columns: ["register_id"]
+            isOneToOne: false
+            referencedRelation: "lifting_register"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_library: {
         Row: {
           active: boolean
