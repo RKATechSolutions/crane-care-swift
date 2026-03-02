@@ -156,11 +156,23 @@ export default function DbInspectionForm({
     loadForm();
   }, [formId, existingInspectionId]);
 
-  // Group questions by section
+  // Evaluate conditional_rule against current responses
+  const evaluateRule = useCallback((rule: string | null): boolean => {
+    if (!rule) return true;
+    const match = rule.match(/^show_if:([^=]+)=(.+)$/);
+    if (!match) return true;
+    const [, questionId, valuesStr] = match;
+    const allowedValues = valuesStr.split(',');
+    const currentValue = responses[questionId]?.answer_value;
+    return currentValue ? allowedValues.includes(currentValue) : false;
+  }, [responses]);
+
+  // Group questions by section, filtering by conditional rules
   const sections = useMemo(() => {
     const sectionMap: Record<string, FormQuestion[]> = {};
     const sectionOrder: string[] = [];
     questions.forEach(q => {
+      if (!evaluateRule(q.conditional_rule)) return;
       if (!sectionMap[q.section]) {
         sectionMap[q.section] = [];
         sectionOrder.push(q.section);
@@ -171,7 +183,7 @@ export default function DbInspectionForm({
       name,
       questions: sectionMap[name].sort((a, b) => (a.override_sort_order || 0) - (b.override_sort_order || 0)),
     }));
-  }, [questions]);
+  }, [questions, evaluateRule]);
 
   const currentSection = sections[currentSectionIdx];
 
