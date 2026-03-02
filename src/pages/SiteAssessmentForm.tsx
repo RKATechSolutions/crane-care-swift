@@ -517,6 +517,18 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
           </button>
         )}
       </div>
+
+      <PdfPreviewModal
+        open={!!previewPdfDoc}
+        onClose={() => setPreviewPdfDoc(null)}
+        pdfDoc={previewPdfDoc}
+        onDownload={() => {
+          if (!previewPdfDoc) return;
+          const fileName = `${site.name.replace(/[^a-zA-Z0-9]/g, '_')}_Site_Assessment_${new Date().toISOString().slice(0, 10)}.pdf`;
+          previewPdfDoc.save(fileName);
+        }}
+        title="Site Assessment Preview"
+      />
     </div>
   );
 }
