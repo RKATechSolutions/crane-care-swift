@@ -55,7 +55,7 @@ export default function DbInspectionForm({
       // Get questions via bridge table
       const { data: bridgeData } = await supabase
         .from('form_template_questions')
-        .select('question_id, required, override_sort_order, override_help_text, override_standard_ref, section_override, sub_heading')
+        .select('question_id, required, override_sort_order, override_help_text, override_standard_ref, section_override, sub_heading, conditional_rule')
         .eq('form_id', formId)
         .order('override_sort_order');
 
