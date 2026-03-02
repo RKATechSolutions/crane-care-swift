@@ -252,6 +252,20 @@ export default function CraneList() {
   // Show DB-driven inspection form
   if (activeDbForm) {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+
+    // Route repair/breakdown form to dedicated component
+    if (activeDbForm.formId === 'FORM-RB1') {
+      return (
+        <RepairBreakdownForm
+          assetName={activeDbForm.crane.name}
+          assetId={activeDbForm.assetId}
+          clientId={clientId}
+          siteName={site.name}
+          onBack={() => setActiveDbForm(null)}
+        />
+      );
+    }
+
     return (
       <DbInspectionForm
         formId={activeDbForm.formId}
