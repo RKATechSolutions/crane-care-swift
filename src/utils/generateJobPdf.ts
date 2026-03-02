@@ -22,6 +22,18 @@ interface JobPdfData {
   template: InspectionTemplate;
   summary: SiteJobSummary;
   customerDefectComments?: string;
+  liftingDefects?: {
+    equipment_type: string;
+    serial_number: string | null;
+    asset_tag: string | null;
+    wll_value: number | null;
+    wll_unit: string | null;
+    equipment_status: string | null;
+    tag_present: string | null;
+    manufacturer: string | null;
+    notes: string | null;
+    quoteStatus?: string;
+  }[];
 }
 
 // RKA brand colours (from Brand Guidelines)
@@ -144,7 +156,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
-  const { site, clientInfo, technicianName, jobType, inspections, template, summary, customerDefectComments } = data;
+  const { site, clientInfo, technicianName, jobType, inspections, template, summary, customerDefectComments, liftingDefects } = data;
   
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
