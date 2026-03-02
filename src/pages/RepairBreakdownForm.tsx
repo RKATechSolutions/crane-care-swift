@@ -3,7 +3,10 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Save, CheckCircle, ChevronDown, ChevronUp, Eye, Send, Loader2 } from 'lucide-react';
+import { generateRepairPdf } from '@/utils/generateRepairPdf';
+import { PdfPreviewModal } from '@/components/PdfPreviewModal';
+import type jsPDF from 'jspdf';
 import { RepairSectionA } from '@/components/repair/RepairSectionA';
 import { RepairSectionB } from '@/components/repair/RepairSectionB';
 import { RepairSectionC } from '@/components/repair/RepairSectionC';
@@ -100,6 +103,9 @@ export default function RepairBreakdownForm({
   const [formData, setFormData] = useState<RepairFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [previewPdf, setPreviewPdf] = useState<jsPDF | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
     a: true, b: false, c: false, d: false, e: false,
   });
@@ -183,11 +189,84 @@ export default function RepairBreakdownForm({
     }
   };
 
-  const handleSubmit = () => {
+  const handlePreviewReport = async () => {
+    setGenerating(true);
+    try {
+      const pdf = await generateRepairPdf({
+        formData,
+        assetName,
+        siteName,
+        technicianName: state.currentUser?.name || 'Unknown',
+      });
+      setPreviewPdf(pdf);
+      setShowPreview(true);
+    } catch (err: any) {
+      toast.error('Failed to generate preview: ' + (err.message || 'Unknown error'));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleFinalise = async () => {
     if (isCritical) {
       setShowSummary(true);
-    } else {
-      saveRepairJob('Submitted');
+      return;
+    }
+    await finaliseAndSend();
+  };
+
+  const finaliseAndSend = async () => {
+    setSaving(true);
+    try {
+      // Generate PDF
+      const pdf = await generateRepairPdf({
+        formData,
+        assetName,
+        siteName,
+        technicianName: state.currentUser?.name || 'Unknown',
+      });
+      const pdfBase64 = pdf.output('datauristring').split(',')[1];
+      const filename = `${assetName.replace(/\s+/g, '_')}_RepairReport_${format(new Date(), 'yyyyMMdd')}.pdf`;
+
+      // Save to DB
+      await saveRepairJob('Submitted');
+
+      // Send email via edge function
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-report', {
+          body: {
+            to: state.currentUser?.email || [],
+            clientName: siteName || assetName,
+            siteName: siteName || assetName,
+            pdfBase64,
+            filename,
+          },
+        });
+        if (emailError) console.error('Email send error:', emailError);
+        else toast.success('Report emailed for your records');
+      } catch {
+        console.error('Email send failed');
+      }
+
+      // Add to sent reports in context
+      dispatch({
+        type: 'ADD_SENT_REPORT',
+        payload: {
+          id: `repair-${Date.now()}`,
+          type: 'email',
+          title: `Repair Report — ${assetName}`,
+          recipientName: state.currentUser?.name || '',
+          recipientEmail: state.currentUser?.email || '',
+          sentAt: new Date().toISOString(),
+          sentBy: state.currentUser?.name || 'Unknown',
+        },
+      });
+
+    } catch (err: any) {
+      console.error('Finalise error:', err);
+      toast.error('Failed to finalise: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -252,8 +331,8 @@ export default function RepairBreakdownForm({
           <RepairSectionD formData={formData} updateForm={updateForm} />
         )}
 
-        {/* Section E — Internal Notes */}
-        {sectionHeader('e', 'E — Internal Notes', 'Not shown on customer report')}
+        {/* Section E — Internal Notes & Improvement Opportunities */}
+        {sectionHeader('e', 'E — Internal Notes & Improvement Opportunities', 'Not shown on customer report')}
         {expandedSections.e && (
           <RepairSectionE formData={formData} updateForm={updateForm} />
         )}
@@ -270,12 +349,20 @@ export default function RepairBreakdownForm({
           {saving ? 'Saving…' : 'Save Draft'}
         </button>
         <button
-          onClick={handleSubmit}
+          onClick={handlePreviewReport}
+          disabled={generating || !formData.job_type}
+          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+        >
+          {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+          {generating ? 'Generating…' : 'Preview Report'}
+        </button>
+        <button
+          onClick={handleFinalise}
           disabled={saving || !formData.job_type}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
         >
-          <CheckCircle className="w-5 h-5" />
-          Submit Repair Job
+          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+          {saving ? 'Sending…' : 'Finalise Report & Send to Customer'}
         </button>
       </div>
 
@@ -286,11 +373,23 @@ export default function RepairBreakdownForm({
           alertReasons={getAlertReasons()}
           onConfirm={() => {
             setShowSummary(false);
-            saveRepairJob('Submitted');
+            finaliseAndSend();
           }}
           onCancel={() => setShowSummary(false)}
         />
       )}
+
+      {/* PDF Preview Modal */}
+      <PdfPreviewModal
+        open={showPreview}
+        onClose={() => setShowPreview(false)}
+        pdfDoc={previewPdf}
+        onDownload={() => {
+          if (previewPdf) {
+            previewPdf.save(`${assetName.replace(/\s+/g, '_')}_RepairReport_${format(new Date(), 'yyyyMMdd')}.pdf`);
+          }
+        }}
+      />
     </div>
   );
 }

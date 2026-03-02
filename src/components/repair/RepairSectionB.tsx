@@ -121,6 +121,7 @@ export function RepairSectionB({ formData, updateForm }: Props) {
           {/* Functional Testing */}
           <div>
             <label className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 block">Functional Testing Completed?</label>
+            <p className="text-xs text-muted-foreground italic mb-2">Optional — use as a training checklist or fill out if applicable.</p>
             <RepairButtonGroup
               options={['Yes', 'No', 'N/A']}
               value={formData.functional_testing_completed}
