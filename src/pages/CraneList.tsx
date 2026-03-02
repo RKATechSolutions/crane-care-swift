@@ -11,6 +11,7 @@ import LiftingRegisterForm from '@/pages/LiftingRegisterForm';
 import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
 import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
+import { LiftingRegisterList } from '@/components/LiftingRegisterList';
 
 interface DbAsset {
   id: string;
