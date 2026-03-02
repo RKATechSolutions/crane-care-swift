@@ -434,34 +434,42 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
               </div>
             )}
 
-            {/* Download Report - always available */}
+            {/* Preview & Download Report */}
             <button
               onClick={async () => {
-                const pdf = await generateAssessmentPdf({
-                  siteName: site.name,
-                  assessmentType,
-                  completionMethod,
-                  technicianName: state.currentUser?.name || '',
-                  facetScores: scores.facetScores,
-                  totalScore: scores.totalScore,
-                  countNotYet: scores.countNotYet,
-                  countPartial: scores.countPartial,
-                  highestRiskFacet: facetNames[scores.highestRisk] || '',
-                  strongestFacet: facetNames[scores.strongest] || '',
-                  aiSummary: aiSummary || '',
-                  facetNotes,
-                  clientAddress: clientDetails.address || site.address,
-                  clientContactName: clientDetails.contactName || site.contactName,
-                  clientContactPhone: clientDetails.phone || site.contactPhone,
-                  clientContactEmail: clientDetails.email,
-                });
-                const fileName = `${site.name.replace(/[^a-zA-Z0-9]/g, '_')}_Site_Assessment_${new Date().toISOString().slice(0, 10)}.pdf`;
-                pdf.save(fileName);
+                setGeneratingPreview(true);
+                try {
+                  const pdf = await generateAssessmentPdf({
+                    siteName: site.name,
+                    assessmentType,
+                    completionMethod,
+                    technicianName: state.currentUser?.name || '',
+                    facetScores: scores.facetScores,
+                    totalScore: scores.totalScore,
+                    countNotYet: scores.countNotYet,
+                    countPartial: scores.countPartial,
+                    highestRiskFacet: facetNames[scores.highestRisk] || '',
+                    strongestFacet: facetNames[scores.strongest] || '',
+                    aiSummary: aiSummary || '',
+                    facetNotes,
+                    clientAddress: clientDetails.address || site.address,
+                    clientContactName: clientDetails.contactName || site.contactName,
+                    clientContactPhone: clientDetails.phone || site.contactPhone,
+                    clientContactEmail: clientDetails.email,
+                  });
+                  setPreviewPdfDoc(pdf);
+                } catch (err) {
+                  console.error('Preview error:', err);
+                  toast({ title: 'Failed to generate preview', variant: 'destructive' });
+                } finally {
+                  setGeneratingPreview(false);
+                }
               }}
+              disabled={generatingPreview}
               className="w-full h-11 bg-foreground text-background rounded-xl font-bold text-sm flex items-center justify-center gap-2"
             >
-              <Download className="w-4 h-4" />
-              Download Report PDF
+              {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+              {generatingPreview ? 'Generating Preview…' : 'Preview Report PDF'}
             </button>
           </div>
         )}
