@@ -253,10 +253,26 @@ export default function CraneList() {
     return acc;
   }, {} as Record<string, DbAsset[]>);
 
+  // Show lifting register list
+  if (showLiftingRegisterList) {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+    return (
+      <LiftingRegisterList
+        clientId={clientId}
+        siteName={site.name}
+        onBack={() => setShowLiftingRegisterList(false)}
+        onAddNew={() => {
+          setShowLiftingRegisterList(false);
+          setShowLiftingRegister(true);
+        }}
+      />
+    );
+  }
+
   // Show lifting register form
   if (showLiftingRegister) {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
-    return <LiftingRegisterForm onBack={() => setShowLiftingRegister(false)} clientId={clientId} siteName={site.name} />;
+    return <LiftingRegisterForm onBack={() => { setShowLiftingRegister(false); setShowLiftingRegisterList(true); }} clientId={clientId} siteName={site.name} />;
   }
 
   // Show DB-driven inspection form
