@@ -79,14 +79,14 @@ type FormData = {
 
 const HIGH_RISK_FIELDS = ['equipment_type', 'wll_value', 'asset_tag', 'serial_number'];
 
-export default function LiftingRegisterForm({ onBack }: LiftingRegisterFormProps) {
+export default function LiftingRegisterForm({ onBack, clientId, siteName }: LiftingRegisterFormProps) {
   const { state } = useApp();
   const [form, setForm] = useState<FormData>({
     equipment_type: '', manufacturer: '', model: '', serial_number: '',
     asset_tag: '', wll_value: '', wll_unit: 'kg', length_m: '', grade: '',
     tag_present: 'unknown', equipment_status: 'In Service',
     sling_configuration: '', sling_leg_count: '', lift_height_m: '',
-    span_m: '', notes: '', site_name: '',
+    span_m: '', notes: '', site_name: siteName || '',
   });
 
   // Photo state
