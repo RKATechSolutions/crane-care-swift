@@ -13,6 +13,8 @@ interface InspectionResponse {
   comment: string | null;
   defect_flag: boolean;
   photo_urls: string[];
+  standard_ref?: string | null;
+  urgency?: string | null;
 }
 
 interface InspectionPdfData {
@@ -143,6 +145,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       const status = q.pass_fail_status || q.answer_value || '—';
       return [
         q.question_text,
+        q.standard_ref || '—',
         status,
         q.severity || '—',
         q.comment || '',
@@ -151,16 +154,17 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
     autoTable(doc, {
       startY: sy,
-      head: [['Item', 'Result', 'Severity', 'Comment']],
+      head: [['Item', 'Std Ref', 'Result', 'Severity', 'Comment']],
       body: tableData,
       margin: { left: 15, right: 15, bottom: bottomMargin },
       headStyles: { fillColor: DARK, textColor: WHITE, fontSize: 8, fontStyle: 'bold' },
       bodyStyles: { fontSize: 7.5, textColor: DARK },
       columnStyles: {
-        0: { cellWidth: 70 },
-        1: { cellWidth: 25, halign: 'center' },
-        2: { cellWidth: 25, halign: 'center' },
-        3: { cellWidth: 'auto' },
+        0: { cellWidth: 55 },
+        1: { cellWidth: 20, halign: 'center', fontSize: 6.5 },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 20, halign: 'center' },
+        4: { cellWidth: 'auto' },
       },
       alternateRowStyles: { fillColor: LIGHT_GRAY },
       didParseCell: (hookData) => {
@@ -183,8 +187,11 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   // Add footer to last section page
   addFooter();
 
-  // Defect register (if any defects)
-  const allDefects = sections.flatMap(s => s.questions.filter(q => q.defect_flag));
+  // Defect register (if any defects) — sorted by urgency priority
+  const urgencyOrder: Record<string, number> = { 'Immediate': 0, 'Urgent': 1, 'Scheduled': 2, 'Monitor': 3 };
+  const allDefects = sections.flatMap(s => s.questions.filter(q => q.defect_flag))
+    .sort((a, b) => (urgencyOrder[a.urgency || ''] ?? 99) - (urgencyOrder[b.urgency || ''] ?? 99));
+
   if (allDefects.length > 0) {
     // Check if room on current page
     if (sy > pageH - bottomMargin - 25) {
@@ -196,24 +203,33 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...DARK);
-    doc.text('Defect Register', 15, sy);
+    doc.text('Defect Register — Priority Order', 15, sy);
     sy += 3;
 
     const defectData = allDefects.map((d, i) => [
       String(i + 1),
       d.question_text,
+      d.urgency || '—',
       d.severity || '—',
+      d.standard_ref || '—',
       d.comment || '',
     ]);
 
     autoTable(doc, {
       startY: sy,
-      head: [['#', 'Item', 'Severity', 'Comment']],
+      head: [['#', 'Item', 'Urgency', 'Severity', 'Std Ref', 'Recommended Action']],
       body: defectData,
       margin: { left: 15, right: 15, bottom: bottomMargin },
       headStyles: { fillColor: RKA_RED, textColor: WHITE, fontSize: 8, fontStyle: 'bold' },
       bodyStyles: { fontSize: 7.5, textColor: DARK },
-      columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 70 } },
+      columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 50 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 18, halign: 'center' }, 4: { cellWidth: 18, halign: 'center', fontSize: 6.5 } },
+      didParseCell: (hookData) => {
+        if (hookData.section === 'body' && hookData.column.index === 2) {
+          const val = String(hookData.cell.raw);
+          if (val === 'Immediate') hookData.cell.styles.textColor = RKA_RED;
+          else if (val === 'Urgent') hookData.cell.styles.textColor = RKA_ORANGE;
+        }
+      },
       didDrawPage: () => {
         addHeader();
         addFooter();
