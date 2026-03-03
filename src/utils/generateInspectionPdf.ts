@@ -2,7 +2,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
-import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 interface InspectionResponse {
   question_text: string;
