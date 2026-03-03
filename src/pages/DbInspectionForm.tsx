@@ -9,6 +9,7 @@ import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2, Sparkles } from 
 import { toast } from 'sonner';
 import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
+import ReactMarkdown from 'react-markdown';
 import type jsPDF from 'jspdf';
 
 interface DbInspectionFormProps {
