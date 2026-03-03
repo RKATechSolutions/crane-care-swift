@@ -47,24 +47,23 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const footerH = 12; // smaller footer
 
   // Load brand images
   let logoImg: HTMLImageElement | undefined;
-  let footerImg: HTMLImageElement | undefined;
   try { logoImg = await loadImage(rkaLogoUrl); } catch { /* skip */ }
-  try { footerImg = await loadImage(rkaFooterUrl); } catch { /* skip */ }
 
   const addHeader = () => {
     if (logoImg) {
       const logoH = 16;
       const logoW = logoH * (logoImg.width / logoImg.height);
-      // Center the logo
       doc.addImage(logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
     }
   };
-  const addFooter = () => {
-    if (footerImg) doc.addImage(footerImg, 'PNG', 0, pageH - footerH, pageW, footerH);
+  const addPageNumber = () => {
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Page ${doc.getNumberOfPages()}`, pageW / 2, pageH - 6, { align: 'center' });
   };
 
   // Cover page
