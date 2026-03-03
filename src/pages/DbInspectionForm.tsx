@@ -131,7 +131,7 @@ export default function DbInspectionForm({
         };
       });
 
-      // If existing inspection, load saved responses
+      // If existing inspection, load saved responses and AI summary
       if (existingInspectionId) {
         const { data: savedResponses } = await supabase
           .from('inspection_responses')
@@ -155,6 +155,14 @@ export default function DbInspectionForm({
             };
           });
         }
+
+        // Load existing AI summary
+        const { data: inspData } = await supabase
+          .from('db_inspections')
+          .select('ai_summary')
+          .eq('id', existingInspectionId)
+          .single();
+        if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
       }
 
       setResponses(initResponses);
