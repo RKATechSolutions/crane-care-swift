@@ -24,6 +24,7 @@ interface InspectionPdfData {
   inspectionDate: string;
   craneStatus?: string;
   sections: { name: string; questions: InspectionResponse[] }[];
+  aiSummary?: string;
 }
 
 const RKA_GREEN: [number, number, number] = [96, 179, 76];
@@ -43,7 +44,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function generateInspectionPdf(data: InspectionPdfData): Promise<jsPDF> {
-  const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections } = data;
+  const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections, aiSummary } = data;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -105,10 +106,75 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const defectCount = sections.reduce((sum, s) => sum + s.questions.filter(q => q.defect_flag).length, 0);
   const passCount = sections.reduce((sum, s) => sum + s.questions.filter(q => q.pass_fail_status === 'Pass').length, 0);
 
+  const failCount = sections.reduce((sum, s) => sum + s.questions.filter(q => q.pass_fail_status === 'Fail' || q.pass_fail_status === 'No').length, 0);
+  const naCount = totalQuestions - passCount - failCount - defectCount;
+  const passPercent = totalQuestions > 0 ? Math.round((passCount / totalQuestions) * 100) : 0;
+  const defectPercent = totalQuestions > 0 ? Math.round((defectCount / totalQuestions) * 100) : 0;
+  const failPercent = totalQuestions > 0 ? Math.round((failCount / totalQuestions) * 100) : 0;
+  const naPercent = totalQuestions > 0 ? 100 - passPercent - defectPercent - failPercent : 0;
+
   doc.setTextColor(...DARK);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`Total Items: ${totalQuestions}  |  Passed: ${passCount}  |  Defects: ${defectCount}`, pageW / 2, y, { align: 'center' });
+  y += 10;
+
+  // Risk percentage breakdown bar
+  const barX = 30;
+  const barW = pageW - 60;
+  const barH = 8;
+  const passW = (passPercent / 100) * barW;
+  const defectW = (defectPercent / 100) * barW;
+  const failW = (failPercent / 100) * barW;
+  const naW = barW - passW - defectW - failW;
+
+  if (passW > 0) { doc.setFillColor(...RKA_GREEN); doc.rect(barX, y, passW, barH, 'F'); }
+  if (defectW > 0) { doc.setFillColor(...RKA_ORANGE); doc.rect(barX + passW, y, defectW, barH, 'F'); }
+  if (failW > 0) { doc.setFillColor(...RKA_RED); doc.rect(barX + passW + defectW, y, failW, barH, 'F'); }
+  if (naW > 0) { doc.setFillColor(200, 200, 200); doc.rect(barX + passW + defectW + failW, y, naW, barH, 'F'); }
+
+  y += barH + 5;
+
+  // Legend
+  doc.setFontSize(7.5);
+  const legendItems: { label: string; color: [number, number, number]; pct: number }[] = [
+    { label: 'Pass', color: RKA_GREEN, pct: passPercent },
+    { label: 'Defect', color: RKA_ORANGE, pct: defectPercent },
+    { label: 'Fail', color: RKA_RED, pct: failPercent },
+    { label: 'N/A', color: [200, 200, 200], pct: naPercent },
+  ];
+  let lx = barX;
+  for (const item of legendItems) {
+    doc.setFillColor(...item.color);
+    doc.rect(lx, y, 3, 3, 'F');
+    doc.setTextColor(...DARK);
+    doc.text(`${item.label} ${item.pct}%`, lx + 5, y + 3);
+    lx += 35;
+  }
+  y += 10;
+
+  // AI Executive Summary (optional)
+  if (aiSummary) {
+    y += 4;
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...DARK);
+    doc.text('AI Executive Summary', pageW / 2, y, { align: 'center' });
+    y += 6;
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    const summaryLines = doc.splitTextToSize(aiSummary.replace(/[#*_`]/g, ''), pageW - 40);
+    for (const line of summaryLines) {
+      if (y > pageH - 20) {
+        doc.addPage();
+        addHeader();
+        y = 28;
+      }
+      doc.text(line, 20, y);
+      y += 4;
+    }
+  }
 
   // All sections continuously on subsequent pages
   doc.addPage();
