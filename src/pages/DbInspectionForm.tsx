@@ -293,6 +293,7 @@ export default function DbInspectionForm({
         technicianName: state.currentUser?.name || 'Technician',
         inspectionDate: new Date().toISOString(),
         sections: pdfSections,
+        aiSummary: aiSummary || undefined,
       });
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
