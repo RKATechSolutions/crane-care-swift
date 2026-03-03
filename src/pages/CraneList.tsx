@@ -408,6 +408,15 @@ export default function CraneList() {
           </button>
         )}
 
+        {/* Initial Site Inspection V2 - Fast Tap */}
+        <button
+          onClick={() => setShowSiteInspectionV2(true)}
+          className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-border"
+        >
+          <ClipboardCheck className="w-4 h-4" />
+          Initial Site Inspection V2
+        </button>
+
         <button
           onClick={() => setShowLiftingRegisterList(true)}
           className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
