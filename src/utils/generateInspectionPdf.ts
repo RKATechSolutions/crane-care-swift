@@ -46,6 +46,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
+  const footerH = 12; // smaller footer
 
   // Load brand images
   let logoImg: HTMLImageElement | undefined;
@@ -55,18 +56,19 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   const addHeader = () => {
     if (logoImg) {
-      const logoH = 18;
+      const logoH = 16;
       const logoW = logoH * (logoImg.width / logoImg.height);
-      doc.addImage(logoImg, 'PNG', 15, 4, logoW, logoH);
+      // Center the logo
+      doc.addImage(logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
     }
   };
   const addFooter = () => {
-    if (footerImg) doc.addImage(footerImg, 'PNG', 0, pageH - 20, pageW, 20);
+    if (footerImg) doc.addImage(footerImg, 'PNG', 0, pageH - footerH, pageW, footerH);
   };
 
   // Cover page
   addHeader();
-  let y = 40;
+  let y = 30;
 
   doc.setFontSize(22);
   doc.setTextColor(...DARK);
@@ -116,17 +118,26 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   addFooter();
 
-  // Detail pages
-  for (const section of sections) {
-    doc.addPage();
-    addHeader();
-    let sy = 32;
+  // All sections continuously on subsequent pages (no page break per section)
+  doc.addPage();
+  addHeader();
+  let sy = 28;
+  const bottomMargin = footerH + 8;
 
-    doc.setFontSize(14);
+  for (const section of sections) {
+    // Check if we have room for at least the section heading + a few rows (~25mm)
+    if (sy > pageH - bottomMargin - 25) {
+      addFooter();
+      doc.addPage();
+      addHeader();
+      sy = 28;
+    }
+
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...DARK);
     doc.text(section.name, 15, sy);
-    sy += 4;
+    sy += 3;
 
     const tableData = section.questions.map(q => {
       const status = q.pass_fail_status || q.answer_value || '—';
@@ -142,7 +153,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       startY: sy,
       head: [['Item', 'Result', 'Severity', 'Comment']],
       body: tableData,
-      margin: { left: 15, right: 15, bottom: 25 },
+      margin: { left: 15, right: 15, bottom: bottomMargin },
       headStyles: { fillColor: DARK, textColor: WHITE, fontSize: 8, fontStyle: 'bold' },
       bodyStyles: { fontSize: 7.5, textColor: DARK },
       columnStyles: {
@@ -159,23 +170,34 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
           else if (val === 'Fail' || val === 'No') hookData.cell.styles.textColor = RKA_RED;
         }
       },
+      didDrawPage: () => {
+        addHeader();
+        addFooter();
+      },
     });
 
-    addFooter();
+    // Get the Y position after the table for the next section
+    sy = (doc as any).lastAutoTable?.finalY + 8 || 28;
   }
 
-  // Defect register page (if any defects)
+  // Add footer to last section page
+  addFooter();
+
+  // Defect register (if any defects)
   const allDefects = sections.flatMap(s => s.questions.filter(q => q.defect_flag));
   if (allDefects.length > 0) {
-    doc.addPage();
-    addHeader();
-    let dy = 32;
+    // Check if room on current page
+    if (sy > pageH - bottomMargin - 25) {
+      doc.addPage();
+      addHeader();
+      sy = 28;
+    }
 
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...DARK);
-    doc.text('Defect Register', 15, dy);
-    dy += 4;
+    doc.text('Defect Register', 15, sy);
+    sy += 3;
 
     const defectData = allDefects.map((d, i) => [
       String(i + 1),
@@ -185,13 +207,17 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     ]);
 
     autoTable(doc, {
-      startY: dy,
+      startY: sy,
       head: [['#', 'Item', 'Severity', 'Comment']],
       body: defectData,
-      margin: { left: 15, right: 15, bottom: 25 },
+      margin: { left: 15, right: 15, bottom: bottomMargin },
       headStyles: { fillColor: RKA_RED, textColor: WHITE, fontSize: 8, fontStyle: 'bold' },
       bodyStyles: { fontSize: 7.5, textColor: DARK },
       columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 70 } },
+      didDrawPage: () => {
+        addHeader();
+        addFooter();
+      },
     });
 
     addFooter();
