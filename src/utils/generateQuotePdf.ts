@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import rkaHeaderUrl from '@/assets/rka-pdf-header.png';
+import rkaLogoUrl from '@/assets/rka-main-logo.png';
 import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 import type { QuoteLineItem } from '@/pages/QuoteBuilder';
 

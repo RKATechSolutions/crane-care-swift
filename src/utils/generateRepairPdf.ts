@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { RepairFormData } from '@/pages/RepairBreakdownForm';
-import rkaHeaderUrl from '@/assets/rka-pdf-header.png';
+import rkaLogoUrl from '@/assets/rka-main-logo.png';
 import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 const RKA_GREEN: [number, number, number] = [96, 179, 76];

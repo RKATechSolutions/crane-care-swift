@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import {
   Inspection, InspectionTemplate, Site, SiteJobSummary, Crane,
 } from '@/types/inspection';
-import rkaHeaderUrl from '@/assets/rka-pdf-header.png';
+import rkaLogoUrl from '@/assets/rka-main-logo.png';
 import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 interface JobPdfData {
