@@ -281,6 +281,33 @@ export default function DbInspectionForm({
     }
   };
 
+  // Generate AI Executive Summary
+  const generateAISummary = async () => {
+    setGeneratingAI(true);
+    // Save first to ensure we have an inspection ID and responses saved
+    await saveInspection('Draft');
+    const currentId = inspectionId;
+    if (!currentId) {
+      toast.error('Please save the inspection first');
+      setGeneratingAI(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-inspection-summary', {
+        body: { inspectionId: currentId },
+      });
+      if (error) throw error;
+      if (data?.summary) {
+        setAiSummary(data.summary);
+        toast.success('AI summary generated');
+      }
+    } catch (err: any) {
+      console.error('AI summary error:', err);
+      toast.error('Failed to generate AI summary');
+    }
+    setGeneratingAI(false);
+  };
+
   // Save to database
   const saveInspection = async (status: string = 'Draft') => {
     setSaving(true);
