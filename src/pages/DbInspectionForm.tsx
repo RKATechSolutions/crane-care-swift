@@ -281,6 +281,8 @@ export default function DbInspectionForm({
           comment: responses[q.question_id]?.comment || null,
           defect_flag: responses[q.question_id]?.defect_flag || false,
           photo_urls: responses[q.question_id]?.photo_urls || [],
+          standard_ref: q.standard_ref || null,
+          urgency: responses[q.question_id]?.urgency || null,
         })),
       }));
 
