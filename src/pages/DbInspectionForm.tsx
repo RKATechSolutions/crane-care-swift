@@ -5,10 +5,11 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { StandardQuestionBlock, QuestionConfig, ResponseData } from '@/components/StandardQuestionBlock';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2 } from 'lucide-react';
+import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
+import ReactMarkdown from 'react-markdown';
 import type jsPDF from 'jspdf';
 
 interface DbInspectionFormProps {
@@ -43,6 +44,8 @@ export default function DbInspectionForm({
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   // Load questions for this form
   useEffect(() => {
@@ -128,7 +131,7 @@ export default function DbInspectionForm({
         };
       });
 
-      // If existing inspection, load saved responses
+      // If existing inspection, load saved responses and AI summary
       if (existingInspectionId) {
         const { data: savedResponses } = await supabase
           .from('inspection_responses')
@@ -152,6 +155,14 @@ export default function DbInspectionForm({
             };
           });
         }
+
+        // Load existing AI summary
+        const { data: inspData } = await supabase
+          .from('db_inspections')
+          .select('ai_summary')
+          .eq('id', existingInspectionId)
+          .single();
+        if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
       }
 
       setResponses(initResponses);
@@ -268,6 +279,33 @@ export default function DbInspectionForm({
     } finally {
       setGeneratingPreview(false);
     }
+  };
+
+  // Generate AI Executive Summary
+  const generateAISummary = async () => {
+    setGeneratingAI(true);
+    // Save first to ensure we have an inspection ID and responses saved
+    await saveInspection('Draft');
+    const currentId = inspectionId;
+    if (!currentId) {
+      toast.error('Please save the inspection first');
+      setGeneratingAI(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-inspection-summary', {
+        body: { inspectionId: currentId },
+      });
+      if (error) throw error;
+      if (data?.summary) {
+        setAiSummary(data.summary);
+        toast.success('AI summary generated');
+      }
+    } catch (err: any) {
+      console.error('AI summary error:', err);
+      toast.error('Failed to generate AI summary');
+    }
+    setGeneratingAI(false);
   };
 
   // Save to database
@@ -462,6 +500,23 @@ export default function DbInspectionForm({
             <Check className="w-5 h-5 text-rka-green" />
             Next — {sections[currentSectionIdx + 1].name}
           </button>
+        )}
+      </div>
+
+      {/* AI Executive Summary */}
+      <div className="px-4 py-3 border-t border-border bg-background space-y-3">
+        <button
+          onClick={generateAISummary}
+          disabled={generatingAI || totalAnswered === 0}
+          className="w-full tap-target bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+        >
+          {generatingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          {generatingAI ? 'Generating AI Summary…' : aiSummary ? 'Regenerate AI Summary' : 'Generate AI Executive Summary'}
+        </button>
+        {aiSummary && (
+          <div className="bg-muted rounded-xl p-4 text-sm prose prose-sm max-w-none dark:prose-invert">
+            <ReactMarkdown>{aiSummary}</ReactMarkdown>
+          </div>
         )}
       </div>
 
