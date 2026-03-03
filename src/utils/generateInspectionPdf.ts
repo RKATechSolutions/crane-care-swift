@@ -2,7 +2,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
-import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 interface InspectionResponse {
   question_text: string;
@@ -48,24 +47,17 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const footerH = 12; // smaller footer
 
   // Load brand images
   let logoImg: HTMLImageElement | undefined;
-  let footerImg: HTMLImageElement | undefined;
   try { logoImg = await loadImage(rkaLogoUrl); } catch { /* skip */ }
-  try { footerImg = await loadImage(rkaFooterUrl); } catch { /* skip */ }
 
   const addHeader = () => {
     if (logoImg) {
       const logoH = 16;
       const logoW = logoH * (logoImg.width / logoImg.height);
-      // Center the logo
       doc.addImage(logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
     }
-  };
-  const addFooter = () => {
-    if (footerImg) doc.addImage(footerImg, 'PNG', 0, pageH - footerH, pageW, footerH);
   };
 
   // Cover page
@@ -118,18 +110,14 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   doc.setFont('helvetica', 'normal');
   doc.text(`Total Items: ${totalQuestions}  |  Passed: ${passCount}  |  Defects: ${defectCount}`, pageW / 2, y, { align: 'center' });
 
-  addFooter();
-
-  // All sections continuously on subsequent pages (no page break per section)
+  // All sections continuously on subsequent pages
   doc.addPage();
   addHeader();
   let sy = 28;
-  const bottomMargin = footerH + 8;
+  const bottomMargin = 14;
 
   for (const section of sections) {
-    // Check if we have room for at least the section heading + a few rows (~25mm)
     if (sy > pageH - bottomMargin - 25) {
-      addFooter();
       doc.addPage();
       addHeader();
       sy = 28;
@@ -168,7 +156,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       },
       alternateRowStyles: { fillColor: LIGHT_GRAY },
       didParseCell: (hookData) => {
-        if (hookData.section === 'body' && hookData.column.index === 1) {
+        if (hookData.section === 'body' && hookData.column.index === 2) {
           const val = String(hookData.cell.raw);
           if (val === 'Pass' || val === 'Yes') hookData.cell.styles.textColor = RKA_GREEN;
           else if (val === 'Fail' || val === 'No') hookData.cell.styles.textColor = RKA_RED;
@@ -176,24 +164,18 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       },
       didDrawPage: () => {
         addHeader();
-        addFooter();
       },
     });
 
-    // Get the Y position after the table for the next section
     sy = (doc as any).lastAutoTable?.finalY + 8 || 28;
   }
 
-  // Add footer to last section page
-  addFooter();
-
-  // Defect register (if any defects) — sorted by urgency priority
+  // Defect register — sorted by urgency priority
   const urgencyOrder: Record<string, number> = { 'Immediate': 0, 'Urgent': 1, 'Scheduled': 2, 'Monitor': 3 };
   const allDefects = sections.flatMap(s => s.questions.filter(q => q.defect_flag))
     .sort((a, b) => (urgencyOrder[a.urgency || ''] ?? 99) - (urgencyOrder[b.urgency || ''] ?? 99));
 
   if (allDefects.length > 0) {
-    // Check if room on current page
     if (sy > pageH - bottomMargin - 25) {
       doc.addPage();
       addHeader();
@@ -232,11 +214,18 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       },
       didDrawPage: () => {
         addHeader();
-        addFooter();
       },
     });
+  }
 
-    addFooter();
+  // Add page numbers to all pages
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Page ${i} of ${totalPages}`, pageW / 2, pageH - 6, { align: 'center' });
   }
 
   return doc;

@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
-import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 import type { QuoteLineItem } from '@/pages/QuoteBuilder';
 
 const RKA_GREEN: [number, number, number] = [96, 179, 76];
@@ -46,22 +45,18 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
 
   // Load images
   let logoImg: HTMLImageElement | null = null;
-  let footerImg: HTMLImageElement | null = null;
   try {
-    [logoImg, footerImg] = await Promise.all([
-      loadImage(rkaLogoUrl),
-      loadImage(rkaFooterUrl),
-    ]);
+    logoImg = await loadImage(rkaLogoUrl);
   } catch {
-    console.warn('Could not load PDF images');
+    console.warn('Could not load PDF logo');
   }
 
-  // Logo
+  // Logo — centered
   if (logoImg) {
-    const logoH = 18;
+    const logoH = 16;
     const logoW = logoH * (logoImg.width / logoImg.height);
-    doc.addImage(logoImg, 'PNG', 15, 4, logoW, logoH);
-    y = 26;
+    doc.addImage(logoImg, 'PNG', (pageWidth - logoW) / 2, 4, logoW, logoH);
+    y = 24;
   }
 
   // Title
@@ -300,14 +295,11 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
   doc.text('Signature:', margin, y);
   doc.line(margin + 24, y, margin + 80, y);
 
-  // Footer image
-  if (footerImg) {
-    const ratio = footerImg.width / footerImg.height;
-    const imgWidth = pageWidth;
-    const imgHeight = imgWidth / ratio;
-    const footerY = doc.internal.pageSize.getHeight() - imgHeight;
-    doc.addImage(footerImg, 'PNG', 0, footerY, imgWidth, imgHeight);
-  }
+  // Page number
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(150, 150, 150);
+  doc.text('Page 1 of 1', pageWidth / 2, doc.internal.pageSize.getHeight() - 6, { align: 'center' });
 
   return doc;
 }
