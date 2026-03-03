@@ -41,6 +41,7 @@ export default function CraneList() {
   const [showAddAsset, setShowAddAsset] = useState(false);
   const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
   const [showAssessment, setShowAssessment] = useState<null | { type: 'Initial Site Baseline' | '12-Month Review'; existingId?: string }>(null);
+  const [showSiteInspectionV2, setShowSiteInspectionV2] = useState(false);
   const [initialAssessment, setInitialAssessment] = useState<{ id: string; status: string } | null>(null);
   const [templatePickerCrane, setTemplatePickerCrane] = useState<Crane | null>(null);
   const [dbFormTemplates, setDbFormTemplates] = useState<{ form_id: string; form_name: string; description: string | null }[]>([]);
@@ -324,6 +325,20 @@ export default function CraneList() {
     );
   }
 
+  // Show Site Inspection V2 form
+  if (showSiteInspectionV2) {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+    return (
+      <DbInspectionForm
+        formId="FORM-ISI-V2"
+        assetName={site.name}
+        clientId={clientId}
+        siteName={site.name}
+        onBack={() => setShowSiteInspectionV2(false)}
+      />
+    );
+  }
+
   // Show assessment form if selected
   if (showAssessment) {
     const refreshAssessment = async () => {
@@ -392,6 +407,15 @@ export default function CraneList() {
             Annual Site Review
           </button>
         )}
+
+        {/* Initial Site Inspection V2 - Fast Tap */}
+        <button
+          onClick={() => setShowSiteInspectionV2(true)}
+          className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-border"
+        >
+          <ClipboardCheck className="w-4 h-4" />
+          Initial Site Inspection V2
+        </button>
 
         <button
           onClick={() => setShowLiftingRegisterList(true)}
@@ -549,8 +573,7 @@ export default function CraneList() {
             />
           </div>
         </div>
-      )}
-
+        )}
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
 
