@@ -210,6 +210,26 @@ export default function DbInspectionForm({
     }
   }, [sections.length, currentSectionIdx]);
 
+  // Autosave: debounce saving responses after each change
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (loading) return;
+    // Skip the initial load
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      return;
+    }
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      saveInspection('Draft');
+    }, 2000);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [responses]);
+
   // Stats – only count visible questions
   const visibleQuestionIds = useMemo(() => new Set(sections.flatMap(s => s.questions.map(q => q.question_id))), [sections]);
   const totalAnswered = Object.values(responses).filter(r => visibleQuestionIds.has(r.question_id) && (r.answer_value || r.pass_fail_status)).length;
