@@ -44,6 +44,8 @@ export default function DbInspectionForm({
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   // Load questions for this form
   useEffect(() => {
