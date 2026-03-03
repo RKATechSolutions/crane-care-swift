@@ -503,6 +503,23 @@ export default function DbInspectionForm({
         )}
       </div>
 
+      {/* AI Executive Summary */}
+      <div className="px-4 py-3 border-t border-border bg-background space-y-3">
+        <button
+          onClick={generateAISummary}
+          disabled={generatingAI || totalAnswered === 0}
+          className="w-full tap-target bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+        >
+          {generatingAI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+          {generatingAI ? 'Generating AI Summary…' : aiSummary ? 'Regenerate AI Summary' : 'Generate AI Executive Summary'}
+        </button>
+        {aiSummary && (
+          <div className="bg-muted rounded-xl p-4 text-sm prose prose-sm max-w-none dark:prose-invert">
+            <ReactMarkdown>{aiSummary}</ReactMarkdown>
+          </div>
+        )}
+      </div>
+
       {/* Action Buttons */}
       <div className="p-4 border-t border-border space-y-2 bg-background">
         <button
