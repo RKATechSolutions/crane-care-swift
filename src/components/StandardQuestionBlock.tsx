@@ -265,15 +265,27 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
         {/* SingleSelect */}
         {question.answer_type === 'SingleSelect' && question.options && (
           <div className="flex flex-wrap gap-2">
-            {question.options.map(opt => (
-              <button key={opt} onClick={() => handleSelectValue(opt)}
-                className={`px-3 h-10 rounded-xl font-semibold text-sm transition-all ${
-                  response.answer_value === opt
-                    ? failTriggers.includes(opt) ? 'bg-rka-red text-destructive-foreground'
-                    : 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
-                }`}>{opt}</button>
-            ))}
+            {question.options.map((opt, optIdx) => {
+              const isSelected = response.answer_value === opt;
+              // For 3-option selects, color positionally: first=green, second=amber, third=red
+              const is3Opt = question.options!.length === 3;
+              let selectedClass = '';
+              if (isSelected) {
+                if (is3Opt) {
+                  selectedClass = optIdx === 0 ? 'bg-rka-green text-primary-foreground'
+                    : optIdx === 1 ? 'bg-rka-orange text-destructive-foreground'
+                    : 'bg-rka-red text-destructive-foreground';
+                } else {
+                  selectedClass = failTriggers.includes(opt) ? 'bg-rka-red text-destructive-foreground' : 'bg-primary text-primary-foreground';
+                }
+              }
+              return (
+                <button key={opt} onClick={() => handleSelectValue(opt)}
+                  className={`px-3 h-10 rounded-xl font-semibold text-sm transition-all flex-1 min-w-0 ${
+                    isSelected ? selectedClass : 'bg-muted text-muted-foreground'
+                  }`}>{opt}</button>
+              );
+            })}
           </div>
         )}
 
