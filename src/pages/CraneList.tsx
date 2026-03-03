@@ -325,6 +325,20 @@ export default function CraneList() {
     );
   }
 
+  // Show Site Inspection V2 form
+  if (showSiteInspectionV2) {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
+    return (
+      <DbInspectionForm
+        formId="FORM-ISI-V2"
+        assetName={site.name}
+        clientId={clientId}
+        siteName={site.name}
+        onBack={() => setShowSiteInspectionV2(false)}
+      />
+    );
+  }
+
   // Show assessment form if selected
   if (showAssessment) {
     const refreshAssessment = async () => {
