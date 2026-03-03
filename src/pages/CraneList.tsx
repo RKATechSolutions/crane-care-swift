@@ -41,6 +41,7 @@ export default function CraneList() {
   const [showAddAsset, setShowAddAsset] = useState(false);
   const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
   const [showAssessment, setShowAssessment] = useState<null | { type: 'Initial Site Baseline' | '12-Month Review'; existingId?: string }>(null);
+  const [showSiteInspectionV2, setShowSiteInspectionV2] = useState(false);
   const [initialAssessment, setInitialAssessment] = useState<{ id: string; status: string } | null>(null);
   const [templatePickerCrane, setTemplatePickerCrane] = useState<Crane | null>(null);
   const [dbFormTemplates, setDbFormTemplates] = useState<{ form_id: string; form_name: string; description: string | null }[]>([]);
