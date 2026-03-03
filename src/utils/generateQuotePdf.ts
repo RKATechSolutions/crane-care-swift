@@ -45,24 +45,23 @@ export async function generateQuotePdf(data: QuotePdfData): Promise<jsPDF> {
   let y = 10;
 
   // Load images
-  let headerImg: HTMLImageElement | null = null;
+  let logoImg: HTMLImageElement | null = null;
   let footerImg: HTMLImageElement | null = null;
   try {
-    [headerImg, footerImg] = await Promise.all([
-      loadImage(rkaHeaderUrl),
+    [logoImg, footerImg] = await Promise.all([
+      loadImage(rkaLogoUrl),
       loadImage(rkaFooterUrl),
     ]);
-  } catch (e) {
+  } catch {
     console.warn('Could not load PDF images');
   }
 
-  // Header image
-  if (headerImg) {
-    const ratio = headerImg.width / headerImg.height;
-    const imgWidth = pageWidth;
-    const imgHeight = imgWidth / ratio;
-    doc.addImage(headerImg, 'PNG', 0, 0, imgWidth, imgHeight);
-    y = imgHeight + 5;
+  // Logo
+  if (logoImg) {
+    const logoH = 18;
+    const logoW = logoH * (logoImg.width / logoImg.height);
+    doc.addImage(logoImg, 'PNG', 15, 4, logoW, logoH);
+    y = 26;
   }
 
   // Title

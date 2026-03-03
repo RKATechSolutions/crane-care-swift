@@ -47,7 +47,7 @@ const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
 const BORDER_GRAY: [number, number, number] = [220, 220, 220];
 
 interface PdfImages {
-  headerImg?: HTMLImageElement;
+  logoImg?: HTMLImageElement;
   footerImg?: HTMLImageElement;
 }
 
@@ -66,18 +66,18 @@ function statusColor(status: string): [number, number, number] {
 function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages) {
   const pageW = doc.internal.pageSize.getWidth();
 
-  if (imgs.headerImg) {
-    const imgAspect = imgs.headerImg.width / imgs.headerImg.height;
-    const headerH = pageW / imgAspect;
-    doc.addImage(imgs.headerImg, 'PNG', 0, 0, pageW, headerH);
+  if (imgs.logoImg) {
+    const logoH = 18;
+    const logoW = logoH * (imgs.logoImg.width / imgs.logoImg.height);
+    doc.addImage(imgs.logoImg, 'PNG', 15, 4, logoW, logoH);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...DARK);
-    doc.text(pageTitle, pageW - 14, headerH + 8, { align: 'right' });
+    doc.text(pageTitle, pageW - 14, 16, { align: 'right' });
     doc.setDrawColor(...BORDER_GRAY);
     doc.setLineWidth(0.3);
-    doc.line(14, headerH + 11, pageW - 14, headerH + 11);
-    return headerH + 15;
+    doc.line(14, 24, pageW - 14, 24);
+    return 28;
   }
 
   // Fallback
@@ -164,7 +164,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
 
   // Load header & footer images
   const imgs: PdfImages = {};
-  try { imgs.headerImg = await loadImage(rkaHeaderUrl); } catch { /* fallback */ }
+  try { imgs.logoImg = await loadImage(rkaLogoUrl); } catch { /* fallback */ }
   try { imgs.footerImg = await loadImage(rkaFooterUrl); } catch { /* fallback */ }
   
   // ═══════════════════════════════════════════

@@ -50,18 +50,18 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
 
-  let headerImg: HTMLImageElement | undefined;
+  let logoImg: HTMLImageElement | undefined;
   let footerImg: HTMLImageElement | undefined;
-  try { headerImg = await loadImage(rkaHeaderUrl); } catch { /* fallback */ }
+  try { logoImg = await loadImage(rkaLogoUrl); } catch { /* fallback */ }
   try { footerImg = await loadImage(rkaFooterUrl); } catch { /* fallback */ }
 
   // Header
   let y = 4;
-  if (headerImg) {
-    const imgAspect = headerImg.width / headerImg.height;
-    const headerH = pageW / imgAspect;
-    doc.addImage(headerImg, 'PNG', 0, 0, pageW, headerH);
-    y = headerH + 4;
+  if (logoImg) {
+    const logoH = 18;
+    const logoW = logoH * (logoImg.width / logoImg.height);
+    doc.addImage(logoImg, 'PNG', 15, 4, logoW, logoH);
+    y = 26;
   }
 
   // Title
