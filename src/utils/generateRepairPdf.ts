@@ -3,7 +3,6 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import type { RepairFormData } from '@/pages/RepairBreakdownForm';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
-import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 const RKA_GREEN: [number, number, number] = [96, 179, 76];
 const RKA_RED: [number, number, number] = [204, 41, 41];
@@ -15,7 +14,6 @@ const BORDER_GRAY: [number, number, number] = [220, 220, 220];
 
 interface PdfImages {
   logoImg?: HTMLImageElement;
-  footerImg?: HTMLImageElement;
 }
 
 interface RepairPdfData {
@@ -37,17 +35,17 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages): number {
   const pageW = doc.internal.pageSize.getWidth();
   if (imgs.logoImg) {
-    const logoH = 18;
+    const logoH = 16;
     const logoW = logoH * (imgs.logoImg.width / imgs.logoImg.height);
-    doc.addImage(imgs.logoImg, 'PNG', 15, 4, logoW, logoH);
+    doc.addImage(imgs.logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...DARK);
     doc.text(pageTitle, pageW - 14, 16, { align: 'right' });
     doc.setDrawColor(...BORDER_GRAY);
     doc.setLineWidth(0.3);
-    doc.line(14, 24, pageW - 14, 24);
-    return 28;
+    doc.line(14, 22, pageW - 14, 22);
+    return 26;
   }
   doc.setFillColor(...DARK);
   doc.rect(0, 0, pageW, 28, 'F');
@@ -58,25 +56,14 @@ function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages): number {
   return 34;
 }
 
-function addFooter(doc: jsPDF, pageNum: number, totalPages: number, imgs: PdfImages) {
+function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  if (imgs.footerImg) {
-    const imgAspect = imgs.footerImg.width / imgs.footerImg.height;
-    const footerH = pageW / imgAspect;
-    doc.addImage(imgs.footerImg, 'PNG', 0, pageH - footerH, pageW, footerH);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(255, 255, 255);
-    doc.text(`Page ${pageNum} of ${totalPages}`, pageW / 2, pageH - footerH - 3, { align: 'center' });
-    doc.text(`Generated ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, pageH - footerH - 3);
-    return;
-  }
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(150, 150, 150);
-  doc.text(`Page ${pageNum} of ${totalPages}`, pageW / 2, pageH - 8, { align: 'center' });
-  doc.text(`Generated ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, pageH - 8);
+  doc.text(`Page ${pageNum} of ${totalPages}`, pageW / 2, pageH - 6, { align: 'center' });
+  doc.text(`Generated ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, pageH - 6);
 }
 
 function addSectionTitle(doc: jsPDF, y: number, title: string): number {
@@ -107,7 +94,7 @@ function addInfoRow(doc: jsPDF, y: number, label: string, value: string, maxWidt
 }
 
 function checkPageBreak(doc: jsPDF, y: number, needed: number, imgs: PdfImages, title: string): number {
-  if (y + needed > doc.internal.pageSize.getHeight() - 30) {
+  if (y + needed > doc.internal.pageSize.getHeight() - 14) {
     doc.addPage();
     return addHeader(doc, title, imgs);
   }
@@ -122,7 +109,6 @@ export async function generateRepairPdf(data: RepairPdfData): Promise<jsPDF> {
 
   const imgs: PdfImages = {};
   try { imgs.logoImg = await loadImage(rkaLogoUrl); } catch { /* fallback */ }
-  try { imgs.footerImg = await loadImage(rkaFooterUrl); } catch { /* fallback */ }
 
   // PAGE 1
   let y = addHeader(doc, 'Repair & Breakdown Report', imgs);
@@ -317,7 +303,7 @@ export async function generateRepairPdf(data: RepairPdfData): Promise<jsPDF> {
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    addFooter(doc, i, totalPages, imgs);
+    addFooter(doc, i, totalPages);
   }
 
   return doc;

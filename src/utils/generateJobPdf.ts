@@ -5,7 +5,6 @@ import {
   Inspection, InspectionTemplate, Site, SiteJobSummary, Crane,
 } from '@/types/inspection';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
-import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 interface JobPdfData {
   site: Site;
@@ -48,7 +47,6 @@ const BORDER_GRAY: [number, number, number] = [220, 220, 220];
 
 interface PdfImages {
   logoImg?: HTMLImageElement;
-  footerImg?: HTMLImageElement;
 }
 
 function severityColor(severity: string): [number, number, number] {
@@ -67,17 +65,17 @@ function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages) {
   const pageW = doc.internal.pageSize.getWidth();
 
   if (imgs.logoImg) {
-    const logoH = 18;
+    const logoH = 16;
     const logoW = logoH * (imgs.logoImg.width / imgs.logoImg.height);
-    doc.addImage(imgs.logoImg, 'PNG', 15, 4, logoW, logoH);
+    doc.addImage(imgs.logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.setTextColor(...DARK);
     doc.text(pageTitle, pageW - 14, 16, { align: 'right' });
     doc.setDrawColor(...BORDER_GRAY);
     doc.setLineWidth(0.3);
-    doc.line(14, 24, pageW - 14, 24);
-    return 28;
+    doc.line(14, 22, pageW - 14, 22);
+    return 26;
   }
 
   // Fallback
@@ -93,28 +91,14 @@ function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages) {
   return 34;
 }
 
-function addFooter(doc: jsPDF, pageNum: number, totalPages: number, imgs: PdfImages) {
+function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-
-  if (imgs.footerImg) {
-    const imgAspect = imgs.footerImg.width / imgs.footerImg.height;
-    const footerH = pageW / imgAspect;
-    doc.addImage(imgs.footerImg, 'PNG', 0, pageH - footerH, pageW, footerH);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(255, 255, 255);
-    doc.text(`Page ${pageNum} of ${totalPages}`, pageW / 2, pageH - footerH - 3, { align: 'center' });
-    doc.text(`Generated ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, pageH - footerH - 3);
-    return;
-  }
-
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(150, 150, 150);
-  doc.text(`Page ${pageNum} of ${totalPages}`, pageW / 2, pageH - 8, { align: 'center' });
-  doc.text(`Generated ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, pageH - 8);
-  doc.text('service@reports.rkaindustrialsolutions.com.au', pageW - 14, pageH - 8, { align: 'right' });
+  doc.text(`Page ${pageNum} of ${totalPages}`, pageW / 2, pageH - 6, { align: 'center' });
+  doc.text(`Generated ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, pageH - 6);
 }
 
 function addSectionTitle(doc: jsPDF, y: number, title: string): number {
@@ -165,7 +149,6 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   // Load header & footer images
   const imgs: PdfImages = {};
   try { imgs.logoImg = await loadImage(rkaLogoUrl); } catch { /* fallback */ }
-  try { imgs.footerImg = await loadImage(rkaFooterUrl); } catch { /* fallback */ }
   
   // ═══════════════════════════════════════════
   // PAGE 1: CLIENT INFO & SERVICE DETAILS
@@ -719,11 +702,11 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
     }
   });
   
-  // Add page numbers and footers to all pages
+  // Add page numbers to all pages
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    addFooter(doc, i, totalPages, imgs);
+    addFooter(doc, i, totalPages);
   }
   
   return doc;

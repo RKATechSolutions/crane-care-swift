@@ -2,7 +2,6 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
-import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 const RKA_GREEN: [number, number, number] = [96, 179, 76];
 const RKA_RED: [number, number, number] = [204, 41, 41];
@@ -51,17 +50,15 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
   const pageH = doc.internal.pageSize.getHeight();
 
   let logoImg: HTMLImageElement | undefined;
-  let footerImg: HTMLImageElement | undefined;
   try { logoImg = await loadImage(rkaLogoUrl); } catch { /* fallback */ }
-  try { footerImg = await loadImage(rkaFooterUrl); } catch { /* fallback */ }
 
   // Header
   let y = 4;
   if (logoImg) {
-    const logoH = 18;
+    const logoH = 16;
     const logoW = logoH * (logoImg.width / logoImg.height);
-    doc.addImage(logoImg, 'PNG', 15, 4, logoW, logoH);
-    y = 26;
+    doc.addImage(logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
+    y = 24;
   }
 
   // Title
@@ -145,24 +142,14 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
     },
   });
 
-  // Footer on all pages
+  // Page numbers on all pages
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    if (footerImg) {
-      const imgAspect = footerImg.width / footerImg.height;
-      const footerH = pageW / imgAspect;
-      doc.addImage(footerImg, 'PNG', 0, pageH - footerH, pageW, footerH);
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(255, 255, 255);
-      doc.text(`Page ${i} of ${totalPages}`, pageW / 2, pageH - footerH - 3, { align: 'center' });
-    } else {
-      doc.setFontSize(7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Page ${i} of ${totalPages}`, pageW / 2, pageH - 8, { align: 'center' });
-    }
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Page ${i} of ${totalPages}`, pageW / 2, pageH - 6, { align: 'center' });
   }
 
   return doc;
