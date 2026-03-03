@@ -472,6 +472,58 @@ export default function DbInspectionForm({
         </div>
       )}
 
+      {/* Risk Summary — show on Technician Summary section */}
+      {currentSection?.name === 'Technician Summary' && (() => {
+        // Calculate risk percentages from all 3-option SingleSelect questions (excluding Technician Summary)
+        const ratingQuestions = sections
+          .filter(s => s.name !== 'Technician Summary')
+          .flatMap(s => s.questions)
+          .filter(q => q.answer_type === 'SingleSelect' && q.options && q.options.length === 3);
+
+        const answered = ratingQuestions.filter(q => responses[q.question_id]?.answer_value);
+        let greenCount = 0, amberCount = 0, redCount = 0;
+        answered.forEach(q => {
+          const val = responses[q.question_id]?.answer_value;
+          const opts = q.options!;
+          if (val === opts[0]) greenCount++;
+          else if (val === opts[1]) amberCount++;
+          else if (val === opts[2]) redCount++;
+        });
+        const total = answered.length || 1;
+        const greenPct = Math.round((greenCount / total) * 100);
+        const amberPct = Math.round((amberCount / total) * 100);
+        const redPct = Math.round((redCount / total) * 100);
+
+        return (
+          <div className="px-4 py-4 border-b border-border space-y-3">
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Overall Site Risk</h3>
+            <div className="flex gap-2">
+              {/* Green */}
+              <div className="flex-1 bg-rka-green/10 border border-rka-green/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-rka-green">{greenPct}%</p>
+                <p className="text-xs font-semibold text-rka-green mt-0.5">Good</p>
+                <p className="text-xs text-muted-foreground">{greenCount} items</p>
+              </div>
+              {/* Amber */}
+              <div className="flex-1 bg-rka-orange/10 border border-rka-orange/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-rka-orange">{amberPct}%</p>
+                <p className="text-xs font-semibold text-rka-orange mt-0.5">Monitor</p>
+                <p className="text-xs text-muted-foreground">{amberCount} items</p>
+              </div>
+              {/* Red */}
+              <div className="flex-1 bg-rka-red/10 border border-rka-red/30 rounded-xl p-3 text-center">
+                <p className="text-2xl font-black text-rka-red">{redPct}%</p>
+                <p className="text-xs font-semibold text-rka-red mt-0.5">Attention</p>
+                <p className="text-xs text-muted-foreground">{redCount} items</p>
+              </div>
+            </div>
+            {answered.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center">Complete the inspection sections to see risk breakdown</p>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Questions */}
       <div className="flex-1">
         {currentSection?.questions.map((q, idx) => {
