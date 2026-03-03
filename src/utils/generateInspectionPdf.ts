@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import rkaHeaderUrl from '@/assets/rka-pdf-header.png';
+import rkaLogoUrl from '@/assets/rka-main-logo.png';
 import rkaFooterUrl from '@/assets/rka-pdf-footer.png';
 
 interface InspectionResponse {
@@ -48,13 +48,17 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const pageH = doc.internal.pageSize.getHeight();
 
   // Load brand images
-  let headerImg: HTMLImageElement | undefined;
+  let logoImg: HTMLImageElement | undefined;
   let footerImg: HTMLImageElement | undefined;
-  try { headerImg = await loadImage(rkaHeaderUrl); } catch { /* skip */ }
+  try { logoImg = await loadImage(rkaLogoUrl); } catch { /* skip */ }
   try { footerImg = await loadImage(rkaFooterUrl); } catch { /* skip */ }
 
   const addHeader = () => {
-    if (headerImg) doc.addImage(headerImg, 'PNG', 0, 0, pageW, 25);
+    if (logoImg) {
+      const logoH = 18;
+      const logoW = logoH * (logoImg.width / logoImg.height);
+      doc.addImage(logoImg, 'PNG', 15, 4, logoW, logoH);
+    }
   };
   const addFooter = () => {
     if (footerImg) doc.addImage(footerImg, 'PNG', 0, pageH - 20, pageW, 20);

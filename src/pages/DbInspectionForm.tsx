@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -209,6 +209,26 @@ export default function DbInspectionForm({
       setCurrentSectionIdx(sections.length - 1);
     }
   }, [sections.length, currentSectionIdx]);
+
+  // Autosave: debounce saving responses after each change
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (loading) return;
+    // Skip the initial load
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
+      return;
+    }
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      saveInspection('Draft');
+    }, 2000);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  }, [responses]);
 
   // Stats – only count visible questions
   const visibleQuestionIds = useMemo(() => new Set(sections.flatMap(s => s.questions.map(q => q.question_id))), [sections]);
