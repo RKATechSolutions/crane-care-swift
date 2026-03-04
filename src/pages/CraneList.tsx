@@ -498,21 +498,25 @@ export default function CraneList() {
       {/* Tab: Assets */}
       {activeTab === 'assets' && (
         <>
-          {/* 4 Square Tiles */}
+          {/* Quick Action Tiles */}
           <div className="px-4 pt-3 pb-2 grid grid-cols-4 gap-2">
             <button
               onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
-              className="aspect-square rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1.5 p-2 text-center shadow-md active:scale-95 transition-transform"
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2.5 text-center active:scale-[0.97] transition-all"
             >
-              <BarChart3 className="w-6 h-6" />
-              <span className="text-[10px] font-bold leading-tight">Initial Site Inspection</span>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-600">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <span className="text-[9px] font-bold leading-tight text-foreground mt-0.5">Site Inspection</span>
             </button>
             <button
               onClick={() => setShowLiftingRegisterList(true)}
-              className="aspect-square rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1.5 p-2 text-center shadow-md active:scale-95 transition-transform"
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2.5 text-center active:scale-[0.97] transition-all"
             >
-              <ClipboardList className="w-6 h-6" />
-              <span className="text-[10px] font-bold leading-tight">Lifting Register</span>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/10 text-emerald-600">
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              <span className="text-[9px] font-bold leading-tight text-foreground mt-0.5">Lifting Register</span>
             </button>
             <button
               onClick={async () => {
@@ -533,19 +537,23 @@ export default function CraneList() {
                   }
                 }
               }}
-              className="aspect-square rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1.5 p-2 text-center shadow-md active:scale-95 transition-transform"
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2.5 text-center active:scale-[0.97] transition-all"
             >
-              <Link2 className="w-6 h-6" />
-              <span className="text-[10px] font-bold leading-tight">Copy Customer Pre-Visit Link</span>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600">
+                <Link2 className="w-5 h-5" />
+              </div>
+              <span className="text-[9px] font-bold leading-tight text-foreground mt-0.5">Pre-Visit Link</span>
             </button>
             <button
               onClick={() => {
                 dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
               }}
-              className="aspect-square rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1.5 p-2 text-center shadow-md active:scale-95 transition-transform"
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2.5 text-center active:scale-[0.97] transition-all"
             >
-              <FileText className="w-6 h-6" />
-              <span className="text-[10px] font-bold leading-tight">Complete Job Site Summary</span>
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-purple-500/10 text-purple-600">
+                <FileText className="w-5 h-5" />
+              </div>
+              <span className="text-[9px] font-bold leading-tight text-foreground mt-0.5">Job Summary</span>
             </button>
           </div>
 
