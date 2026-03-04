@@ -28,7 +28,7 @@ export default function DefectSummary() {
       setShowStatusPicker(true);
       return;
     }
-    dispatch({ type: 'BACK_TO_CRANES' });
+    dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
   };
 
   return (
