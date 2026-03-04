@@ -505,6 +505,14 @@ export default function AdminCustomisation() {
             Add Client Field
           </button>
         </div>
+
+        <button
+          onClick={() => toast.success('Client Info settings saved')}
+          className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+        >
+          <Check className="w-4 h-4" />
+          Save Changes
+        </button>
       </div>
     );
   }
