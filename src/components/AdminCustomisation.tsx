@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import {
-  AdminFormConfig, CustomField, FieldVisibility,
+  AdminFormConfig, CustomField, FieldVisibility, ClientInfoField,
 } from '@/types/adminConfig';
 import {
   Eye, EyeOff, Plus, Trash2, ChevronRight, ArrowLeft,
-  FileText, Lock, Package, ClipboardList,
+  FileText, Lock, Package, ClipboardList, Users, GripVertical,
+  Pencil, Check, ArrowUp, ArrowDown, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 
-type Section = 'menu' | 'report_fields' | 'report_custom' | 'private_inspection' | 'private_asset' | 'asset_add' | 'asset_detail';
+type Section = 'menu' | 'report_fields' | 'report_custom' | 'private_inspection' | 'private_asset' | 'asset_add' | 'asset_detail' | 'client_info';
 
 export default function AdminCustomisation() {
   const { state, dispatch } = useApp();
@@ -20,6 +21,14 @@ export default function AdminCustomisation() {
   const [newType, setNewType] = useState<CustomField['type']>('text');
   const [newOptions, setNewOptions] = useState('');
   const [newRequired, setNewRequired] = useState(false);
+
+  // Client info editing
+  const [editingFieldKey, setEditingFieldKey] = useState<string | null>(null);
+  const [editLabel, setEditLabel] = useState('');
+  const [newClientLabel, setNewClientLabel] = useState('');
+  const [newClientType, setNewClientType] = useState<ClientInfoField['fieldType']>('text');
+  const [newClientGroup, setNewClientGroup] = useState('Contact Details');
+  const [newClientOptions, setNewClientOptions] = useState('');
 
   const updateConfig = (partial: Partial<AdminFormConfig>) => {
     dispatch({ type: 'UPDATE_ADMIN_CONFIG', payload: partial });
@@ -58,6 +67,71 @@ export default function AdminCustomisation() {
     fieldId: string,
   ) => {
     updateConfig({ [key]: config[key].filter(f => f.id !== fieldId) });
+  };
+
+  // Client info field operations
+  const clientFields = [...(config.clientInfoFields || [])].sort((a, b) => a.sortOrder - b.sortOrder);
+  const clientGroups = [...new Set(clientFields.map(f => f.group))];
+
+  const toggleClientFieldVisibility = (fieldKey: string) => {
+    const updated = config.clientInfoFields.map(f =>
+      f.fieldKey === fieldKey ? { ...f, visible: !f.visible } : f
+    );
+    updateConfig({ clientInfoFields: updated });
+  };
+
+  const toggleClientFieldEditable = (fieldKey: string) => {
+    const updated = config.clientInfoFields.map(f =>
+      f.fieldKey === fieldKey ? { ...f, editable: !f.editable } : f
+    );
+    updateConfig({ clientInfoFields: updated });
+  };
+
+  const renameClientField = (fieldKey: string) => {
+    if (!editLabel.trim()) return;
+    const updated = config.clientInfoFields.map(f =>
+      f.fieldKey === fieldKey ? { ...f, label: editLabel.trim() } : f
+    );
+    updateConfig({ clientInfoFields: updated });
+    setEditingFieldKey(null);
+    setEditLabel('');
+  };
+
+  const moveClientField = (fieldKey: string, direction: 'up' | 'down') => {
+    const sorted = [...config.clientInfoFields].sort((a, b) => a.sortOrder - b.sortOrder);
+    const idx = sorted.findIndex(f => f.fieldKey === fieldKey);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const tempOrder = sorted[idx].sortOrder;
+    sorted[idx] = { ...sorted[idx], sortOrder: sorted[swapIdx].sortOrder };
+    sorted[swapIdx] = { ...sorted[swapIdx], sortOrder: tempOrder };
+    updateConfig({ clientInfoFields: sorted });
+  };
+
+  const removeClientField = (fieldKey: string) => {
+    updateConfig({ clientInfoFields: config.clientInfoFields.filter(f => f.fieldKey !== fieldKey) });
+  };
+
+  const addClientInfoField = () => {
+    if (!newClientLabel.trim()) return;
+    const maxOrder = Math.max(...config.clientInfoFields.map(f => f.sortOrder), 0);
+    const fieldKey = `custom_${Date.now()}`;
+    const field: ClientInfoField = {
+      fieldKey,
+      label: newClientLabel.trim(),
+      visible: true,
+      editable: true,
+      sortOrder: maxOrder + 1,
+      group: newClientGroup,
+      isCustom: true,
+      fieldType: newClientType,
+      options: newClientType === 'select' ? newClientOptions.split(',').map(o => o.trim()).filter(Boolean) : undefined,
+    };
+    updateConfig({ clientInfoFields: [...config.clientInfoFields, field] });
+    setNewClientLabel('');
+    setNewClientType('text');
+    setNewClientOptions('');
   };
 
   const renderFieldToggleList = (
@@ -171,6 +245,7 @@ export default function AdminCustomisation() {
   // ── Main menu ──
   if (section === 'menu') {
     const menuItems: { id: Section; icon: React.ReactNode; title: string; desc: string }[] = [
+      { id: 'client_info', icon: <Users className="w-5 h-5" />, title: 'Client Info (Job Summary)', desc: `Configure fields techs see & edit on-site (${clientFields.filter(f => f.visible).length} visible)` },
       { id: 'report_fields', icon: <FileText className="w-5 h-5" />, title: 'Report Customer Fields', desc: 'Toggle which customer details appear on report cover page' },
       { id: 'report_custom', icon: <Plus className="w-5 h-5" />, title: 'Custom Report Fields', desc: `Add custom fields for reports (${config.reportCustomFields.length} added)` },
       { id: 'private_inspection', icon: <Lock className="w-5 h-5" />, title: 'Private Inspection Fields', desc: `Internal-only fields on inspections (${config.privateInspectionFields.length} added)` },
@@ -196,6 +271,175 @@ export default function AdminCustomisation() {
             <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </button>
         ))}
+      </div>
+    );
+  }
+
+  // ── Client Info Fields (Job Summary) ──
+  if (section === 'client_info') {
+    return (
+      <div className="p-4 space-y-3">
+        <BackButton label="Back to Customisation" />
+        <p className="font-bold text-base">Client Info — Site Job Summary</p>
+        <p className="text-xs text-muted-foreground">
+          Configure which client fields technicians see and can edit on the Site Job Summary. Drag to reorder, rename labels, or add new custom fields.
+        </p>
+
+        <div className="flex gap-2 text-[10px] text-muted-foreground items-center flex-wrap">
+          <span className="flex items-center gap-1"><Eye className="w-3 h-3 text-rka-green" /> Visible</span>
+          <span className="flex items-center gap-1"><EyeOff className="w-3 h-3" /> Hidden</span>
+          <span className="flex items-center gap-1"><Pencil className="w-3 h-3 text-primary" /> Editable by tech</span>
+        </div>
+
+        {clientGroups.map(group => {
+          const groupFields = clientFields.filter(f => f.group === group);
+          return (
+            <div key={group}>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 border-b border-border pb-1">{group}</p>
+              <div className="space-y-1">
+                {groupFields.map((f, idx) => (
+                  <div
+                    key={f.fieldKey}
+                    className={`flex items-center gap-2 p-2.5 rounded-lg transition-colors ${
+                      f.visible ? 'bg-muted' : 'bg-muted/40 opacity-60'
+                    }`}
+                  >
+                    {/* Reorder buttons */}
+                    <div className="flex flex-col gap-0.5">
+                      <button
+                        onClick={() => moveClientField(f.fieldKey, 'up')}
+                        className="p-0.5 text-muted-foreground hover:text-foreground"
+                        disabled={idx === 0}
+                      >
+                        <ArrowUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => moveClientField(f.fieldKey, 'down')}
+                        className="p-0.5 text-muted-foreground hover:text-foreground"
+                        disabled={idx === groupFields.length - 1}
+                      >
+                        <ArrowDown className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    {/* Visibility toggle */}
+                    <button
+                      onClick={() => toggleClientFieldVisibility(f.fieldKey)}
+                      className="flex-shrink-0"
+                    >
+                      {f.visible
+                        ? <Eye className="w-4 h-4 text-rka-green" />
+                        : <EyeOff className="w-4 h-4 text-muted-foreground" />
+                      }
+                    </button>
+
+                    {/* Label (editable on tap) */}
+                    <div className="flex-1 min-w-0">
+                      {editingFieldKey === f.fieldKey ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={editLabel}
+                            onChange={e => setEditLabel(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && renameClientField(f.fieldKey)}
+                            className="flex-1 h-7 px-2 border border-primary rounded text-sm bg-background"
+                            autoFocus
+                          />
+                          <button onClick={() => renameClientField(f.fieldKey)} className="p-1 text-primary">
+                            <Check className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setEditingFieldKey(f.fieldKey); setEditLabel(f.label); }}
+                          className="text-sm font-medium text-left w-full truncate flex items-center gap-1"
+                        >
+                          {f.label}
+                          <Pencil className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
+                        </button>
+                      )}
+                      {f.isCustom && (
+                        <span className="text-[10px] text-primary font-medium">Custom field</span>
+                      )}
+                    </div>
+
+                    {/* Editable toggle */}
+                    <button
+                      onClick={() => toggleClientFieldEditable(f.fieldKey)}
+                      className={`flex-shrink-0 p-1 rounded ${f.editable ? 'text-primary' : 'text-muted-foreground/40'}`}
+                      title={f.editable ? 'Editable by tech' : 'Read-only for tech'}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Delete (custom only) */}
+                    {f.isCustom && (
+                      <button
+                        onClick={() => removeClientField(f.fieldKey)}
+                        className="p-1 text-muted-foreground active:text-destructive"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Add new custom client info field */}
+        <div className="bg-muted/50 rounded-xl p-3 space-y-2 border border-dashed border-border mt-4">
+          <p className="text-xs font-bold text-muted-foreground">Add Custom Client Field</p>
+          <input
+            type="text"
+            value={newClientLabel}
+            onChange={e => setNewClientLabel(e.target.value)}
+            placeholder="Field label (e.g. Purchase Order #)"
+            className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+          />
+          <div className="flex gap-2">
+            <select
+              value={newClientType}
+              onChange={e => setNewClientType(e.target.value as ClientInfoField['fieldType'])}
+              className="flex-1 p-2.5 border border-border rounded-lg bg-background text-sm"
+            >
+              <option value="text">Text</option>
+              <option value="textarea">Multi-line Text</option>
+              <option value="number">Number</option>
+              <option value="date">Date</option>
+              <option value="select">Dropdown</option>
+            </select>
+            <select
+              value={newClientGroup}
+              onChange={e => setNewClientGroup(e.target.value)}
+              className="flex-1 p-2.5 border border-border rounded-lg bg-background text-sm"
+            >
+              <option value="Contact Details">Contact Details</option>
+              <option value="Service & Scheduling">Service & Scheduling</option>
+              <option value="Business Info">Business Info</option>
+              <option value="Links">Links</option>
+              <option value="Custom">Custom</option>
+            </select>
+          </div>
+          {newClientType === 'select' && (
+            <input
+              type="text"
+              value={newClientOptions}
+              onChange={e => setNewClientOptions(e.target.value)}
+              placeholder="Options (comma separated)"
+              className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+            />
+          )}
+          <button
+            onClick={addClientInfoField}
+            disabled={!newClientLabel.trim() || (newClientType === 'select' && !newClientOptions.trim())}
+            className="w-full h-10 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+          >
+            <Plus className="w-4 h-4" />
+            Add Client Field
+          </button>
+        </div>
       </div>
     );
   }
