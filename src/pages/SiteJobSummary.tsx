@@ -704,6 +704,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
             <p className="text-sm text-muted-foreground py-2">No inspections completed yet</p>
           )}
         </div>
+        )}
 
         {/* Defect Review for Customer */}
         {(totalDefectCount > 0 || dbDefectsLoading) && (
