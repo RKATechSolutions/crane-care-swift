@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AppHeader } from '@/components/AppHeader';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText
 import { toast } from 'sonner';
 import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
 import { format } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 interface LiftingRegisterListProps {
   clientId?: string;
@@ -169,95 +170,93 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     toast.success('CSV downloaded');
   };
 
-  const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const headerMap: Record<string, string> = {
+    'equipment type': 'equipment_type', 'type': 'equipment_type',
+    'manufacturer': 'manufacturer', 'make': 'manufacturer', 'brand': 'manufacturer',
+    'model': 'model',
+    'serial number': 'serial_number', 'serial': 'serial_number', 'sn': 'serial_number',
+    'asset tag': 'asset_tag', 'tag': 'asset_tag', 'asset id': 'asset_tag',
+    'wll': 'wll_value', 'swl': 'wll_value', 'wll value': 'wll_value',
+    'wll unit': 'wll_unit', 'unit': 'wll_unit',
+    'length': 'length_m', 'length (m)': 'length_m', 'length_m': 'length_m',
+    'grade': 'grade',
+    'status': 'equipment_status', 'equipment status': 'equipment_status',
+    'notes': 'notes', 'comment': 'notes',
+    'configuration': 'sling_configuration', 'sling configuration': 'sling_configuration',
+    'legs': 'sling_leg_count', 'leg count': 'sling_leg_count',
+    'lift height': 'lift_height_m', 'lift height (m)': 'lift_height_m',
+    'span': 'span_m', 'span (m)': 'span_m',
+  };
+
+  const parseRowsToInsert = (headers: string[], dataRows: any[][]) => {
+    const colMap = headers.map(h => headerMap[h.toLowerCase().trim()] || null);
+    const techName = localStorage.getItem('technicianName') || 'Import';
+    const techId = localStorage.getItem('technicianId') || 'import';
+
+    return dataRows.filter(vals => vals.some(v => v != null && String(v).trim())).map(vals => {
+      const row: any = {
+        registered_by_name: techName,
+        registered_by_id: techId,
+        site_name: siteName,
+        client_id: clientId || null,
+      };
+      colMap.forEach((field, idx) => {
+        if (!field || vals[idx] == null || String(vals[idx]).trim() === '') return;
+        const val = String(vals[idx]).trim();
+        if (['wll_value', 'length_m', 'lift_height_m', 'span_m'].includes(field)) {
+          row[field] = parseFloat(val) || null;
+        } else if (field === 'sling_leg_count') {
+          row[field] = parseInt(val) || null;
+        } else {
+          row[field] = val;
+        }
+      });
+      if (!row.equipment_type) row.equipment_type = 'Unknown';
+      return row;
+    });
+  };
+
+  const refreshItems = async () => {
+    let query = supabase.from('lifting_register').select('*').order('created_at', { ascending: false });
+    if (clientId) query = query.eq('client_id', clientId);
+    else query = query.eq('site_name', siteName);
+    const { data } = await query;
+    setItems((data as RegisterItem[]) || []);
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        const text = ev.target?.result as string;
-        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-        if (lines.length < 2) { toast.error('CSV must have a header row and at least one data row'); setImporting(false); return; }
 
-        const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-        // Map common header names to DB fields
-        const headerMap: Record<string, string> = {
-          'equipment type': 'equipment_type', 'type': 'equipment_type',
-          'manufacturer': 'manufacturer', 'make': 'manufacturer', 'brand': 'manufacturer',
-          'model': 'model',
-          'serial number': 'serial_number', 'serial': 'serial_number', 'sn': 'serial_number',
-          'asset tag': 'asset_tag', 'tag': 'asset_tag', 'id': 'asset_tag', 'asset id': 'asset_tag',
-          'wll': 'wll_value', 'swl': 'wll_value', 'wll value': 'wll_value',
-          'wll unit': 'wll_unit', 'unit': 'wll_unit',
-          'length': 'length_m', 'length (m)': 'length_m', 'length_m': 'length_m',
-          'grade': 'grade',
-          'status': 'equipment_status', 'equipment status': 'equipment_status',
-          'notes': 'notes', 'comment': 'notes',
-          'configuration': 'sling_configuration', 'sling configuration': 'sling_configuration',
-          'legs': 'sling_leg_count', 'leg count': 'sling_leg_count',
-          'lift height': 'lift_height_m', 'lift height (m)': 'lift_height_m',
-          'span': 'span_m', 'span (m)': 'span_m',
-        };
+      if (jsonData.length < 2) { toast.error('File must have a header row and at least one data row'); setImporting(false); return; }
 
-        const colMap = headers.map(h => headerMap[h] || null);
+      const headers = jsonData[0].map((h: any) => String(h || ''));
+      const dataRows = jsonData.slice(1);
+      const rows = parseRowsToInsert(headers, dataRows);
 
-        const techName = localStorage.getItem('technicianName') || 'Import';
-        const techId = localStorage.getItem('technicianId') || 'import';
+      if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
 
-        const rows: any[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          // Parse CSV row respecting quoted commas
-          const vals = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, '').trim()) || lines[i].split(',').map(v => v.trim());
-          
-          const row: any = {
-            registered_by_name: techName,
-            registered_by_id: techId,
-            site_name: siteName,
-            client_id: clientId || null,
-          };
-
-          colMap.forEach((field, idx) => {
-            if (!field || !vals[idx]) return;
-            const val = vals[idx];
-            if (['wll_value', 'length_m', 'lift_height_m', 'span_m'].includes(field)) {
-              row[field] = parseFloat(val) || null;
-            } else if (field === 'sling_leg_count') {
-              row[field] = parseInt(val) || null;
-            } else {
-              row[field] = val;
-            }
-          });
-
-          if (!row.equipment_type) {
-            row.equipment_type = 'Unknown';
-          }
-
-          rows.push(row);
-        }
-
-        if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
-
-        const { error } = await supabase.from('lifting_register').insert(rows);
-        if (error) {
-          console.error('Import error:', error);
-          toast.error('Import failed: ' + error.message);
-        } else {
-          toast.success(`Imported ${rows.length} items`);
-          // Refresh list
-          let query = supabase.from('lifting_register').select('*').order('created_at', { ascending: false });
-          if (clientId) query = query.eq('client_id', clientId);
-          else query = query.eq('site_name', siteName);
-          const { data } = await query;
-          setItems((data as RegisterItem[]) || []);
-        }
-      } catch (err) {
-        console.error('CSV parse error:', err);
-        toast.error('Failed to parse CSV');
+      const { error } = await supabase.from('lifting_register').insert(rows);
+      if (error) {
+        console.error('Import error:', error);
+        toast.error('Import failed: ' + error.message);
+      } else {
+        toast.success(`Imported ${rows.length} items`);
+        await refreshItems();
       }
-      setImporting(false);
+    } catch (err) {
+      console.error('File parse error:', err);
+      toast.error('Failed to parse file');
+    }
+    setImporting(false);
+    e.target.value = '';
     };
     reader.readAsText(file);
     // Reset input so same file can be re-selected
@@ -306,9 +305,9 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           <input
             id="csv-import-input"
             type="file"
-            accept=".csv"
+            accept=".csv,.xlsx,.xls"
             className="hidden"
-            onChange={handleImportCsv}
+            onChange={handleImportFile}
           />
         </div>
         <div className="flex gap-2">
