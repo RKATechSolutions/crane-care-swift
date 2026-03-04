@@ -169,7 +169,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
-  const { site, clientInfo, technicianName, jobType, inspections, template, summary, customerDefectComments, liftingDefects } = data;
+  const { site, clientInfo, technicianName, jobType, inspections, template, summary, customerDefectComments, liftingDefects, dbInspections, dbDefects } = data;
   
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
