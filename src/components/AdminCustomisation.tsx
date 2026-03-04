@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { toast } from 'sonner';
 import {
   AdminFormConfig, CustomField, FieldVisibility, ClientInfoField, JobSummarySectionVisibility,
 } from '@/types/adminConfig';
@@ -630,6 +631,14 @@ export default function AdminCustomisation() {
             </div>
           );
         })}
+
+        <button
+          onClick={() => toast.success('Job Summary settings saved')}
+          className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+        >
+          <Check className="w-4 h-4" />
+          Save Changes
+        </button>
       </div>
     );
   }
