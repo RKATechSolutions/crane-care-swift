@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import {
-  AdminFormConfig, CustomField, FieldVisibility, ClientInfoField,
+  AdminFormConfig, CustomField, FieldVisibility, ClientInfoField, JobSummarySectionVisibility,
 } from '@/types/adminConfig';
 import {
   Eye, EyeOff, Plus, Trash2, ChevronRight, ArrowLeft,
@@ -9,7 +9,7 @@ import {
   Pencil, Check, ArrowUp, ArrowDown, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 
-type Section = 'menu' | 'report_fields' | 'report_custom' | 'private_inspection' | 'private_asset' | 'asset_add' | 'asset_detail' | 'client_info';
+type Section = 'menu' | 'report_fields' | 'report_custom' | 'private_inspection' | 'private_asset' | 'asset_add' | 'asset_detail' | 'client_info' | 'job_summary_sections';
 
 export default function AdminCustomisation() {
   const { state, dispatch } = useApp();
@@ -261,7 +261,9 @@ export default function AdminCustomisation() {
 
   // ── Main menu ──
   if (section === 'menu') {
+    const jobSummarySections = config.jobSummarySections || [];
     const menuItems: { id: Section; icon: React.ReactNode; title: string; desc: string }[] = [
+      { id: 'job_summary_sections', icon: <ClipboardList className="w-5 h-5" />, title: 'Job Summary Sections', desc: `Show/hide sections on Job Site Summary (${jobSummarySections.filter(s => s.visible).length}/${jobSummarySections.length} visible)` },
       { id: 'client_info', icon: <Users className="w-5 h-5" />, title: 'Client Info (Job Summary)', desc: `Configure fields techs see & edit on-site (${clientFields.filter(f => f.visible).length} visible)` },
       { id: 'report_fields', icon: <FileText className="w-5 h-5" />, title: 'Report Customer Fields', desc: 'Toggle which customer details appear on report cover page' },
       { id: 'report_custom', icon: <Plus className="w-5 h-5" />, title: 'Custom Report Fields', desc: `Add custom fields for reports (${config.reportCustomFields.length} added)` },
@@ -574,6 +576,60 @@ export default function AdminCustomisation() {
         <p className="font-bold text-base">Asset Detail View Fields</p>
         <p className="text-xs text-muted-foreground">Toggle which fields show in the asset detail modal.</p>
         {renderFieldToggleList(config.assetDetailFields, 'assetDetailFields')}
+      </div>
+    );
+  }
+
+  // ── Job Summary Sections ──
+  if (section === 'job_summary_sections') {
+    const sections = config.jobSummarySections || [];
+    const groups = [...new Set(sections.map(s => s.group))];
+
+    const toggleSection = (fieldKey: string) => {
+      const updated = sections.map(s =>
+        s.fieldKey === fieldKey ? { ...s, visible: !s.visible } : s
+      );
+      updateConfig({ jobSummarySections: updated });
+    };
+
+    return (
+      <div className="p-4 space-y-3">
+        <BackButton label="Back to Customisation" />
+        <p className="font-bold text-base">Job Site Summary — Sections</p>
+        <p className="text-xs text-muted-foreground">
+          Toggle which sections and fields appear on the Job Site Summary page for technicians.
+        </p>
+
+        {groups.map(group => {
+          const groupItems = sections.filter(s => s.group === group);
+          return (
+            <div key={group}>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 border-b border-border pb-1">{group}</p>
+              <div className="space-y-1 mb-3">
+                {groupItems.map(s => (
+                  <button
+                    key={s.fieldKey}
+                    onClick={() => toggleSection(s.fieldKey)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                      s.visible ? 'bg-muted' : 'bg-muted/40 opacity-60'
+                    }`}
+                  >
+                    {s.visible
+                      ? <Eye className="w-4 h-4 text-rka-green flex-shrink-0" />
+                      : <EyeOff className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    }
+                    <span className="text-sm font-medium flex-1 text-left">{s.label}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      s.visible ? 'bg-rka-green/20 text-rka-green-dark' : 'bg-muted-foreground/20 text-muted-foreground'
+                    }`}>
+                      {s.visible ? 'Visible' : 'Hidden'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }
