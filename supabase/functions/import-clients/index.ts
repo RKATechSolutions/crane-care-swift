@@ -115,10 +115,26 @@ serve(async (req) => {
 
     console.log(`Parsed ${clientRows.length} client rows`);
 
+    // Deduplicate by client_name (keep last occurrence which has the most data)
+    const dedupedMap = new Map<string, Record<string, any>>();
+    for (const row of clientRows) {
+      const existing = dedupedMap.get(row.client_name);
+      if (existing) {
+        // Merge: keep non-null values from both, preferring new values
+        for (const [key, val] of Object.entries(row)) {
+          if (val !== null) existing[key] = val;
+        }
+      } else {
+        dedupedMap.set(row.client_name, { ...row });
+      }
+    }
+    const dedupedRows = Array.from(dedupedMap.values());
+    console.log(`Deduped to ${dedupedRows.length} unique clients`);
+
     // Upsert in batches of 50
     let upserted = 0;
-    for (let i = 0; i < clientRows.length; i += 50) {
-      const batch = clientRows.slice(i, i + 50);
+    for (let i = 0; i < dedupedRows.length; i += 50) {
+      const batch = dedupedRows.slice(i, i + 50);
       const { error } = await supabase
         .from("clients")
         .upsert(batch, { onConflict: "client_name" });
