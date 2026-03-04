@@ -238,7 +238,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
 
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Add Photo (optional)</label>
-              <input
+               <input
                 ref={unresolvedFileInputRef}
                 type="file"
                 accept="image/*"
@@ -246,14 +246,24 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 onChange={(e) => handlePhotoUpload(e, 'unresolved')}
                 multiple
               />
-              <button
-                onClick={() => unresolvedFileInputRef.current?.click()}
-                disabled={unresolvedPhotos.length >= MAX_PHOTOS}
-                className="mt-1 tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
-              >
-                <Camera className="w-5 h-5" />
-                {unresolvedPhotos.length > 0 ? `Add more (${unresolvedPhotos.length}/${MAX_PHOTOS})` : 'Tap to add photo'}
-              </button>
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={() => { if (unresolvedFileInputRef.current) { unresolvedFileInputRef.current.capture = 'environment'; unresolvedFileInputRef.current.click(); } }}
+                  disabled={unresolvedPhotos.length >= MAX_PHOTOS}
+                  className="flex-1 tap-target rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
+                >
+                  <Camera className="w-4 h-4" />
+                  Take Photo
+                </button>
+                <button
+                  onClick={() => { if (unresolvedFileInputRef.current) { unresolvedFileInputRef.current.removeAttribute('capture'); unresolvedFileInputRef.current.click(); } }}
+                  disabled={unresolvedPhotos.length >= MAX_PHOTOS}
+                  className="flex-1 tap-target rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                  Upload
+                </button>
+              </div>
               {uploadError && <p className="text-xs text-rka-red mt-1">{uploadError}</p>}
               {unresolvedPhotos.length > 0 && (
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -310,14 +320,24 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 onChange={(e) => handlePhotoUpload(e, 'pass')}
                 multiple
               />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={photos.length >= MAX_PHOTOS}
-                className="tap-target w-full rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
-              >
-                <Camera className="w-5 h-5" />
-                {photos.length > 0 ? `Add more (${photos.length}/${MAX_PHOTOS})` : 'Tap to add photo (optional)'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { if (fileInputRef.current) { fileInputRef.current.capture = 'environment'; fileInputRef.current.click(); } }}
+                  disabled={photos.length >= MAX_PHOTOS}
+                  className="flex-1 tap-target rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
+                >
+                  <Camera className="w-4 h-4" />
+                  Take Photo
+                </button>
+                <button
+                  onClick={() => { if (fileInputRef.current) { fileInputRef.current.removeAttribute('capture'); fileInputRef.current.click(); } }}
+                  disabled={photos.length >= MAX_PHOTOS}
+                  className="flex-1 tap-target rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-sm text-muted-foreground active:bg-muted disabled:opacity-40"
+                >
+                  <ImagePlus className="w-4 h-4" />
+                  Upload
+                </button>
+              </div>
               {uploadError && <p className="text-xs text-rka-red mt-1">{uploadError}</p>}
               {photos.length > 0 && (
                 <div className="flex gap-2 mt-2 flex-wrap">
@@ -419,16 +439,28 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 onChange={(e) => handlePhotoUpload(e, 'defect')}
                 multiple
               />
-              <button
-                onClick={() => defectFileInputRef.current?.click()}
-                disabled={defectPhotos.length >= MAX_PHOTOS}
-                className={`mt-1 tap-target w-full rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm active:bg-muted disabled:opacity-40 ${
-                  defectPhotos.length === 0 ? 'border-rka-red/50 text-rka-red' : 'border-border text-muted-foreground'
-                }`}
-              >
-                <Camera className="w-5 h-5" />
-                {defectPhotos.length > 0 ? `Add more (${defectPhotos.length}/${MAX_PHOTOS})` : '⚠ Tap to add photo (required)'}
-              </button>
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={() => { if (defectFileInputRef.current) { defectFileInputRef.current.capture = 'environment'; defectFileInputRef.current.click(); } }}
+                  disabled={defectPhotos.length >= MAX_PHOTOS}
+                  className={`flex-1 tap-target rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm font-semibold active:bg-muted disabled:opacity-40 ${
+                    defectPhotos.length === 0 ? 'border-rka-red/50 text-rka-red' : 'border-border text-muted-foreground'
+                  }`}
+                >
+                  <Camera className="w-4 h-4" />
+                  Take Photo
+                </button>
+                <button
+                  onClick={() => { if (defectFileInputRef.current) { defectFileInputRef.current.removeAttribute('capture'); defectFileInputRef.current.click(); } }}
+                  disabled={defectPhotos.length >= MAX_PHOTOS}
+                  className={`flex-1 tap-target rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm font-semibold active:bg-muted disabled:opacity-40 ${
+                    defectPhotos.length === 0 ? 'border-rka-red/50 text-rka-red' : 'border-border text-muted-foreground'
+                  }`}
+                >
+                  <ImagePlus className="w-4 h-4" />
+                  Upload
+                </button>
+              </div>
               {uploadError && <p className="text-xs text-rka-red mt-1">{uploadError}</p>}
               {defectPhotos.length > 0 && (
                 <div className="flex gap-2 mt-2 flex-wrap">
