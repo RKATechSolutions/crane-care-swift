@@ -90,6 +90,14 @@ export default function AdminDashboard() {
           Timesheets
         </button>
         <button
+          onClick={() => setTab('assets')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
+            tab === 'assets' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Package className="w-4 h-4 inline mr-1" />
+          Assets
+        <button
           onClick={() => setTab('suggestions')}
           className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
             tab === 'suggestions' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
