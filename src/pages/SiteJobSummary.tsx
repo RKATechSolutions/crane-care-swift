@@ -6,7 +6,7 @@ import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Loader2, ExternalLink, Package, ShoppingCart } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Loader2, Package, ShoppingCart } from 'lucide-react';
 import { ClientInfoSummarySection } from '@/components/ClientInfoSummarySection';
 import { toast } from 'sonner';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
@@ -190,6 +190,60 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
     };
     loadLiftingDefects();
   }, [site.name]);
+
+  // Load client details and contacts for Site Job Summary client info section
+  useEffect(() => {
+    const loadClientInfo = async () => {
+      try {
+        const searchTerms = [
+          site.name,
+          site.name.split(' - ')[0],
+          site.name.split(' ')[0],
+        ];
+
+        let matchedClient: any = null;
+        for (const term of searchTerms) {
+          if (!term || term.length < 3) continue;
+          const { data: clients } = await supabase
+            .from('clients')
+            .select('*')
+            .ilike('client_name', `%${term}%`)
+            .limit(1);
+
+          if (clients && clients.length > 0) {
+            matchedClient = clients[0];
+            break;
+          }
+        }
+
+        if (matchedClient) {
+          setClientInfo({
+            ...matchedClient,
+            client_custom_fields: matchedClient.client_custom_fields || {},
+          });
+
+          const { data: contacts } = await supabase
+            .from('client_contacts')
+            .select('*')
+            .eq('client_id', matchedClient.id)
+            .order('created_at', { ascending: true });
+
+          setClientContacts(contacts || []);
+        } else {
+          setClientInfo({
+            client_name: site.name,
+            location_address: site.address,
+            client_custom_fields: {},
+          });
+          setClientContacts([]);
+        }
+      } catch (err) {
+        console.error('Error loading client info:', err);
+      }
+    };
+
+    loadClientInfo();
+  }, [site.name, site.address]);
 
   // Also keep legacy context defects as fallback
   const allDefects = completedInspections.flatMap(insp => {
@@ -489,12 +543,36 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
                 clientContacts={clientContacts}
                 adminConfig={state.adminConfig}
                 onUpdateClientInfo={(updates) => {
-                  setClientInfo((prev: any) => ({ ...prev, ...updates }));
-                  // Save to DB
+                  const { __custom_fields = {}, ...standardUpdates } = updates as Record<string, any>;
+                  const mergedCustomFields = {
+                    ...(clientInfo?.client_custom_fields || {}),
+                    ...(__custom_fields || {}),
+                  };
+
+                  setClientInfo((prev: any) => ({
+                    ...prev,
+                    ...standardUpdates,
+                    client_custom_fields: mergedCustomFields,
+                  }));
+
                   if (clientInfo?.id) {
-                    supabase.from('clients').update(updates).eq('id', clientInfo.id).then(({ error }) => {
-                      if (error) toast.error('Failed to save client info');
-                    });
+                    const payload: Record<string, any> = { ...standardUpdates };
+                    if (Object.keys(__custom_fields || {}).length > 0) {
+                      payload.client_custom_fields = mergedCustomFields;
+                    }
+
+                    if (Object.keys(payload).length > 0) {
+                      supabase
+                        .from('clients')
+                        .update(payload)
+                        .eq('id', clientInfo.id)
+                        .then(({ error }) => {
+                          if (error) {
+                            toast.error('Failed to save client info');
+                            console.error('Client info save error:', error);
+                          }
+                        });
+                    }
                   }
                 }}
               />
