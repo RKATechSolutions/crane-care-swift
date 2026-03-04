@@ -649,6 +649,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
         </div>
 
         {/* Assets Inspected */}
+        {isSectionVisible('assets_inspected') && (
         <div className="px-4 py-3 border-b border-border bg-muted/30">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Assets Inspected</p>
           {dbInspections.length > 0 ? (
