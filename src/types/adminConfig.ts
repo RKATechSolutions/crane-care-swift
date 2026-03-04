@@ -35,7 +35,7 @@ export interface JobSummarySectionVisibility {
 
 export const DEFAULT_JOB_SUMMARY_SECTIONS: JobSummarySectionVisibility[] = [
   // Header fields
-  { fieldKey: 'business_name', label: 'Business Name (RKA Crane Services)', visible: true, group: 'Header' },
+  { fieldKey: 'business_name', label: 'Business Name (RKA Industrial Solutions)', visible: true, group: 'Header' },
   { fieldKey: 'client_info', label: 'Client Info Section', visible: true, group: 'Header' },
   { fieldKey: 'site_address', label: 'Site Address', visible: true, group: 'Header' },
   { fieldKey: 'job_type', label: 'Job Type Selector', visible: true, group: 'Header' },

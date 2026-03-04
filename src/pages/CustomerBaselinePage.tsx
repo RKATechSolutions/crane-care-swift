@@ -25,7 +25,7 @@ export default function CustomerBaselinePage() {
       if (data) {
         setSiteName(data.company_name || data.site_name);
       } else {
-        setError('Baseline not found. Please contact RKA Crane Services.');
+        setError('Baseline not found. Please contact RKA Industrial Solutions.');
       }
       setLoading(false);
     };
