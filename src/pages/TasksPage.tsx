@@ -10,6 +10,7 @@ import { CreateJobTaskModal } from '@/components/CreateJobTaskModal';
 interface TasksPageProps {
   onBack: () => void;
   onOpenJob?: (jobId: string) => void;
+  onOpenClient?: (clientName: string) => void;
 }
 
 interface Task {
@@ -39,7 +40,7 @@ const JOB_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   general: { label: 'General', color: 'bg-muted text-muted-foreground' },
 };
 
-export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
+export default function TasksPage({ onBack, onOpenJob, onOpenClient }: TasksPageProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'open' | 'finished'>('open');
@@ -152,9 +153,12 @@ export default function TasksPage({ onBack, onOpenJob }: TasksPageProps) {
                 {/* Meta row */}
                 <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
                   {task.client_name && (
-                    <span className="flex items-center gap-1">
+                    <button
+                      className="flex items-center gap-1 underline text-primary font-semibold hover:text-primary/80 transition-colors"
+                      onClick={(e) => { e.stopPropagation(); onOpenClient?.(task.client_name!); }}
+                    >
                       <User className="w-3 h-3" /> {task.client_name}
-                    </span>
+                    </button>
                   )}
                   {task.scheduled_date && (
                     <span className="flex items-center gap-1">

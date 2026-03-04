@@ -42,12 +42,13 @@ type ClientTab = 'details' | 'assets' | 'quotes' | 'reports' | 'jobs';
 interface CraneListProps {
   activeJobId?: string | null;
   onSetActiveJob?: (id: string | null) => void;
+  initialTab?: ClientTab;
 }
 
-export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProps = {}) {
+export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: CraneListProps = {}) {
   const { state, dispatch } = useApp();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<ClientTab>('assets');
+  const [activeTab, setActiveTab] = useState<ClientTab>(initialTab || 'assets');
   const [noteOpen, setNoteOpen] = useState(false);
   const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
   const [loading, setLoading] = useState(true);
