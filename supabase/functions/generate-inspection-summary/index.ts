@@ -17,7 +17,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get inspection
     const { data: inspection, error: inspErr } = await supabase
       .from("db_inspections")
       .select("*")
@@ -25,13 +24,11 @@ serve(async (req) => {
       .single();
     if (inspErr || !inspection) throw new Error("Inspection not found");
 
-    // Get responses with question text
     const { data: responses } = await supabase
       .from("inspection_responses")
-      .select("question_id, answer_value, pass_fail_status, severity, comment, defect_flag, urgency")
+      .select("question_id, answer_value, pass_fail_status, severity, comment, defect_flag, urgency, defect_types")
       .eq("inspection_id", inspectionId);
 
-    // Get question texts
     const questionIds = (responses || []).map(r => r.question_id);
     const { data: questions } = await supabase
       .from("question_library")
@@ -43,7 +40,6 @@ serve(async (req) => {
       questionMap[q.question_id] = { text: q.question_text, section: q.section };
     });
 
-    // Build response summary grouped by section
     const sectionData: Record<string, string[]> = {};
     let defectCount = 0;
     let totalAnswered = 0;
@@ -56,10 +52,10 @@ serve(async (req) => {
 
       const answer = r.answer_value || r.pass_fail_status || "No answer";
       let line = `- ${q.text}: ${answer}`;
-      if (r.severity) line += ` (Severity: ${r.severity})`;
       if (r.comment) line += ` — Note: ${r.comment}`;
       if (r.defect_flag) {
-        line += " [DEFECT]";
+        line += ` [DEFECT${r.urgency ? ` - ${r.urgency}` : ''}]`;
+        if (r.defect_types && r.defect_types.length > 0) line += ` Categories: ${r.defect_types.join(', ')}`;
         defectCount++;
       }
       sectionData[section].push(line);
@@ -77,7 +73,7 @@ serve(async (req) => {
 Use Australian English throughout (e.g. "organisation", "colour", "utilise").
 Reference Australian Standards where relevant (AS 2550, AS 1418, AS 4991).
 
-Based on this initial site inspection data:
+Based on this crane inspection data:
 
 Site: ${inspection.site_name || "Unknown"}
 Asset: ${inspection.asset_name || "N/A"}
@@ -89,18 +85,15 @@ Defects Found: ${defectCount}
 Inspection Responses:
 ${sectionSummary}
 
-Generate a CONCISE executive summary for a busy site manager. Keep it scannable with bullet points. No waffle.
+Generate a CONCISE executive summary for a busy site manager. Keep it scannable. No waffle. No month-by-month action plan.
 
-1. Executive Summary — MAX 100 words. State overall risk level, biggest concerns, and strongest areas.
+1. Executive Summary — MAX 120 words. State overall condition, biggest concerns, and strongest areas.
 
-2. Top 3 Risks — One line each, ranked by urgency.
+2. Key Defects — List each defect found with its urgency and a one-line recommended action.
 
-3. 12-Month Action Plan — Bullet points only, max 3 items per phase:
-   - NOW (0–3 months) — most critical
-   - NEXT (3–6 months)
-   - LATER (6–12 months)
+3. Overall Assessment — One paragraph: is this asset safe, what needs immediate attention, and general condition rating.
 
-Use direct, professional tone. No fluff, no sales language. Keep entire output under 400 words total.`;
+Use direct, professional tone. No fluff, no sales language. Keep entire output under 350 words total.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -136,7 +129,6 @@ Use direct, professional tone. No fluff, no sales language. Keep entire output u
     const aiData = await aiResponse.json();
     const summary = aiData.choices?.[0]?.message?.content || "";
 
-    // Save summary to inspection
     await supabase.from("db_inspections").update({
       ai_summary: summary,
       updated_at: new Date().toISOString(),
