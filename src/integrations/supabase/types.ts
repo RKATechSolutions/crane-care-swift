@@ -328,52 +328,103 @@ export type Database = {
       }
       clients: {
         Row: {
+          abn: string | null
+          automatic_service_package: string | null
+          business_type: string | null
+          casual_service_rates: string | null
           client_name: string
+          comments_or_notes: string | null
           created_at: string
           created_date: string | null
+          google_drive_link: string | null
           id: string
+          inspectall_account_link: string | null
+          inspectall_code: string | null
+          lead_or_referral_source: string | null
           location_address: string | null
+          payment_days: string | null
+          planned_service_dates: string | null
+          preferred_days_and_times: string | null
           primary_contact_email: string | null
           primary_contact_given_name: string | null
           primary_contact_mobile: string | null
           primary_contact_name: string | null
           primary_contact_position: string | null
           primary_contact_surname: string | null
+          priority_service_package: string | null
+          report_visible_fields: Json | null
+          required_to_complete_work: string | null
           send_schedule_reminders: string | null
+          services_interested_in: string | null
           site_induction_details: string | null
           status: string
+          travel_time_from_base: string | null
         }
         Insert: {
+          abn?: string | null
+          automatic_service_package?: string | null
+          business_type?: string | null
+          casual_service_rates?: string | null
           client_name: string
+          comments_or_notes?: string | null
           created_at?: string
           created_date?: string | null
+          google_drive_link?: string | null
           id?: string
+          inspectall_account_link?: string | null
+          inspectall_code?: string | null
+          lead_or_referral_source?: string | null
           location_address?: string | null
+          payment_days?: string | null
+          planned_service_dates?: string | null
+          preferred_days_and_times?: string | null
           primary_contact_email?: string | null
           primary_contact_given_name?: string | null
           primary_contact_mobile?: string | null
           primary_contact_name?: string | null
           primary_contact_position?: string | null
           primary_contact_surname?: string | null
+          priority_service_package?: string | null
+          report_visible_fields?: Json | null
+          required_to_complete_work?: string | null
           send_schedule_reminders?: string | null
+          services_interested_in?: string | null
           site_induction_details?: string | null
           status?: string
+          travel_time_from_base?: string | null
         }
         Update: {
+          abn?: string | null
+          automatic_service_package?: string | null
+          business_type?: string | null
+          casual_service_rates?: string | null
           client_name?: string
+          comments_or_notes?: string | null
           created_at?: string
           created_date?: string | null
+          google_drive_link?: string | null
           id?: string
+          inspectall_account_link?: string | null
+          inspectall_code?: string | null
+          lead_or_referral_source?: string | null
           location_address?: string | null
+          payment_days?: string | null
+          planned_service_dates?: string | null
+          preferred_days_and_times?: string | null
           primary_contact_email?: string | null
           primary_contact_given_name?: string | null
           primary_contact_mobile?: string | null
           primary_contact_name?: string | null
           primary_contact_position?: string | null
           primary_contact_surname?: string | null
+          priority_service_package?: string | null
+          report_visible_fields?: Json | null
+          required_to_complete_work?: string | null
           send_schedule_reminders?: string | null
+          services_interested_in?: string | null
           site_induction_details?: string | null
           status?: string
+          travel_time_from_base?: string | null
         }
         Relationships: []
       }
