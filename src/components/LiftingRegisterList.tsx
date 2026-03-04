@@ -294,6 +294,22 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
             <Download className="w-3.5 h-3.5" />
             CSV
           </Button>
+          <Button
+            variant="outline"
+            className="flex-1 gap-1 text-xs"
+            disabled={importing}
+            onClick={() => document.getElementById('csv-import-input')?.click()}
+          >
+            {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            {importing ? 'Importing...' : 'Import'}
+          </Button>
+          <input
+            id="csv-import-input"
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleImportCsv}
+          />
         </div>
         <div className="flex gap-2">
           {onInspect && (
