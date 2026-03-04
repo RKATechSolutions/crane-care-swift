@@ -381,6 +381,10 @@ export default function CraneList() {
         clientId={clientId}
         siteName={site.name}
         onBack={() => setActiveDbForm(null)}
+        onSubmitComplete={() => {
+          setActiveDbForm(null);
+          dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
+        }}
       />
     );
   }
