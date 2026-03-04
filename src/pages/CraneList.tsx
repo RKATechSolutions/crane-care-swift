@@ -37,9 +37,12 @@ interface DbAsset {
   main_photo_url: string | null;
 }
 
+type ClientTab = 'details' | 'assets' | 'quotes' | 'reports' | 'jobs';
+
 export default function CraneList() {
   const { state, dispatch } = useApp();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<ClientTab>('assets');
   const [noteOpen, setNoteOpen] = useState(false);
   const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +59,9 @@ export default function CraneList() {
   const [showLiftingInspection, setShowLiftingInspection] = useState(false);
   const [showBaseline, setShowBaseline] = useState<{ existingId?: string } | null>(null);
   const [existingBaseline, setExistingBaseline] = useState<{ id: string; status: string } | null>(null);
+  const [clientQuotes, setClientQuotes] = useState<any[]>([]);
+  const [clientJobs, setClientJobs] = useState<any[]>([]);
+  const [clientReports, setClientReports] = useState<any[]>([]);
   const site = state.selectedSite;
 
   // Fetch DB form templates
