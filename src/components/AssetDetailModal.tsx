@@ -271,6 +271,35 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
               )}
             </div>
           )}
+
+          {/* Asset Photo Gallery */}
+          <SectionHeader title={`Asset Photos (${galleryPhotos.length})`} open={showGallery} onToggle={() => setShowGallery(!showGallery)} />
+          {showGallery && (
+            <div className="space-y-2 pl-1 border-l-2 border-primary/20">
+              <input type="file" accept="image/*" multiple ref={galleryInputRef} className="hidden" onChange={handleGalleryUpload} />
+              <div className="grid grid-cols-3 gap-2">
+                {galleryPhotos.map(photo => (
+                  <div key={photo.id} className="relative group">
+                    <img src={photo.photo_url} alt="Asset" className="w-full h-20 object-cover rounded-lg border border-border" />
+                    <button
+                      onClick={() => handleDeleteGalleryPhoto(photo.id)}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={uploadingGallery}
+                  className="w-full h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-[10px]">{uploadingGallery ? 'Uploading…' : 'Add Photos'}</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
