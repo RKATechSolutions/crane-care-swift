@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronRight, ChevronLeft, CheckCircle, Loader2, Save, FileText } from 'lucide-react';
+import { ChevronRight, ChevronLeft, CheckCircle, Loader2, Save, FileText, Sparkles } from 'lucide-react';
 import { generateBaselinePdf } from '@/utils/generateBaselinePdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import type jsPDF from 'jspdf';
@@ -29,6 +29,16 @@ const SECTIONS = [
 const YES_PARTIAL_NO = ['Yes', 'Partially', 'No'];
 const YES_SOMEWHAT_NO = ['Yes', 'Somewhat', 'No'];
 
+// Fields that are answered by the customer (pre-visit sections)
+const CUSTOMER_FIELDS = new Set([
+  'company_name', 'site_location', 'main_contact_name', 'role_position',
+  'number_of_cranes', 'operating_hours_per_day', 'shifts_per_day', 'days_per_week',
+  'production_increased', 'breakdowns', 'avg_downtime', 'longest_downtime',
+  'avg_response_time', 'scheduled_visits', 'emergency_visits', 'first_time_fix',
+  'top_recurring_issues', 'rev_hour', 'labour_cost_per_hour', 'backup_crane',
+  'value_most', 'most_frustrating', 'magic_wand',
+]);
+
 type FormData = Record<string, string | number | null>;
 
 export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineFormProps) {
@@ -43,11 +53,14 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
   const [status, setStatus] = useState<'in_progress' | 'completed'>('in_progress');
   const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   // Load existing
   useEffect(() => {
     if (!existingId) {
-      // Pre-fill company name from site
       setFormData(prev => ({ ...prev, company_name: site.name }));
       return;
     }
@@ -55,9 +68,10 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
       const { data } = await supabase.from('crane_baselines').select('*').eq('id', existingId).single();
       if (data) {
         setStatus(data.status as any);
+        if (data.ai_summary) setAiSummary(data.ai_summary);
         const fd: FormData = {};
         Object.entries(data).forEach(([k, v]) => {
-          if (!['id', 'created_at', 'updated_at', 'client_id'].includes(k) && v !== null) {
+          if (!['id', 'created_at', 'updated_at', 'client_id', 'ai_summary'].includes(k) && v !== null) {
             fd[k] = v as any;
           }
         });
@@ -67,9 +81,50 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
     load();
   }, [existingId]);
 
+  // Autosave with debounce
+  const doAutosave = useCallback(async (data: FormData, currentRecordId: string) => {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+    const payload: any = {
+      site_name: site.name,
+      client_id: clientId,
+      technician_id: state.currentUser?.id,
+      technician_name: state.currentUser?.name,
+      status: 'in_progress',
+      ...data,
+    };
+    delete payload.status_label;
+
+    try {
+      if (currentRecordId) {
+        await supabase.from('crane_baselines').update(payload).eq('id', currentRecordId);
+      } else {
+        const { data: newRecord } = await supabase.from('crane_baselines').insert(payload).select('id').single();
+        if (newRecord) setRecordId(newRecord.id);
+      }
+      setLastSaved(new Date());
+    } catch {
+      // Silent fail for autosave
+    }
+  }, [site, state.currentUser]);
+
   const set = (key: string, value: string | number | null) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    setFormData(prev => {
+      const next = { ...prev, [key]: value };
+      // Trigger autosave after 2s debounce
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = setTimeout(() => {
+        doAutosave(next, recordId);
+      }, 2000);
+      return next;
+    });
   };
+
+  // Cleanup timer
+  useEffect(() => {
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, []);
 
   const num = (key: string): number => {
     const v = formData[key];
@@ -101,42 +156,13 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
     const adjustedCost = backupCrane === 'No' ? annualCost * 1.2 : annualCost;
     const trainingCoverage = totalOps > 0 ? (refresherOps / totalOps) * 100 : 0;
 
-    return {
-      annualDowntime,
-      reactiveRatio,
-      mttr,
-      costPerBreakdown,
-      annualCost,
-      adjustedCost,
-      trainingCoverage,
-    };
+    return { annualDowntime, reactiveRatio, mttr, costPerBreakdown, annualCost, adjustedCost, trainingCoverage };
   }, [formData]);
 
   const save = async () => {
     setSaving(true);
-    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
-    const payload: any = {
-      site_name: site.name,
-      client_id: clientId,
-      technician_id: state.currentUser?.id,
-      technician_name: state.currentUser?.name,
-      status,
-      ...formData,
-    };
-    // Remove non-DB fields
-    delete payload.status_label;
-
-    try {
-      if (recordId) {
-        await supabase.from('crane_baselines').update(payload).eq('id', recordId);
-      } else {
-        const { data } = await supabase.from('crane_baselines').insert(payload).select('id').single();
-        if (data) setRecordId(data.id);
-      }
-      toast({ title: 'Saved', description: 'Baseline saved successfully.' });
-    } catch (e) {
-      toast({ title: 'Error', description: 'Failed to save.', variant: 'destructive' });
-    }
+    await doAutosave(formData, recordId);
+    toast({ title: 'Saved', description: 'Baseline saved successfully.' });
     setSaving(false);
   };
 
@@ -162,10 +188,35 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
         if (data) setRecordId(data.id);
       }
       toast({ title: 'Completed', description: 'Baseline completed and saved.' });
-    } catch (e) {
+    } catch {
       toast({ title: 'Error', description: 'Failed to complete.', variant: 'destructive' });
     }
     setSaving(false);
+  };
+
+  const generateAiSummary = async () => {
+    if (!recordId) {
+      // Save first to get a record ID
+      await save();
+    }
+    if (!recordId) {
+      toast({ title: 'Error', description: 'Please save the form first.', variant: 'destructive' });
+      return;
+    }
+    setGeneratingAi(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-baseline-summary', {
+        body: { baselineId: recordId },
+      });
+      if (error) throw error;
+      if (data?.summary) {
+        setAiSummary(data.summary);
+        toast({ title: 'AI Summary Generated', description: 'Strategic summary is ready.' });
+      }
+    } catch (e: any) {
+      toast({ title: 'Error', description: e?.message || 'Failed to generate AI summary.', variant: 'destructive' });
+    }
+    setGeneratingAi(false);
   };
 
   const handleExportPdf = async () => {
@@ -177,15 +228,19 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
         technicianName: state.currentUser?.name || '',
         formData,
         calculations: calc,
+        aiSummary: aiSummary || undefined,
       });
       setPreviewPdfDoc(doc);
-    } catch (e) {
+    } catch {
       toast({ title: 'Error', description: 'Failed to generate PDF.', variant: 'destructive' });
     }
     setGeneratingPdf(false);
   };
 
-  // Render helpers
+  // Helper to determine if a field is a technician field (bold styling)
+  const isTechField = (key: string) => !CUSTOMER_FIELDS.has(key);
+
+  // Render helpers with bold styling for technician answers
   const renderNumberField = (label: string, key: string, placeholder = '0', suffix?: string) => (
     <div className="space-y-1">
       <label className="text-sm font-medium text-foreground">{label}</label>
@@ -196,7 +251,7 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
           value={formData[key] ?? ''}
           onChange={e => set(key, e.target.value ? parseFloat(e.target.value) : null)}
           placeholder={placeholder}
-          className="flex-1 h-11 px-3 border border-border rounded-lg bg-background text-sm"
+          className={`flex-1 h-11 px-3 border border-border rounded-lg bg-background text-sm ${isTechField(key) && formData[key] != null ? 'font-bold' : ''}`}
         />
         {suffix && <span className="text-xs text-muted-foreground">{suffix}</span>}
       </div>
@@ -212,7 +267,7 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
         type="text"
         value={str(key)}
         onChange={e => set(key, e.target.value)}
-        className="w-full h-11 px-3 border border-border rounded-lg bg-background text-sm"
+        className={`w-full h-11 px-3 border border-border rounded-lg bg-background text-sm ${isTechField(key) && str(key) ? 'font-bold' : ''}`}
       />
     </div>
   );
@@ -224,7 +279,7 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
         value={str(key)}
         onChange={e => set(key, e.target.value)}
         rows={3}
-        className="w-full p-3 border border-border rounded-lg bg-background text-sm resize-none"
+        className={`w-full p-3 border border-border rounded-lg bg-background text-sm resize-none ${isTechField(key) && str(key) ? 'font-bold' : ''}`}
       />
     </div>
   );
@@ -237,10 +292,10 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
           <button
             key={opt}
             onClick={() => set(key, str(key) === opt ? null : opt)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            className={`px-4 py-2.5 rounded-xl text-sm transition-all ${
               str(key) === opt
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-foreground border border-border'
+                ? `bg-primary text-primary-foreground ${isTechField(key) ? 'font-extrabold ring-2 ring-primary/50' : 'font-bold'}`
+                : 'bg-muted text-foreground border border-border font-medium'
             }`}
           >
             {opt}
@@ -250,12 +305,13 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
     </div>
   );
 
-  const renderCalcField = (label: string, value: number, prefix = '', suffix = '') => (
+  const renderCalcField = (label: string, value: number, prefix = '', suffix = '', explainer?: string) => (
     <div className="bg-muted/50 border border-border rounded-xl p-3">
       <p className="text-xs text-muted-foreground mb-1">{label}</p>
       <p className="text-lg font-bold text-foreground">
         {prefix}{isNaN(value) || !isFinite(value) ? '—' : value.toLocaleString('en-AU', { maximumFractionDigits: 1 })}{suffix}
       </p>
+      {explainer && <p className="text-[10px] text-muted-foreground mt-1 leading-tight">{explainer}</p>}
     </div>
   );
 
@@ -295,9 +351,9 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
             
             <div className="pt-2 space-y-3">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Calculated Metrics</p>
-              {renderCalcField('Estimated Annual Downtime', calc.annualDowntime, '', ' hours')}
-              {renderCalcField('Reactive Maintenance Ratio', calc.reactiveRatio, '', '%')}
-              {renderCalcField('Mean Time To Repair (MTTR)', calc.mttr, '', ' hours')}
+              {renderCalcField('Estimated Annual Downtime', calc.annualDowntime, '', ' hours', 'Total hours your cranes are out of action each year based on breakdown frequency and average repair time.')}
+              {renderCalcField('Reactive Maintenance Ratio', calc.reactiveRatio, '', '%', 'Percentage of maintenance that is unplanned. Above 50% indicates a reactive maintenance culture.')}
+              {renderCalcField('Mean Time To Repair', calc.mttr, '', ' hours', 'Average time from breakdown to crane back in service. Lower is better — industry benchmark is under 4 hours.')}
             </div>
           </div>
         );
@@ -311,13 +367,16 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
 
             <div className="pt-2 space-y-3">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Financial Impact</p>
-              {renderCalcField('Estimated Cost Per Breakdown', calc.costPerBreakdown, '$')}
-              {renderCalcField('Estimated Annual Downtime Cost', calc.annualCost, '$')}
+              {renderCalcField('Estimated Cost Per Breakdown', calc.costPerBreakdown, '$', '', 'Revenue lost each time a crane breaks down, based on your hourly production value.')}
+              {renderCalcField('Estimated Annual Downtime Cost', calc.annualCost, '$', '', 'Total annual revenue lost due to crane downtime across all breakdowns.')}
               {str('backup_crane') === 'No' && (
                 <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3">
                   <p className="text-xs text-muted-foreground mb-1">Adjusted Annual Downtime Cost (No Backup — 20% buffer)</p>
                   <p className="text-lg font-bold text-destructive">
                     ${isNaN(calc.adjustedCost) ? '—' : calc.adjustedCost.toLocaleString('en-AU', { maximumFractionDigits: 0 })}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-tight">
+                    Without a backup crane, downtime impact increases by ~20% due to production bottlenecks, overtime costs, and delivery penalties.
                   </p>
                 </div>
               )}
@@ -371,7 +430,7 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
             {renderSelect('Near misses formally reviewed?', 'near_misses_reviewed', YES_PARTIAL_NO)}
 
             <div className="pt-2">
-              {renderCalcField('Training Coverage Rate', calc.trainingCoverage, '', '%')}
+              {renderCalcField('Training Coverage Rate', calc.trainingCoverage, '', '%', 'Percentage of operators with up-to-date refresher training. Below 80% indicates a training gap.')}
             </div>
           </div>
         );
@@ -390,8 +449,6 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
       case 'provider':
         return (
           <div className="space-y-4">
-            {renderNumberField('Average Response Time', 'provider_response_time', '0', 'hours')}
-            {renderNumberField('First-Time Fix Rate', 'provider_fix_rate', '0', '%')}
             {renderSelect('Reports electronic & detailed?', 'reports_electronic', YES_PARTIAL_NO)}
             {renderSelect('Reports include risk ranking?', 'reports_risk_ranking', YES_PARTIAL_NO)}
             {renderSelect('Engineering advice provided?', 'engineering_advice', YES_PARTIAL_NO)}
@@ -408,25 +465,51 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
             <div>
               <h3 className="text-sm font-bold text-foreground mb-3">🏗 Reliability Overview</h3>
               <div className="grid grid-cols-2 gap-3">
-                {renderCalcField('Annual Downtime', calc.annualDowntime, '', ' hrs')}
-                {renderCalcField('Reactive Ratio', calc.reactiveRatio, '', '%')}
-                {renderCalcField('MTTR', calc.mttr, '', ' hrs')}
-                {renderCalcField('First-Time Fix', num('first_time_fix'), '', '%')}
+                {renderCalcField('Annual Downtime', calc.annualDowntime, '', ' hrs', 'Total crane downtime per year from all breakdowns.')}
+                {renderCalcField('Reactive Ratio', calc.reactiveRatio, '', '%', 'Share of maintenance that is unplanned emergency work.')}
+                {renderCalcField('Mean Time To Repair', calc.mttr, '', ' hrs', 'Average hours from breakdown to crane back in service.')}
+                {renderCalcField('First-Time Fix', num('first_time_fix'), '', '%', 'How often issues are resolved on the first visit.')}
               </div>
             </div>
 
             <div>
               <h3 className="text-sm font-bold text-foreground mb-3">💰 Financial Exposure</h3>
               <div className="grid grid-cols-2 gap-3">
-                {renderCalcField('Cost Per Breakdown', calc.costPerBreakdown, '$')}
-                {renderCalcField('Annual Cost', calc.annualCost, '$')}
-                {str('backup_crane') === 'No' && renderCalcField('Adjusted Cost', calc.adjustedCost, '$')}
+                {renderCalcField('Cost Per Breakdown', calc.costPerBreakdown, '$', '', 'Revenue lost each time a crane goes down.')}
+                {renderCalcField('Annual Cost', calc.annualCost, '$', '', 'Total yearly revenue impact from all crane downtime.')}
+                {str('backup_crane') === 'No' && renderCalcField('Adjusted Cost (No Backup)', calc.adjustedCost, '$', '', 'Includes 20% buffer for no backup crane — covers overtime, delays and penalties.')}
               </div>
             </div>
 
             <div>
               <h3 className="text-sm font-bold text-foreground mb-3">🎓 Education Indicator</h3>
-              {renderCalcField('Training Coverage Rate', calc.trainingCoverage, '', '%')}
+              {renderCalcField('Training Coverage Rate', calc.trainingCoverage, '', '%', 'Percentage of operators with current refresher training.')}
+            </div>
+
+            {/* AI Summary Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-foreground">🤖 AI Strategic Summary</h3>
+                <button
+                  onClick={generateAiSummary}
+                  disabled={generatingAi}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground disabled:opacity-50"
+                >
+                  {generatingAi ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                  {aiSummary ? 'Regenerate' : 'Generate'}
+                </button>
+              </div>
+              {generatingAi && (
+                <div className="bg-muted/50 border border-border rounded-xl p-4 text-center">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
+                  <p className="text-xs text-muted-foreground">Analysing baseline data and generating strategic summary...</p>
+                </div>
+              )}
+              {aiSummary && !generatingAi && (
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+                  <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{aiSummary}</div>
+                </div>
+              )}
             </div>
 
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
@@ -499,11 +582,16 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
         </div>
       </div>
 
-      {/* Section title */}
-      <div className="px-4 pt-4 pb-2">
+      {/* Section title + autosave indicator */}
+      <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <h2 className="text-lg font-bold text-foreground">
           {currentSection.label}
         </h2>
+        {lastSaved && (
+          <span className="text-[10px] text-muted-foreground">
+            Saved {lastSaved.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
       </div>
 
       {/* Form content */}
