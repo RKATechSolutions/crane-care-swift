@@ -27,6 +27,13 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
   const [noteOpen, setNoteOpen] = useState(false);
   const site = state.selectedSite!;
 
+  // Section visibility helper
+  const isSectionVisible = (fieldKey: string) => {
+    const sections = state.adminConfig.jobSummarySections || [];
+    const found = sections.find(s => s.fieldKey === fieldKey);
+    return found ? found.visible : true; // default visible if not configured
+  };
+
   const completedInspections = state.inspections.filter(
     i => i.siteId === site.id && i.status === 'completed'
   );
