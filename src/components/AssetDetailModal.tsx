@@ -45,6 +45,9 @@ function SectionHeader({ title, open, onToggle }: { title: string; open: boolean
 export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalProps) {
   const [saving, setSaving] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [mainPhotoUrl, setMainPhotoUrl] = useState(asset.main_photo_url || '');
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Editable fields
   const [description, setDescription] = useState(asset.description || '');
@@ -58,6 +61,26 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
   const [status, setStatus] = useState(asset.status || 'In Service');
   const [lengthLift, setLengthLift] = useState(asset.length_lift || '');
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `asset-photos/${asset.id}_${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+      const url = urlData.publicUrl;
+      setMainPhotoUrl(url);
+      await supabase.from('assets').update({ main_photo_url: url } as any).eq('id', asset.id);
+      toast.success('Asset photo uploaded');
+    } catch (err: any) {
+      toast.error('Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
   const handleSave = async () => {
     setSaving(true);
     const { error } = await supabase.from('assets').update({
