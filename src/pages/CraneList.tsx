@@ -70,6 +70,9 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
   const [pendingFormAction, setPendingFormAction] = useState<(() => void) | null>(null);
   const [activeJobName, setActiveJobName] = useState<string | null>(null);
   const [clientReports, setClientReports] = useState<any[]>([]);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const site = state.selectedSite;
 
   // Fetch active job name
