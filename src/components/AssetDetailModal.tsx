@@ -95,7 +95,8 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
       area_name: areaName.trim() || null,
       status: status,
       length_lift: lengthLift.trim() || null,
-    }).eq('id', asset.id);
+      main_photo_url: mainPhotoUrl || null,
+    } as any).eq('id', asset.id);
 
     if (error) {
       toast.error(error.message || 'Failed to update');
