@@ -84,6 +84,27 @@ export default function CraneList() {
     fetchAssessment();
   }, [site?.id, site?.name]);
 
+  // Fetch existing crane baseline
+  useEffect(() => {
+    if (!site) return;
+    const fetchBaseline = async () => {
+      const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+      let query = supabase.from('crane_baselines').select('id, status');
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      } else {
+        query = query.eq('site_name', site.name);
+      }
+      const { data } = await query.order('created_at', { ascending: false }).limit(1);
+      if (data && data.length > 0) {
+        setExistingBaseline({ id: data[0].id, status: data[0].status });
+      } else {
+        setExistingBaseline(null);
+      }
+    };
+    fetchBaseline();
+  }, [site?.id, site?.name]);
+
   useEffect(() => {
     if (!site) {
       setLoading(false);
