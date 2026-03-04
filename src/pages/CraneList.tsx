@@ -326,7 +326,33 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
     if (data) setDbAssets(data);
   };
 
-  // Group DB assets by class_name
+  const refreshReports = async () => {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+    let query = supabase.from('db_inspections').select('id, asset_name, inspection_date, status, technician_name, crane_status, form_id');
+    if (clientId) query = query.eq('client_id', clientId);
+    else query = query.eq('site_name', site.name);
+    const { data } = await query.order('created_at', { ascending: false });
+    if (data) setClientReports(data);
+  };
+
+  const handleDeleteReport = async (reportId: string) => {
+    setDeleting(true);
+    try {
+      // Delete responses first, then the inspection
+      await supabase.from('inspection_responses').delete().eq('inspection_id', reportId);
+      const { error } = await supabase.from('db_inspections').delete().eq('id', reportId);
+      if (error) throw error;
+      toast({ title: 'Report deleted', description: 'The inspection report has been removed.' });
+      setClientReports(prev => prev.filter(r => r.id !== reportId));
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    }
+    setDeleting(false);
+    setDeletingReportId(null);
+  };
+
+
   const groupedAssets = displayAssets.reduce((acc, asset) => {
     const key = asset.class_name;
     if (!acc[key]) acc[key] = [];
