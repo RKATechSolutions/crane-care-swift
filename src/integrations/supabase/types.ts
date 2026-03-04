@@ -339,6 +339,224 @@ export type Database = {
         }
         Relationships: []
       }
+      crane_baselines: {
+        Row: {
+          avg_downtime: number | null
+          avg_response_time: number | null
+          backup_crane: string | null
+          baseline_date: string | null
+          breakdown_response_process: string | null
+          breakdowns: number | null
+          capital_forecast: string | null
+          cleanliness_standard: string | null
+          client_id: string | null
+          company_name: string | null
+          competency_matrix: string | null
+          completed_at: string | null
+          complex_lifts_process: string | null
+          crane_hazards_meetings: string | null
+          created_at: string
+          days_per_week: number | null
+          defects_tracked: string | null
+          design_work_period: string | null
+          digital_monitoring: string | null
+          duty_classification_reassessed: string | null
+          emergency_visits: number | null
+          engineering_advice: string | null
+          environmental_factors: string | null
+          findings_reviewed: string | null
+          first_time_fix: number | null
+          id: string
+          labour_cost_per_hour: number | null
+          lifecycle_planning: string | null
+          lifting_register_maintained: string | null
+          load_handling_education: string | null
+          logbooks_updated: string | null
+          longest_downtime: number | null
+          magic_wand: string | null
+          main_contact_name: string | null
+          most_frustrating: string | null
+          near_misses_recorded: string | null
+          near_misses_reviewed: string | null
+          number_of_cranes: number | null
+          operating_hours_per_day: number | null
+          ppe_worn: string | null
+          pre_start_inspections: string | null
+          preventative_maintenance: string | null
+          production_increased: string | null
+          provider_fix_rate: number | null
+          provider_response_time: number | null
+          refresher_operators: number | null
+          remaining_service_life: string | null
+          reports_electronic: string | null
+          reports_risk_ranking: string | null
+          rev_hour: number | null
+          role_position: string | null
+          scheduled_visits: number | null
+          shifts_per_day: number | null
+          signage_current: string | null
+          site_location: string | null
+          site_name: string
+          status: string
+          supervisors_trained: string | null
+          technician_id: string | null
+          technician_name: string | null
+          top_recurring_issues: string | null
+          total_operators: number | null
+          updated_at: string
+          value_most: string | null
+          walkways_clear: string | null
+          within_capacity: string | null
+          workshop_tidy: string | null
+        }
+        Insert: {
+          avg_downtime?: number | null
+          avg_response_time?: number | null
+          backup_crane?: string | null
+          baseline_date?: string | null
+          breakdown_response_process?: string | null
+          breakdowns?: number | null
+          capital_forecast?: string | null
+          cleanliness_standard?: string | null
+          client_id?: string | null
+          company_name?: string | null
+          competency_matrix?: string | null
+          completed_at?: string | null
+          complex_lifts_process?: string | null
+          crane_hazards_meetings?: string | null
+          created_at?: string
+          days_per_week?: number | null
+          defects_tracked?: string | null
+          design_work_period?: string | null
+          digital_monitoring?: string | null
+          duty_classification_reassessed?: string | null
+          emergency_visits?: number | null
+          engineering_advice?: string | null
+          environmental_factors?: string | null
+          findings_reviewed?: string | null
+          first_time_fix?: number | null
+          id?: string
+          labour_cost_per_hour?: number | null
+          lifecycle_planning?: string | null
+          lifting_register_maintained?: string | null
+          load_handling_education?: string | null
+          logbooks_updated?: string | null
+          longest_downtime?: number | null
+          magic_wand?: string | null
+          main_contact_name?: string | null
+          most_frustrating?: string | null
+          near_misses_recorded?: string | null
+          near_misses_reviewed?: string | null
+          number_of_cranes?: number | null
+          operating_hours_per_day?: number | null
+          ppe_worn?: string | null
+          pre_start_inspections?: string | null
+          preventative_maintenance?: string | null
+          production_increased?: string | null
+          provider_fix_rate?: number | null
+          provider_response_time?: number | null
+          refresher_operators?: number | null
+          remaining_service_life?: string | null
+          reports_electronic?: string | null
+          reports_risk_ranking?: string | null
+          rev_hour?: number | null
+          role_position?: string | null
+          scheduled_visits?: number | null
+          shifts_per_day?: number | null
+          signage_current?: string | null
+          site_location?: string | null
+          site_name: string
+          status?: string
+          supervisors_trained?: string | null
+          technician_id?: string | null
+          technician_name?: string | null
+          top_recurring_issues?: string | null
+          total_operators?: number | null
+          updated_at?: string
+          value_most?: string | null
+          walkways_clear?: string | null
+          within_capacity?: string | null
+          workshop_tidy?: string | null
+        }
+        Update: {
+          avg_downtime?: number | null
+          avg_response_time?: number | null
+          backup_crane?: string | null
+          baseline_date?: string | null
+          breakdown_response_process?: string | null
+          breakdowns?: number | null
+          capital_forecast?: string | null
+          cleanliness_standard?: string | null
+          client_id?: string | null
+          company_name?: string | null
+          competency_matrix?: string | null
+          completed_at?: string | null
+          complex_lifts_process?: string | null
+          crane_hazards_meetings?: string | null
+          created_at?: string
+          days_per_week?: number | null
+          defects_tracked?: string | null
+          design_work_period?: string | null
+          digital_monitoring?: string | null
+          duty_classification_reassessed?: string | null
+          emergency_visits?: number | null
+          engineering_advice?: string | null
+          environmental_factors?: string | null
+          findings_reviewed?: string | null
+          first_time_fix?: number | null
+          id?: string
+          labour_cost_per_hour?: number | null
+          lifecycle_planning?: string | null
+          lifting_register_maintained?: string | null
+          load_handling_education?: string | null
+          logbooks_updated?: string | null
+          longest_downtime?: number | null
+          magic_wand?: string | null
+          main_contact_name?: string | null
+          most_frustrating?: string | null
+          near_misses_recorded?: string | null
+          near_misses_reviewed?: string | null
+          number_of_cranes?: number | null
+          operating_hours_per_day?: number | null
+          ppe_worn?: string | null
+          pre_start_inspections?: string | null
+          preventative_maintenance?: string | null
+          production_increased?: string | null
+          provider_fix_rate?: number | null
+          provider_response_time?: number | null
+          refresher_operators?: number | null
+          remaining_service_life?: string | null
+          reports_electronic?: string | null
+          reports_risk_ranking?: string | null
+          rev_hour?: number | null
+          role_position?: string | null
+          scheduled_visits?: number | null
+          shifts_per_day?: number | null
+          signage_current?: string | null
+          site_location?: string | null
+          site_name?: string
+          status?: string
+          supervisors_trained?: string | null
+          technician_id?: string | null
+          technician_name?: string | null
+          top_recurring_issues?: string | null
+          total_operators?: number | null
+          updated_at?: string
+          value_most?: string | null
+          walkways_clear?: string | null
+          within_capacity?: string | null
+          workshop_tidy?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crane_baselines_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       db_inspections: {
         Row: {
           ai_12_month_plan: string | null

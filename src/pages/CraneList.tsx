@@ -2,9 +2,10 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X, ClipboardList } from 'lucide-react';
+import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X, ClipboardList, BarChart3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
+import CraneBaselineForm from '@/pages/CraneBaselineForm';
 import DbInspectionForm from '@/pages/DbInspectionForm';
 import RepairBreakdownForm from '@/pages/RepairBreakdownForm';
 import LiftingRegisterForm from '@/pages/LiftingRegisterForm';
@@ -49,6 +50,8 @@ export default function CraneList() {
   const [showLiftingRegister, setShowLiftingRegister] = useState(false);
   const [showLiftingRegisterList, setShowLiftingRegisterList] = useState(false);
   const [showLiftingInspection, setShowLiftingInspection] = useState(false);
+  const [showBaseline, setShowBaseline] = useState<{ existingId?: string } | null>(null);
+  const [existingBaseline, setExistingBaseline] = useState<{ id: string; status: string } | null>(null);
   const site = state.selectedSite;
 
   // Fetch DB form templates
@@ -79,6 +82,27 @@ export default function CraneList() {
       }
     };
     fetchAssessment();
+  }, [site?.id, site?.name]);
+
+  // Fetch existing crane baseline
+  useEffect(() => {
+    if (!site) return;
+    const fetchBaseline = async () => {
+      const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+      let query = supabase.from('crane_baselines').select('id, status');
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      } else {
+        query = query.eq('site_name', site.name);
+      }
+      const { data } = await query.order('created_at', { ascending: false }).limit(1);
+      if (data && data.length > 0) {
+        setExistingBaseline({ id: data[0].id, status: data[0].status });
+      } else {
+        setExistingBaseline(null);
+      }
+    };
+    fetchBaseline();
   }, [site?.id, site?.name]);
 
   useEffect(() => {
@@ -339,6 +363,24 @@ export default function CraneList() {
     );
   }
 
+  // Show crane baseline form
+  if (showBaseline) {
+    const refreshBaseline = async () => {
+      const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+      let query = supabase.from('crane_baselines').select('id, status');
+      if (clientId) query = query.eq('client_id', clientId);
+      else query = query.eq('site_name', site.name);
+      const { data } = await query.order('created_at', { ascending: false }).limit(1);
+      if (data && data.length > 0) setExistingBaseline({ id: data[0].id, status: data[0].status });
+    };
+    return (
+      <CraneBaselineForm
+        existingId={showBaseline.existingId}
+        onBack={() => { setShowBaseline(null); refreshBaseline(); }}
+      />
+    );
+  }
+
   // Show assessment form if selected
   if (showAssessment) {
     const refreshAssessment = async () => {
@@ -368,6 +410,18 @@ export default function CraneList() {
       />
 
       <div className="px-4 py-2 border-b border-border space-y-2">
+        {/* Crane Culture & Performance Baseline */}
+        <button
+          onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
+          className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+            existingBaseline?.status === 'completed'
+              ? 'bg-muted text-foreground border border-border'
+              : 'bg-primary text-primary-foreground shadow-lg'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          {existingBaseline?.status === 'completed' ? 'View Crane Performance Baseline' : 'Crane Performance Baseline'}
+        </button>
         <button
           onClick={() => {
             dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
