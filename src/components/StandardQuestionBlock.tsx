@@ -166,17 +166,28 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
           ))}
         </div>
       )}
-      <button
-        onClick={() => fileRef.current?.click()}
-        className={`w-full h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${
-          required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
-        }`}
-      >
-        <Camera className="w-4 h-4" />
-        {response.photo_urls.length > 0 ? 'Add Photo' : required ? 'Photo Required' : 'Add Photo (Optional)'}
-      </button>
-      <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
-    </div>
+      <div className="flex gap-2">
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+        <input ref={galleryRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
+        <button
+          onClick={() => fileRef.current?.click()}
+          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${
+            required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
+          }`}
+        >
+          <Camera className="w-4 h-4" />
+          Take Photo
+        </button>
+        <button
+          onClick={() => galleryRef.current?.click()}
+          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${
+            required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
+          }`}
+        >
+          <ImagePlus className="w-4 h-4" />
+          Upload
+        </button>
+      </div>
   );
 
   return (

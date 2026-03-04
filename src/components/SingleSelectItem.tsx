@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { TemplateItem, InspectionItemResult } from '@/types/inspection';
-import { Check, Camera, X, Lightbulb } from 'lucide-react';
+import { Check, Camera, X, Lightbulb, ImagePlus } from 'lucide-react';
 
 interface SingleSelectItemProps {
   item: TemplateItem;

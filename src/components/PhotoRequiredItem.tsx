@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { TemplateItem, InspectionItemResult } from '@/types/inspection';
-import { Camera, X, CheckCircle } from 'lucide-react';
+import { Camera, X, CheckCircle, ImagePlus } from 'lucide-react';
 
 interface PhotoRequiredItemProps {
   item: TemplateItem;
@@ -68,20 +68,37 @@ export function PhotoRequiredItem({ item, result, onUpdate }: PhotoRequiredItemP
           </div>
         )}
 
-        <button
-          onClick={() => fileRef.current?.click()}
-          className="w-full tap-target bg-primary/10 text-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 border-2 border-dashed border-primary/30"
-        >
-          <Camera className="w-5 h-5" />
-          {hasPhotos ? 'Add Another Photo' : 'Take / Upload Photo (Required)'}
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          onChange={handleCapture}
-          className="hidden"
-        />
+        <div className="flex gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleCapture}
+            className="hidden"
+          />
+          <input
+            ref={galleryRef}
+            type="file"
+            accept="image/*"
+            onChange={handleCapture}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="flex-1 tap-target bg-primary/10 text-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 border-2 border-dashed border-primary/30"
+          >
+            <Camera className="w-5 h-5" />
+            Take Photo
+          </button>
+          <button
+            onClick={() => galleryRef.current?.click()}
+            className="flex-1 tap-target bg-primary/10 text-primary rounded-xl font-bold text-sm flex items-center justify-center gap-2 border-2 border-dashed border-primary/30"
+          >
+            <ImagePlus className="w-5 h-5" />
+            Upload
+          </button>
+        </div>
       </div>
     </div>
   );
