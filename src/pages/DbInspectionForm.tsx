@@ -581,7 +581,21 @@ export default function DbInspectionForm({
         })}
       </div>
 
-      {/* Section Navigation */}
+      {/* Other / Additional Notes — free text for anything missed */}
+      {currentSectionIdx === sections.length - 1 && (
+        <div className="px-4 py-3 border-b border-border bg-muted/30 space-y-2">
+          <p className="text-sm font-bold text-foreground">Other Notes / Additional Observations</p>
+          <p className="text-xs text-muted-foreground">Use this for anything not covered by the form questions above.</p>
+          <textarea
+            value={otherNotes}
+            onChange={(e) => setOtherNotes(e.target.value)}
+            placeholder="Enter any additional observations, findings, or notes…"
+            rows={3}
+            className="w-full p-2.5 border border-border rounded-lg bg-background text-sm resize-none"
+          />
+        </div>
+      )}
+
       <div className="px-4 py-2 border-t border-border flex gap-2">
         {currentSectionIdx > 0 && (
           <button
