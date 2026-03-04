@@ -358,7 +358,7 @@ export const mockTemplateCommissioningLoadTest: InspectionTemplate = {
 };
 
 export const mockUsers = [
-  { id: 'tech-1', name: 'Aaron Harrison', email: 'aaron@rka.com.au', role: 'admin' as const, pin: '1234' },
+  { id: 'tech-1', name: 'Aaron Harrison', email: 'aaron@rka.com.au', role: 'technician' as const },
   { id: 'tech-2', name: 'Vince Fernandez', email: 'vince@rka.com.au', role: 'technician' as const },
   { id: 'tech-3', name: 'Ryan Adams', email: 'ryan@rka.com.au', role: 'technician' as const },
   { id: 'tech-4', name: 'Seth Adams', email: 'seth@rka.com.au', role: 'technician' as const },
