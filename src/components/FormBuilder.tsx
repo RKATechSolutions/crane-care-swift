@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { TemplateItemType, TemplateItem } from '@/types/inspection';
-import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2, Calendar, Type, Camera, ToggleLeft, Pencil, X, Save, FilePlus, Loader2 } from 'lucide-react';
+import { Plus, ChevronRight, CheckSquare, List, Hash, Trash2, Calendar, Type, Camera, ToggleLeft, Pencil, X, Save, FilePlus, Loader2, MessageSquare, Image, Star, BarChart3, Clock, AlignLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
 
 interface DbFormTemplate {
   form_id: string;
@@ -13,7 +14,7 @@ interface DbFormTemplate {
 }
 
 interface DbQuestion {
-  id: string; // form_template_questions.id
+  id: string;
   question_id: string;
   question_text: string;
   section: string;
@@ -26,7 +27,36 @@ interface DbQuestion {
   override_help_text: string | null;
   override_standard_ref: string | null;
   section_override: string | null;
+  sub_heading: string | null;
+  // Question library fields
+  optional_photo: boolean;
+  optional_comment: boolean;
+  requires_comment_on_fail: boolean;
+  requires_photo_on_fail: boolean;
+  severity_required_on_fail: boolean;
+  auto_defect_types: string[] | null;
+  advanced_defect_options: string[] | null;
 }
+
+// All supported answer types for DB forms
+const DB_ANSWER_TYPES = [
+  { value: 'PassFailNA', label: 'Pass / Fail / NA', icon: <CheckSquare className="w-4 h-4" />, desc: 'Standard inspection check' },
+  { value: 'YesNoNA', label: 'Yes / No / NA', icon: <ToggleLeft className="w-4 h-4" />, desc: 'Simple yes/no question' },
+  { value: 'YesPartialNo', label: 'Yes / Partial / No', icon: <BarChart3 className="w-4 h-4" />, desc: 'With partial option' },
+  { value: 'SingleSelect', label: 'Single Select', icon: <List className="w-4 h-4" />, desc: 'Custom dropdown options' },
+  { value: 'Text', label: 'Text / Notes', icon: <Type className="w-4 h-4" />, desc: 'Free-text input' },
+  { value: 'TextArea', label: 'Long Text', icon: <AlignLeft className="w-4 h-4" />, desc: 'Multi-line text area' },
+  { value: 'Number', label: 'Numeric', icon: <Hash className="w-4 h-4" />, desc: 'Number input field' },
+  { value: 'Date', label: 'Date', icon: <Calendar className="w-4 h-4" />, desc: 'Date picker' },
+  { value: 'PhotoOnly', label: 'Photo Only', icon: <Camera className="w-4 h-4" />, desc: 'Mandatory photo capture' },
+  { value: 'Rating', label: 'Rating (1-5)', icon: <Star className="w-4 h-4" />, desc: 'Star or scale rating' },
+  { value: 'Time', label: 'Time', icon: <Clock className="w-4 h-4" />, desc: 'Time picker' },
+];
+
+const DEFECT_TYPE_OPTIONS = [
+  'Structural', 'Mechanical', 'Electrical', 'Safety', 'Hydraulic',
+  'Wear & Tear', 'Corrosion', 'Misalignment', 'Control System', 'Other',
+];
 
 export default function FormBuilder() {
   const { state, dispatch } = useApp();
@@ -52,13 +82,34 @@ export default function FormBuilder() {
   const [selectedDbSection, setSelectedDbSection] = useState<string | null>(null);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [editingDbQuestion, setEditingDbQuestion] = useState<DbQuestion | null>(null);
+  const [savingDbEdit, setSavingDbEdit] = useState(false);
+
+  // DB question edit fields
   const [dbEditText, setDbEditText] = useState('');
   const [dbEditAnswerType, setDbEditAnswerType] = useState('');
   const [dbEditHelpText, setDbEditHelpText] = useState('');
   const [dbEditStandardRef, setDbEditStandardRef] = useState('');
-  const [dbEditOptions, setDbEditOptions] = useState('');
+  const [dbEditOptions, setDbEditOptions] = useState<string[]>([]);
+  const [dbEditNewOption, setDbEditNewOption] = useState('');
   const [dbEditSection, setDbEditSection] = useState('');
-  const [savingDbEdit, setSavingDbEdit] = useState(false);
+  const [dbEditSubHeading, setDbEditSubHeading] = useState('');
+  const [dbEditOptionalPhoto, setDbEditOptionalPhoto] = useState(false);
+  const [dbEditOptionalComment, setDbEditOptionalComment] = useState(false);
+  const [dbEditRequiresCommentOnFail, setDbEditRequiresCommentOnFail] = useState(false);
+  const [dbEditRequiresPhotoOnFail, setDbEditRequiresPhotoOnFail] = useState(false);
+  const [dbEditSeverityOnFail, setDbEditSeverityOnFail] = useState(false);
+  const [dbEditAutoDefectTypes, setDbEditAutoDefectTypes] = useState<string[]>([]);
+  const [dbEditAdvancedDefectOptions, setDbEditAdvancedDefectOptions] = useState<string[]>([]);
+  const [dbEditNewAdvancedOption, setDbEditNewAdvancedOption] = useState('');
+
+  // Add new question to DB form
+  const [showAddDbQuestion, setShowAddDbQuestion] = useState(false);
+  const [addDbText, setAddDbText] = useState('');
+  const [addDbAnswerType, setAddDbAnswerType] = useState('PassFailNA');
+  const [addDbOptions, setAddDbOptions] = useState<string[]>([]);
+  const [addDbNewOption, setAddDbNewOption] = useState('');
+  const [addDbHelpText, setAddDbHelpText] = useState('');
+  const [addingDbQuestion, setAddingDbQuestion] = useState(false);
 
   useEffect(() => {
     fetchDbForms();
@@ -84,6 +135,7 @@ export default function FormBuilder() {
           override_help_text,
           override_standard_ref,
           section_override,
+          sub_heading,
           question_library!inner (
             question_text,
             section,
@@ -91,7 +143,14 @@ export default function FormBuilder() {
             sort_order,
             help_text,
             standard_ref,
-            options
+            options,
+            optional_photo,
+            optional_comment,
+            requires_comment_on_fail,
+            requires_photo_on_fail,
+            severity_required_on_fail,
+            auto_defect_types,
+            advanced_defect_options
           )
         `)
         .eq('form_id', formId)
@@ -113,14 +172,18 @@ export default function FormBuilder() {
         override_help_text: row.override_help_text,
         override_standard_ref: row.override_standard_ref,
         section_override: row.section_override,
+        sub_heading: row.sub_heading,
+        optional_photo: row.question_library.optional_photo,
+        optional_comment: row.question_library.optional_comment,
+        requires_comment_on_fail: row.question_library.requires_comment_on_fail,
+        requires_photo_on_fail: row.question_library.requires_photo_on_fail,
+        severity_required_on_fail: row.question_library.severity_required_on_fail,
+        auto_defect_types: row.question_library.auto_defect_types,
+        advanced_defect_options: row.question_library.advanced_defect_options,
       }));
 
-      // Sort by sort_order
       questions.sort((a, b) => a.sort_order - b.sort_order);
-
       setDbQuestions(questions);
-
-      // Extract unique sections
       const sections = [...new Set(questions.map(q => q.section))];
       setDbSections(sections);
     } catch (err: any) {
@@ -151,40 +214,54 @@ export default function FormBuilder() {
     }
   };
 
+  const answerTypeNeedsOptions = (t: string) => ['SingleSelect', 'YesPartialNo'].includes(t);
+  const answerTypeHasFailState = (t: string) => ['PassFailNA', 'YesNoNA', 'YesPartialNo'].includes(t);
+
   const startEditingDbQuestion = (q: DbQuestion) => {
     setEditingDbQuestion(q);
     setDbEditText(q.question_text);
     setDbEditAnswerType(q.answer_type);
     setDbEditHelpText(q.help_text || '');
     setDbEditStandardRef(q.standard_ref || '');
-    setDbEditOptions(q.options ? q.options.join(', ') : '');
+    setDbEditOptions(q.options || []);
+    setDbEditNewOption('');
     setDbEditSection(q.section);
+    setDbEditSubHeading(q.sub_heading || '');
+    setDbEditOptionalPhoto(q.optional_photo);
+    setDbEditOptionalComment(q.optional_comment);
+    setDbEditRequiresCommentOnFail(q.requires_comment_on_fail);
+    setDbEditRequiresPhotoOnFail(q.requires_photo_on_fail);
+    setDbEditSeverityOnFail(q.severity_required_on_fail);
+    setDbEditAutoDefectTypes(q.auto_defect_types || []);
+    setDbEditAdvancedDefectOptions(q.advanced_defect_options || []);
+    setDbEditNewAdvancedOption('');
   };
 
   const cancelDbEdit = () => {
     setEditingDbQuestion(null);
-    setDbEditText('');
-    setDbEditAnswerType('');
-    setDbEditHelpText('');
-    setDbEditStandardRef('');
-    setDbEditOptions('');
-    setDbEditSection('');
   };
 
   const handleSaveDbQuestion = async () => {
     if (!editingDbQuestion || !dbEditText.trim()) return;
     setSavingDbEdit(true);
     try {
-      // Update the question in question_library
       const updateData: any = {
         question_text: dbEditText.trim(),
         answer_type: dbEditAnswerType,
         help_text: dbEditHelpText.trim() || null,
         standard_ref: dbEditStandardRef.trim() || null,
         section: dbEditSection.trim() || editingDbQuestion.section,
+        optional_photo: dbEditOptionalPhoto,
+        optional_comment: dbEditOptionalComment,
+        requires_comment_on_fail: dbEditRequiresCommentOnFail,
+        requires_photo_on_fail: dbEditRequiresPhotoOnFail,
+        severity_required_on_fail: dbEditSeverityOnFail,
+        auto_defect_types: dbEditAutoDefectTypes.length > 0 ? dbEditAutoDefectTypes : null,
+        advanced_defect_options: dbEditAdvancedDefectOptions.length > 0 ? dbEditAdvancedDefectOptions : null,
       };
-      if (dbEditAnswerType === 'SingleSelect' || dbEditAnswerType === 'YesPartialNo') {
-        updateData.options = dbEditOptions.split(',').map((o: string) => o.trim()).filter(Boolean);
+
+      if (answerTypeNeedsOptions(dbEditAnswerType)) {
+        updateData.options = dbEditOptions.length > 0 ? dbEditOptions : null;
       } else {
         updateData.options = null;
       }
@@ -196,11 +273,18 @@ export default function FormBuilder() {
 
       if (error) throw error;
 
-      // Update section_override on bridge table if section changed
+      // Update bridge table overrides
+      const bridgeUpdate: any = {};
       if (dbEditSection.trim() && dbEditSection.trim() !== editingDbQuestion.section) {
+        bridgeUpdate.section_override = dbEditSection.trim();
+      }
+      if (dbEditSubHeading.trim() !== (editingDbQuestion.sub_heading || '')) {
+        bridgeUpdate.sub_heading = dbEditSubHeading.trim() || null;
+      }
+      if (Object.keys(bridgeUpdate).length > 0) {
         await supabase
           .from('form_template_questions')
-          .update({ section_override: dbEditSection.trim() })
+          .update(bridgeUpdate)
           .eq('id', editingDbQuestion.id);
       }
 
@@ -214,22 +298,60 @@ export default function FormBuilder() {
     }
   };
 
-  const dbAnswerTypes = [
-    { value: 'PassFailNA', label: 'Pass / Fail / NA' },
-    { value: 'YesPartialNo', label: 'Yes / Partial / No' },
-    { value: 'Text', label: 'Text / Notes' },
-    { value: 'Number', label: 'Numeric' },
-    { value: 'Date', label: 'Date' },
-    { value: 'PhotoOnly', label: 'Photo Only' },
-    { value: 'SingleSelect', label: 'Single Select' },
-  ];
+  const handleAddDbQuestion = async () => {
+    if (!addDbText.trim() || !selectedDbFormId || !selectedDbSection) return;
+    setAddingDbQuestion(true);
+    try {
+      const questionId = `Q_${Date.now()}`;
+      const maxSort = dbQuestions
+        .filter(q => q.section === selectedDbSection)
+        .reduce((max, q) => Math.max(max, q.sort_order), 0);
+
+      // Create in question_library
+      const { error: qlError } = await supabase.from('question_library').insert({
+        question_id: questionId,
+        question_text: addDbText.trim(),
+        answer_type: addDbAnswerType,
+        section: selectedDbSection,
+        sort_order: maxSort + 10,
+        help_text: addDbHelpText.trim() || null,
+        options: answerTypeNeedsOptions(addDbAnswerType) && addDbOptions.length > 0 ? addDbOptions : null,
+        asset_types: ['All'],
+        category: 'Custom',
+      });
+      if (qlError) throw qlError;
+
+      // Link to form
+      const { error: ftqError } = await supabase.from('form_template_questions').insert({
+        form_id: selectedDbFormId,
+        question_id: questionId,
+        override_sort_order: maxSort + 10,
+        section_override: selectedDbSection,
+      });
+      if (ftqError) throw ftqError;
+
+      toast({ title: 'Question Added' });
+      setShowAddDbQuestion(false);
+      setAddDbText('');
+      setAddDbAnswerType('PassFailNA');
+      setAddDbOptions([]);
+      setAddDbNewOption('');
+      setAddDbHelpText('');
+      fetchDbFormQuestions(selectedDbFormId);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setAddingDbQuestion(false);
+    }
+  };
+
+  const getAnswerTypeLabel = (type: string) => {
+    const found = DB_ANSWER_TYPES.find(t => t.value === type);
+    return found ? found.label : type;
+  };
 
   const generateFormId = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .substring(0, 30);
+    return name.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_').substring(0, 30);
   };
 
   const handleCreateForm = async () => {
@@ -256,7 +378,428 @@ export default function FormBuilder() {
     }
   };
 
-  // Form state (shared for add + edit) — local templates only
+  // ===== Chip-based options editor =====
+  const renderOptionsEditor = (options: string[], setOptions: (o: string[]) => void, newOpt: string, setNewOpt: (v: string) => void) => (
+    <div>
+      <label className="text-xs font-semibold text-muted-foreground block mb-1">Options</label>
+      <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
+        {options.map((opt, i) => (
+          <span key={i} className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-2.5 py-1 rounded-full">
+            {opt}
+            <button onClick={() => setOptions(options.filter((_, idx) => idx !== i))} className="hover:text-destructive">
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+        {options.length === 0 && <span className="text-xs text-muted-foreground italic">No options added yet</span>}
+      </div>
+      <div className="flex gap-1.5">
+        <input
+          type="text"
+          value={newOpt}
+          onChange={e => setNewOpt(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && newOpt.trim()) {
+              e.preventDefault();
+              setOptions([...options, newOpt.trim()]);
+              setNewOpt('');
+            }
+          }}
+          placeholder="Type option & press Enter"
+          className="flex-1 p-2 border border-border rounded-lg bg-background text-sm"
+        />
+        <button
+          onClick={() => { if (newOpt.trim()) { setOptions([...options, newOpt.trim()]); setNewOpt(''); } }}
+          className="px-3 py-2 bg-primary/10 text-primary rounded-lg text-sm font-medium"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+
+  // ===== Answer type grid =====
+  const renderAnswerTypeGrid = (selected: string, onSelect: (v: string) => void) => (
+    <div>
+      <label className="text-xs font-semibold text-muted-foreground block mb-1">Answer Type</label>
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+        {DB_ANSWER_TYPES.map(at => (
+          <button
+            key={at.value}
+            onClick={() => onSelect(at.value)}
+            className={`p-2 rounded-lg border-2 text-center transition-all ${
+              selected === at.value ? 'border-primary bg-primary/10' : 'border-border bg-background'
+            }`}
+          >
+            <div className="flex justify-center mb-0.5">{at.icon}</div>
+            <p className="text-[10px] font-bold leading-tight">{at.label}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ===== Toggle row helper =====
+  const renderToggleRow = (label: string, description: string, checked: boolean, onChange: (v: boolean) => void) => (
+    <div className="flex items-center justify-between py-1.5">
+      <div>
+        <p className="text-xs font-semibold">{label}</p>
+        <p className="text-[10px] text-muted-foreground">{description}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+
+  // ===== Defect type multi-select =====
+  const renderDefectTypeSelector = (selected: string[], setSelected: (v: string[]) => void) => (
+    <div>
+      <label className="text-xs font-semibold text-muted-foreground block mb-1">Auto Defect Types</label>
+      <div className="flex flex-wrap gap-1.5">
+        {DEFECT_TYPE_OPTIONS.map(dt => (
+          <button
+            key={dt}
+            onClick={() => setSelected(selected.includes(dt) ? selected.filter(d => d !== dt) : [...selected, dt])}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-all ${
+              selected.includes(dt) ? 'bg-primary/10 text-primary border-primary/30' : 'bg-muted text-muted-foreground border-transparent'
+            }`}
+          >
+            {dt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // ====== DB Form: Section question list ======
+  if (selectedDbFormId && selectedDbSection !== null) {
+    const sectionQuestions = dbQuestions.filter(q => q.section === selectedDbSection);
+    return (
+      <div className="p-4 space-y-3">
+        <button onClick={() => setSelectedDbSection(null)} className="text-sm text-primary font-medium mb-2">
+          ← Back to Sections
+        </button>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">{selectedDbFormName}</p>
+            <p className="font-bold text-base">{selectedDbSection}</p>
+          </div>
+          <span className="text-xs bg-muted px-2 py-1 rounded-full font-medium">
+            {sectionQuestions.length} questions
+          </span>
+        </div>
+
+        <div className="space-y-1">
+          {sectionQuestions.map((q, idx) => (
+            <div key={q.id}>
+              {q.sub_heading && (
+                <div className="pt-3 pb-1 px-1">
+                  <p className="text-xs font-bold text-primary uppercase tracking-wide">{q.sub_heading}</p>
+                </div>
+              )}
+              <div className={`flex items-center gap-2 rounded-lg p-3 transition-colors ${
+                editingDbQuestion?.id === q.id ? 'bg-primary/10 ring-2 ring-primary' : 'bg-muted'
+              }`}>
+                <span className="text-xs font-bold text-muted-foreground w-6">{idx + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{q.question_text}</p>
+                  <div className="flex flex-wrap gap-1 mt-0.5">
+                    <span className="text-[10px] bg-background px-1.5 py-0.5 rounded font-medium">{getAnswerTypeLabel(q.answer_type)}</span>
+                    {q.standard_ref && <span className="text-[10px] text-muted-foreground">• {q.standard_ref}</span>}
+                    {q.optional_photo && <span className="text-[10px] bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded">📷</span>}
+                    {q.optional_comment && <span className="text-[10px] bg-amber-500/10 text-amber-600 px-1.5 py-0.5 rounded">💬</span>}
+                    {q.requires_comment_on_fail && <span className="text-[10px] bg-red-500/10 text-red-600 px-1.5 py-0.5 rounded">Fail→Comment</span>}
+                    {q.requires_photo_on_fail && <span className="text-[10px] bg-red-500/10 text-red-600 px-1.5 py-0.5 rounded">Fail→Photo</span>}
+                  </div>
+                  {q.help_text && (
+                    <p className="text-[10px] text-muted-foreground/70 italic truncate mt-0.5">{q.help_text}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => startEditingDbQuestion(q)}
+                  className="p-1.5 text-muted-foreground active:text-primary transition-colors"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleRemoveDbQuestion(q.id)}
+                  className="p-1.5 text-muted-foreground active:text-destructive transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Inline edit form */}
+              {editingDbQuestion?.id === q.id && (
+                <div className="bg-muted rounded-xl p-4 space-y-3 border-2 border-primary/30 mt-1 max-h-[70vh] overflow-y-auto">
+                  <div className="flex items-center justify-between sticky top-0 bg-muted pb-2 z-10">
+                    <p className="text-sm font-bold">Edit Question</p>
+                    <button onClick={cancelDbEdit} className="p-1 text-muted-foreground">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Question Text</label>
+                    <input
+                      type="text"
+                      value={dbEditText}
+                      onChange={e => setDbEditText(e.target.value)}
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                      autoFocus
+                    />
+                  </div>
+
+                  {renderAnswerTypeGrid(dbEditAnswerType, setDbEditAnswerType)}
+
+                  {answerTypeNeedsOptions(dbEditAnswerType) &&
+                    renderOptionsEditor(dbEditOptions, setDbEditOptions, dbEditNewOption, setDbEditNewOption)
+                  }
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Section</label>
+                      <input
+                        type="text"
+                        value={dbEditSection}
+                        onChange={e => setDbEditSection(e.target.value)}
+                        className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Sub-heading</label>
+                      <input
+                        type="text"
+                        value={dbEditSubHeading}
+                        onChange={e => setDbEditSubHeading(e.target.value)}
+                        placeholder="Group divider label"
+                        className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Help Text</label>
+                    <input
+                      type="text"
+                      value={dbEditHelpText}
+                      onChange={e => setDbEditHelpText(e.target.value)}
+                      placeholder="Guidance shown to technicians"
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Standard Ref</label>
+                    <input
+                      type="text"
+                      value={dbEditStandardRef}
+                      onChange={e => setDbEditStandardRef(e.target.value)}
+                      placeholder="e.g. AS 2550 Cl 8.3.1"
+                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                    />
+                  </div>
+
+                  {/* Behaviour toggles */}
+                  <div className="border border-border rounded-lg p-3 space-y-1">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1">Question Behaviour</p>
+                    {renderToggleRow('Optional Photo', 'Allow photo on any result', dbEditOptionalPhoto, setDbEditOptionalPhoto)}
+                    {renderToggleRow('Optional Comment', 'Allow comment on any result', dbEditOptionalComment, setDbEditOptionalComment)}
+                    {answerTypeHasFailState(dbEditAnswerType) && (
+                      <>
+                        {renderToggleRow('Require Comment on Fail', 'Mandatory comment when Fail/No', dbEditRequiresCommentOnFail, setDbEditRequiresCommentOnFail)}
+                        {renderToggleRow('Require Photo on Fail', 'Mandatory photo when Fail/No', dbEditRequiresPhotoOnFail, setDbEditRequiresPhotoOnFail)}
+                        {renderToggleRow('Severity on Fail', 'Show severity picker on Fail/No', dbEditSeverityOnFail, setDbEditSeverityOnFail)}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Defect configuration */}
+                  {answerTypeHasFailState(dbEditAnswerType) && (
+                    <div className="border border-border rounded-lg p-3 space-y-2">
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Defect Configuration</p>
+                      {renderDefectTypeSelector(dbEditAutoDefectTypes, setDbEditAutoDefectTypes)}
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1">Advanced Defect Detail Options</label>
+                        <div className="flex flex-wrap gap-1.5 mb-2 min-h-[24px]">
+                          {dbEditAdvancedDefectOptions.map((opt, i) => (
+                            <span key={i} className="inline-flex items-center gap-1 bg-destructive/10 text-destructive text-xs font-medium px-2 py-0.5 rounded-full">
+                              {opt}
+                              <button onClick={() => setDbEditAdvancedDefectOptions(dbEditAdvancedDefectOptions.filter((_, idx) => idx !== i))}>
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex gap-1.5">
+                          <input
+                            type="text"
+                            value={dbEditNewAdvancedOption}
+                            onChange={e => setDbEditNewAdvancedOption(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && dbEditNewAdvancedOption.trim()) {
+                                e.preventDefault();
+                                setDbEditAdvancedDefectOptions([...dbEditAdvancedDefectOptions, dbEditNewAdvancedOption.trim()]);
+                                setDbEditNewAdvancedOption('');
+                              }
+                            }}
+                            placeholder="e.g. Chain worn beyond limit"
+                            className="flex-1 p-2 border border-border rounded-lg bg-background text-sm"
+                          />
+                          <button
+                            onClick={() => { if (dbEditNewAdvancedOption.trim()) { setDbEditAdvancedDefectOptions([...dbEditAdvancedDefectOptions, dbEditNewAdvancedOption.trim()]); setDbEditNewAdvancedOption(''); } }}
+                            className="px-3 py-2 bg-destructive/10 text-destructive rounded-lg text-sm font-medium"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 sticky bottom-0 bg-muted pt-2">
+                    <button
+                      onClick={handleSaveDbQuestion}
+                      disabled={!dbEditText.trim() || savingDbEdit}
+                      className="flex-1 tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+                    >
+                      {savingDbEdit ? 'Saving...' : <><Save className="w-4 h-4" /> Save Changes</>}
+                    </button>
+                    <button
+                      onClick={cancelDbEdit}
+                      className="px-4 tap-target bg-muted rounded-xl font-semibold text-sm border border-border"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {sectionQuestions.length === 0 && (
+          <p className="text-center text-muted-foreground py-6 text-sm">No questions in this section</p>
+        )}
+
+        {/* Add new question to section */}
+        {!showAddDbQuestion && !editingDbQuestion && (
+          <button
+            onClick={() => setShowAddDbQuestion(true)}
+            className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Add Question
+          </button>
+        )}
+
+        {showAddDbQuestion && (
+          <div className="bg-muted rounded-xl p-4 space-y-3 border-2 border-primary/30">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold">New Question</p>
+              <button onClick={() => { setShowAddDbQuestion(false); setAddDbText(''); setAddDbOptions([]); setAddDbNewOption(''); setAddDbHelpText(''); }} className="p-1 text-muted-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Question Text</label>
+              <input
+                type="text"
+                value={addDbText}
+                onChange={e => setAddDbText(e.target.value)}
+                placeholder="e.g. Wire rope condition check"
+                className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+                autoFocus
+              />
+            </div>
+
+            {renderAnswerTypeGrid(addDbAnswerType, setAddDbAnswerType)}
+
+            {answerTypeNeedsOptions(addDbAnswerType) &&
+              renderOptionsEditor(addDbOptions, setAddDbOptions, addDbNewOption, setAddDbNewOption)
+            }
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground block mb-1">Help Text (optional)</label>
+              <input
+                type="text"
+                value={addDbHelpText}
+                onChange={e => setAddDbHelpText(e.target.value)}
+                placeholder="Guidance for technicians"
+                className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleAddDbQuestion}
+                disabled={!addDbText.trim() || addingDbQuestion || (answerTypeNeedsOptions(addDbAnswerType) && addDbOptions.length === 0)}
+                className="flex-1 tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {addingDbQuestion ? 'Adding...' : 'Add to Form'}
+              </button>
+              <button
+                onClick={() => { setShowAddDbQuestion(false); setAddDbText(''); setAddDbOptions([]); setAddDbNewOption(''); setAddDbHelpText(''); }}
+                className="px-4 tap-target bg-muted rounded-xl font-semibold text-sm border border-border"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ====== DB Form: Section list ======
+  if (selectedDbFormId && selectedDbSection === null) {
+    return (
+      <div className="p-4 space-y-3">
+        <button onClick={() => { setSelectedDbFormId(null); setSelectedDbFormName(''); setDbQuestions([]); setDbSections([]); }} className="text-sm text-primary font-medium mb-2">
+          ← Back to Forms
+        </button>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          {selectedDbFormName} — Sections
+        </p>
+
+        {loadingQuestions ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : dbSections.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p className="font-medium">No questions linked yet</p>
+            <p className="text-sm">Add questions via the Question Library</p>
+          </div>
+        ) : (
+          dbSections.map(sec => {
+            const count = dbQuestions.filter(q => q.section === sec).length;
+            return (
+              <button
+                key={sec}
+                onClick={() => setSelectedDbSection(sec)}
+                className="w-full bg-muted rounded-xl p-4 text-left active:bg-foreground/10 transition-colors flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-sm">{sec}</p>
+                  <p className="text-xs text-muted-foreground">{count} question{count !== 1 ? 's' : ''}</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            );
+          })
+        )}
+
+        <div className="bg-muted/50 rounded-xl p-3 mt-2">
+          <p className="text-xs text-muted-foreground">
+            <strong>Total:</strong> {dbQuestions.length} questions across {dbSections.length} sections
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ====== Local templates: Form state ======
   const [formLabel, setFormLabel] = useState('');
   const [formType, setFormType] = useState<TemplateItemType>('checklist');
   const [formOptions, setFormOptions] = useState('');
@@ -347,20 +890,7 @@ export default function FormBuilder() {
     if (editingItem?.id === itemId) resetForm();
   };
 
-  const getAnswerTypeLabel = (type: string) => {
-    switch (type) {
-      case 'PassFailNA': return 'Pass / Fail / NA';
-      case 'YesPartialNo': return 'Yes / Partial / No';
-      case 'Text': return 'Text / Notes';
-      case 'Number': return 'Numeric';
-      case 'Date': return 'Date picker';
-      case 'PhotoOnly': return 'Photo required';
-      case 'SingleSelect': return 'Single select';
-      default: return type;
-    }
-  };
-
-  // Shared question form (used for both add and edit) — local templates
+  // Local template question form
   const renderQuestionForm = (mode: 'add' | 'edit') => (
     <div className="bg-muted rounded-xl p-4 space-y-3 border-2 border-primary/30">
       <div className="flex items-center justify-between">
@@ -456,219 +986,10 @@ export default function FormBuilder() {
     </div>
   );
 
-  // ====== DB Form: Section question list ======
-  if (selectedDbFormId && selectedDbSection !== null) {
-    const sectionQuestions = dbQuestions.filter(q => q.section === selectedDbSection);
-    return (
-      <div className="p-4 space-y-3">
-        <button onClick={() => setSelectedDbSection(null)} className="text-sm text-primary font-medium mb-2">
-          ← Back to Sections
-        </button>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground">{selectedDbFormName}</p>
-            <p className="font-bold text-base">{selectedDbSection}</p>
-          </div>
-          <span className="text-xs bg-muted px-2 py-1 rounded-full font-medium">
-            {sectionQuestions.length} questions
-          </span>
-        </div>
-
-        <div className="space-y-1">
-          {sectionQuestions.map((q, idx) => (
-            <div key={q.id}>
-              <div className={`flex items-center gap-2 rounded-lg p-3 transition-colors ${
-                editingDbQuestion?.id === q.id ? 'bg-primary/10 ring-2 ring-primary' : 'bg-muted'
-              }`}>
-                <span className="text-xs font-bold text-muted-foreground w-6">{idx + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{q.question_text}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {getAnswerTypeLabel(q.answer_type)}
-                    {q.standard_ref && ` • ${q.standard_ref}`}
-                  </p>
-                  {q.help_text && (
-                    <p className="text-[10px] text-muted-foreground/70 italic truncate">{q.help_text}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => startEditingDbQuestion(q)}
-                  className="p-1.5 text-muted-foreground active:text-primary transition-colors"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleRemoveDbQuestion(q.id)}
-                  className="p-1.5 text-muted-foreground active:text-destructive transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Inline edit form */}
-              {editingDbQuestion?.id === q.id && (
-                <div className="bg-muted rounded-xl p-4 space-y-3 border-2 border-primary/30 mt-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-bold">Edit Question</p>
-                    <button onClick={cancelDbEdit} className="p-1 text-muted-foreground">
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Question Text</label>
-                    <input
-                      type="text"
-                      value={dbEditText}
-                      onChange={e => setDbEditText(e.target.value)}
-                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
-                      autoFocus
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Answer Type</label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {dbAnswerTypes.map(at => (
-                        <button
-                          key={at.value}
-                          onClick={() => setDbEditAnswerType(at.value)}
-                          className={`p-2 rounded-lg border-2 text-center transition-all text-xs font-semibold ${
-                            dbEditAnswerType === at.value ? 'border-primary bg-primary/10' : 'border-border bg-background'
-                          }`}
-                        >
-                          {at.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {(dbEditAnswerType === 'SingleSelect' || dbEditAnswerType === 'YesPartialNo') && (
-                    <div>
-                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Options (comma separated)</label>
-                      <input
-                        type="text"
-                        value={dbEditOptions}
-                        onChange={e => setDbEditOptions(e.target.value)}
-                        placeholder="e.g. Good, Fair, Poor"
-                        className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Section</label>
-                    <input
-                      type="text"
-                      value={dbEditSection}
-                      onChange={e => setDbEditSection(e.target.value)}
-                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Help Text (optional)</label>
-                    <input
-                      type="text"
-                      value={dbEditHelpText}
-                      onChange={e => setDbEditHelpText(e.target.value)}
-                      placeholder="Guidance shown to technicians"
-                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Standard Ref (optional)</label>
-                    <input
-                      type="text"
-                      value={dbEditStandardRef}
-                      onChange={e => setDbEditStandardRef(e.target.value)}
-                      placeholder="e.g. AS 2550 Cl 8.3.1"
-                      className="w-full p-2.5 border border-border rounded-lg bg-background text-sm"
-                    />
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSaveDbQuestion}
-                      disabled={!dbEditText.trim() || savingDbEdit}
-                      className="flex-1 tap-target bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40 flex items-center justify-center gap-2"
-                    >
-                      {savingDbEdit ? 'Saving...' : <><Save className="w-4 h-4" /> Save Changes</>}
-                    </button>
-                    <button
-                      onClick={cancelDbEdit}
-                      className="px-4 tap-target bg-muted rounded-xl font-semibold text-sm border border-border"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {sectionQuestions.length === 0 && (
-          <p className="text-center text-muted-foreground py-6 text-sm">No questions in this section</p>
-        )}
-      </div>
-    );
-  }
-
-  // ====== DB Form: Section list ======
-  if (selectedDbFormId && selectedDbSection === null) {
-    return (
-      <div className="p-4 space-y-3">
-        <button onClick={() => { setSelectedDbFormId(null); setSelectedDbFormName(''); setDbQuestions([]); setDbSections([]); }} className="text-sm text-primary font-medium mb-2">
-          ← Back to Forms
-        </button>
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          {selectedDbFormName} — Sections
-        </p>
-
-        {loadingQuestions ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : dbSections.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="font-medium">No questions linked yet</p>
-            <p className="text-sm">Add questions via the Question Library</p>
-          </div>
-        ) : (
-          dbSections.map(sec => {
-            const count = dbQuestions.filter(q => q.section === sec).length;
-            return (
-              <button
-                key={sec}
-                onClick={() => setSelectedDbSection(sec)}
-                className="w-full bg-muted rounded-xl p-4 text-left active:bg-foreground/10 transition-colors flex items-center justify-between"
-              >
-                <div>
-                  <p className="font-semibold text-sm">{sec}</p>
-                  <p className="text-xs text-muted-foreground">{count} question{count !== 1 ? 's' : ''}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </button>
-            );
-          })
-        )}
-
-        <div className="bg-muted/50 rounded-xl p-3 mt-2">
-          <p className="text-xs text-muted-foreground">
-            <strong>Total:</strong> {dbQuestions.length} questions across {dbSections.length} sections
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ====== Step 1: Select template ======
+  // Step 1: Select template
   if (!selectedTemplateId) {
     return (
       <div className="p-4 space-y-3">
-        {/* Create New Form */}
         {!showCreateForm ? (
           <button
             onClick={() => setShowCreateForm(true)}
@@ -735,7 +1056,6 @@ export default function FormBuilder() {
           </div>
         )}
 
-        {/* DB Forms */}
         {dbForms.length > 0 && (
           <>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Forms</p>
@@ -760,7 +1080,6 @@ export default function FormBuilder() {
           </>
         )}
 
-        {/* Local templates (legacy) */}
         {state.templates.length > 0 && (
           <>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mt-2">Local Templates</p>
