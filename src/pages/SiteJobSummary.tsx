@@ -68,6 +68,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
   const [generatingPreview, setGeneratingPreview] = useState(false);
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
+  const [autoServicePkg, setAutoServicePkg] = useState(false);
+  const [priorityServicePkg, setPriorityServicePkg] = useState(false);
   const [clientContacts, setClientContacts] = useState<any[]>([]);
   // DB inspections (assets inspected)
   interface DbInspection {
