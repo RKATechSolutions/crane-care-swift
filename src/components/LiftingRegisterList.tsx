@@ -305,7 +305,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       </div>
 
       {/* Hidden photo input */}
-      <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
+      <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
 
       <div className="flex-1 overflow-auto">
         {loading && (

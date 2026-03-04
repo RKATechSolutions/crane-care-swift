@@ -180,7 +180,7 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
           {/* Main Asset Photo */}
           <div>
             <label className={labelClass}>Main Asset Photo</label>
-            <input type="file" accept="image/*" capture="environment" ref={photoInputRef} className="hidden" onChange={handlePhotoUpload} />
+            <input type="file" accept="image/*" ref={photoInputRef} className="hidden" onChange={handlePhotoUpload} />
             {mainPhotoUrl ? (
               <div className="relative mt-1">
                 <img src={mainPhotoUrl} alt="Asset" className="w-full h-32 object-cover rounded-lg border border-border" />
