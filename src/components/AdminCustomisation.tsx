@@ -25,6 +25,9 @@ export default function AdminCustomisation() {
   // Client info editing
   const [editingFieldKey, setEditingFieldKey] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
+  const [editFieldType, setEditFieldType] = useState<ClientInfoField['fieldType']>('text');
+  const [editFieldGroup, setEditFieldGroup] = useState('Contact Details');
+  const [editFieldOptions, setEditFieldOptions] = useState('');
   const [newClientLabel, setNewClientLabel] = useState('');
   const [newClientType, setNewClientType] = useState<ClientInfoField['fieldType']>('text');
   const [newClientGroup, setNewClientGroup] = useState('Contact Details');
