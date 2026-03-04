@@ -399,10 +399,13 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
         assetId={activeDbForm.assetId}
         clientId={clientId}
         siteName={site.name}
+        existingInspectionId={editingReportId || undefined}
         taskId={activeJobId || undefined}
-        onBack={() => setActiveDbForm(null)}
+        onBack={() => { setActiveDbForm(null); setEditingReportId(null); refreshReports(); }}
         onSubmitComplete={() => {
           setActiveDbForm(null);
+          setEditingReportId(null);
+          refreshReports();
           dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
         }}
       />
