@@ -287,7 +287,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   doc.addPage();
   y = addHeader(doc, 'Job Summary — Defects & Sign-off', imgs);
   
-  // Gather all defects
+  // Gather all defects - prefer DB defects, fallback to legacy
   const allDefects = inspections.flatMap(insp => {
     const crane = site.cranes.find(c => c.id === insp.craneId);
     return insp.items
@@ -301,37 +301,52 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
         return { crane, item, itemLabel };
       });
   });
+
+  const hasDbDefectsForPdf = useDbDefectsData && dbDefects!.length > 0;
+  const totalDefectsForPdf = hasDbDefectsForPdf ? dbDefects!.length : allDefects.length;
   
-  if (allDefects.length > 0) {
-    y = addSectionTitle(doc, y, `Defects Found (${allDefects.length})`);
+  if (hasDbDefectsForPdf) {
+    // Group DB defects by quote status
+    const quoteNowDb = dbDefects!.filter(d => d.quoteStatus === 'Quote Now');
+    const quoteLaterDb = dbDefects!.filter(d => d.quoteStatus === 'Quote Later');
+    const uncategorizedDb = dbDefects!.filter(d => !d.quoteStatus);
+
+    y = addSectionTitle(doc, y, `Defects Found (${totalDefectsForPdf})`);
     
-    const defectRows = allDefects.map(({ crane, item, itemLabel }) => [
-      crane?.name || '',
-      itemLabel,
-      item.defect!.severity,
-      item.defect!.defectType,
-      item.defect!.rectificationTimeframe,
-      item.defect!.notes || '—',
-      item.defect!.quoteStatus || '—',
+    const defectRows = dbDefects!.map(d => [
+      d.assetName,
+      d.questionText,
+      d.severity || d.urgency || '—',
+      d.defectTypes.join(', ') || '—',
+      d.comment || '—',
+      d.quoteStatus === 'Quote Now' ? 'Fix Now' : d.quoteStatus === 'Quote Later' ? 'Quote Later' : '—',
     ]);
     
     autoTable(doc, {
       startY: y,
-      head: [['Asset', 'Item', 'Severity', 'Type', 'Timeframe', 'Notes', 'Quote']],
+      head: [['Asset', 'Item', 'Severity', 'Type', 'Notes', 'Decision']],
       body: defectRows,
       margin: { left: 14, right: 14 },
       styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
       headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
       columnStyles: {
         0: { cellWidth: 28 },
-        1: { cellWidth: 35 },
-        5: { cellWidth: 35 },
+        1: { cellWidth: 40 },
+        4: { cellWidth: 30 },
       },
       didParseCell(data) {
         if (data.section === 'body' && data.column.index === 2) {
-          const val = data.cell.raw as string;
-          data.cell.styles.textColor = severityColor(val);
+          const val = (data.cell.raw as string) || '';
+          if (val === 'Critical' || val === 'Immediate') data.cell.styles.textColor = RKA_RED;
+          else if (val === 'Major' || val === 'Urgent') data.cell.styles.textColor = RKA_ORANGE;
           data.cell.styles.fontStyle = 'bold';
+        }
+        if (data.section === 'body' && data.column.index === 5) {
+          const val = data.cell.raw as string;
+          if (val === 'Fix Now') {
+            data.cell.styles.textColor = RKA_GREEN;
+            data.cell.styles.fontStyle = 'bold';
+          }
         }
       },
     });
@@ -352,125 +367,236 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
       doc.text(lines, 18, y);
       y += lines.length * 4 + 4;
     }
-  } else {
-    y = addSectionTitle(doc, y, 'Defects Found');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...DARK);
-    doc.text('No defects found — all assets passed inspection.', 18, y + 4);
-    y += 12;
-  }
-  
-  // Lifting Equipment Defects section
-  if (liftingDefects && liftingDefects.length > 0) {
-    if (y > 220) {
-      doc.addPage();
-      y = addHeader(doc, 'Lifting Equipment Defects', imgs);
+
+    // Lifting Equipment Defects section
+    if (liftingDefects && liftingDefects.length > 0) {
+      if (y > 220) { doc.addPage(); y = addHeader(doc, 'Lifting Equipment Defects', imgs); }
+      y = addSectionTitle(doc, y, `Lifting Equipment — Failed / Flagged (${liftingDefects.length})`);
+      const liftingRows = liftingDefects.map(item => {
+        const issues: string[] = [];
+        if (item.equipment_status === 'Failed') issues.push('FAILED');
+        if (item.equipment_status === 'Removed From Service') issues.push('Removed');
+        if (item.tag_present === 'false') issues.push('Tag Missing');
+        if (item.tag_present === 'illegible') issues.push('Tag Illegible');
+        return [
+          item.equipment_type, item.serial_number || item.asset_tag || '—',
+          item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
+          item.manufacturer || '—', issues.join(', ') || item.equipment_status || '—',
+          item.quoteStatus || '—', item.notes || '—',
+        ];
+      });
+      autoTable(doc, {
+        startY: y, head: [['Type', 'Serial/Tag', 'WLL', 'Manufacturer', 'Issue', 'Quote', 'Notes']],
+        body: liftingRows, margin: { left: 14, right: 14 },
+        styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
+        columnStyles: { 0: { cellWidth: 28 }, 6: { cellWidth: 35 } },
+        didParseCell(data) {
+          if (data.section === 'body' && data.column.index === 4) {
+            const val = data.cell.raw as string;
+            if (val.includes('FAILED')) { data.cell.styles.textColor = RKA_RED; data.cell.styles.fontStyle = 'bold'; }
+            else if (val.includes('Tag')) { data.cell.styles.textColor = RKA_ORANGE; data.cell.styles.fontStyle = 'bold'; }
+          }
+        },
+      });
+      y = (doc as any).lastAutoTable.finalY + 4;
+    }
+
+    // Recommendations using DB defects
+    y = addSectionTitle(doc, y, 'Recommendations');
+    
+    const criticalDb = dbDefects!.filter(d => d.severity === 'Critical' || d.urgency === 'Immediate');
+    if (criticalDb.length > 0) {
+      doc.setFillColor(255, 240, 240);
+      doc.roundedRect(14, y, contentW, 10, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_RED);
+      doc.text(`⚠ ${criticalDb.length} CRITICAL defect${criticalDb.length > 1 ? 's' : ''} requiring immediate attention`, 18, y + 6);
+      y += 14;
     }
     
-    y = addSectionTitle(doc, y, `Lifting Equipment — Failed / Flagged (${liftingDefects.length})`);
+    if (quoteNowDb.length > 0) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_GREEN);
+      doc.text(`✓ ${quoteNowDb.length} item${quoteNowDb.length > 1 ? 's' : ''} approved for quotation (Fix Now)`, 18, y);
+      y += 5;
+      quoteNowDb.forEach(d => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+        doc.text(`• ${d.assetName} — ${d.questionText}`, 22, y);
+        y += 4;
+      });
+      y += 2;
+    }
     
-    const liftingRows = liftingDefects.map(item => {
-      const issues: string[] = [];
-      if (item.equipment_status === 'Failed') issues.push('FAILED');
-      if (item.equipment_status === 'Removed From Service') issues.push('Removed');
-      if (item.tag_present === 'false') issues.push('Tag Missing');
-      if (item.tag_present === 'illegible') issues.push('Tag Illegible');
-      
-      return [
-        item.equipment_type,
-        item.serial_number || item.asset_tag || '—',
-        item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
-        item.manufacturer || '—',
-        issues.join(', ') || item.equipment_status || '—',
-        item.quoteStatus || '—',
-        item.notes || '—',
-      ];
-    });
+    if (quoteLaterDb.length > 0) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+      doc.text(`${quoteLaterDb.length} item${quoteLaterDb.length > 1 ? 's' : ''} flagged for future quotation`, 18, y);
+      y += 5;
+      quoteLaterDb.forEach(d => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+        doc.text(`• ${d.assetName} — ${d.questionText}`, 22, y);
+        y += 4;
+      });
+      y += 2;
+    }
+    
+    if (uncategorizedDb.length > 0) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_ORANGE);
+      doc.text(`${uncategorizedDb.length} item${uncategorizedDb.length > 1 ? 's' : ''} pending customer decision`, 18, y);
+      y += 5;
+      uncategorizedDb.forEach(d => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+        doc.text(`• ${d.assetName} — ${d.questionText}`, 22, y);
+        y += 4;
+      });
+      y += 2;
+    }
+    
+    if (totalDefectsForPdf === 0) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+      doc.text('All assets are in satisfactory condition. Continue regular scheduled inspections.', 18, y);
+      y += 8;
+    }
+
+  } else if (allDefects.length > 0) {
+    y = addSectionTitle(doc, y, `Defects Found (${allDefects.length})`);
+    
+    const defectRows = allDefects.map(({ crane, item, itemLabel }) => [
+      crane?.name || '',
+      itemLabel,
+      item.defect!.severity,
+      item.defect!.defectType,
+      item.defect!.rectificationTimeframe,
+      item.defect!.notes || '—',
+      item.defect!.quoteStatus || '—',
+    ]);
     
     autoTable(doc, {
       startY: y,
-      head: [['Type', 'Serial/Tag', 'WLL', 'Manufacturer', 'Issue', 'Quote', 'Notes']],
-      body: liftingRows,
+      head: [['Asset', 'Item', 'Severity', 'Type', 'Timeframe', 'Notes', 'Quote']],
+      body: defectRows,
       margin: { left: 14, right: 14 },
       styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
       headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
-      columnStyles: {
-        0: { cellWidth: 28 },
-        6: { cellWidth: 35 },
-      },
+      columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 35 }, 5: { cellWidth: 35 } },
       didParseCell(data) {
-        if (data.section === 'body' && data.column.index === 4) {
-          const val = data.cell.raw as string;
-          if (val.includes('FAILED')) {
-            data.cell.styles.textColor = RKA_RED;
-            data.cell.styles.fontStyle = 'bold';
-          } else if (val.includes('Tag')) {
-            data.cell.styles.textColor = RKA_ORANGE;
-            data.cell.styles.fontStyle = 'bold';
-          }
+        if (data.section === 'body' && data.column.index === 2) {
+          data.cell.styles.textColor = severityColor(data.cell.raw as string);
+          data.cell.styles.fontStyle = 'bold';
         }
       },
     });
     
     y = (doc as any).lastAutoTable.finalY + 4;
-  }
+    
+    if (customerDefectComments) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+      doc.text('CUSTOMER COMMENTS ON DEFECTS:', 18, y); y += 4;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+      const lines = doc.splitTextToSize(customerDefectComments, contentW - 8);
+      doc.text(lines, 18, y); y += lines.length * 4 + 4;
+    }
 
-  // Recommendations section
-  y = addSectionTitle(doc, y, 'Recommendations');
-  
-  const quoteNowItems = allDefects.filter(d => d.item.defect?.quoteStatus === 'Quote Now');
-  const quoteLaterItems = allDefects.filter(d => d.item.defect?.quoteStatus === 'Quote Later');
-  const criticalItems = allDefects.filter(d => d.item.defect?.severity === 'Critical');
-  
-  if (criticalItems.length > 0) {
-    doc.setFillColor(255, 240, 240);
-    doc.roundedRect(14, y, contentW, 10, 2, 2, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(...RKA_RED);
-    doc.text(`⚠ ${criticalItems.length} CRITICAL defect${criticalItems.length > 1 ? 's' : ''} requiring immediate attention`, 18, y + 6);
-    y += 14;
-  }
-  
-  if (quoteNowItems.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(...RKA_GREEN);
-    doc.text(`✓ ${quoteNowItems.length} item${quoteNowItems.length > 1 ? 's' : ''} approved for quotation`, 18, y);
-    y += 5;
-    quoteNowItems.forEach(d => {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(...DARK);
-      doc.text(`• ${d.crane?.name} — ${d.itemLabel}`, 22, y);
-      y += 4;
-    });
-    y += 2;
-  }
-  
-  if (quoteLaterItems.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`${quoteLaterItems.length} item${quoteLaterItems.length > 1 ? 's' : ''} flagged for future quotation`, 18, y);
-    y += 5;
-    quoteLaterItems.forEach(d => {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(...DARK);
-      doc.text(`• ${d.crane?.name} — ${d.itemLabel}`, 22, y);
-      y += 4;
-    });
-    y += 2;
-  }
-  
-  if (allDefects.length === 0) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(...DARK);
-    doc.text('All assets are in satisfactory condition. Continue regular scheduled inspections.', 18, y);
-    y += 8;
+    // Lifting Equipment Defects section (legacy path)
+    if (liftingDefects && liftingDefects.length > 0) {
+      if (y > 220) { doc.addPage(); y = addHeader(doc, 'Lifting Equipment Defects', imgs); }
+      y = addSectionTitle(doc, y, `Lifting Equipment — Failed / Flagged (${liftingDefects.length})`);
+      const liftingRows = liftingDefects.map(item => {
+        const issues: string[] = [];
+        if (item.equipment_status === 'Failed') issues.push('FAILED');
+        if (item.equipment_status === 'Removed From Service') issues.push('Removed');
+        if (item.tag_present === 'false') issues.push('Tag Missing');
+        if (item.tag_present === 'illegible') issues.push('Tag Illegible');
+        return [
+          item.equipment_type, item.serial_number || item.asset_tag || '—',
+          item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
+          item.manufacturer || '—', issues.join(', ') || item.equipment_status || '—',
+          item.quoteStatus || '—', item.notes || '—',
+        ];
+      });
+      autoTable(doc, {
+        startY: y, head: [['Type', 'Serial/Tag', 'WLL', 'Manufacturer', 'Issue', 'Quote', 'Notes']],
+        body: liftingRows, margin: { left: 14, right: 14 },
+        styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
+        columnStyles: { 0: { cellWidth: 28 }, 6: { cellWidth: 35 } },
+        didParseCell(data) {
+          if (data.section === 'body' && data.column.index === 4) {
+            const val = data.cell.raw as string;
+            if (val.includes('FAILED')) { data.cell.styles.textColor = RKA_RED; data.cell.styles.fontStyle = 'bold'; }
+            else if (val.includes('Tag')) { data.cell.styles.textColor = RKA_ORANGE; data.cell.styles.fontStyle = 'bold'; }
+          }
+        },
+      });
+      y = (doc as any).lastAutoTable.finalY + 4;
+    }
+
+    // Recommendations (legacy path)
+    y = addSectionTitle(doc, y, 'Recommendations');
+    const quoteNowItems = allDefects.filter(d => d.item.defect?.quoteStatus === 'Quote Now');
+    const quoteLaterItems = allDefects.filter(d => d.item.defect?.quoteStatus === 'Quote Later');
+    const criticalItems = allDefects.filter(d => d.item.defect?.severity === 'Critical');
+    
+    if (criticalItems.length > 0) {
+      doc.setFillColor(255, 240, 240);
+      doc.roundedRect(14, y, contentW, 10, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_RED);
+      doc.text(`⚠ ${criticalItems.length} CRITICAL defect${criticalItems.length > 1 ? 's' : ''} requiring immediate attention`, 18, y + 6);
+      y += 14;
+    }
+    if (quoteNowItems.length > 0) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_GREEN);
+      doc.text(`✓ ${quoteNowItems.length} item${quoteNowItems.length > 1 ? 's' : ''} approved for quotation`, 18, y); y += 5;
+      quoteNowItems.forEach(d => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+        doc.text(`• ${d.crane?.name} — ${d.itemLabel}`, 22, y); y += 4;
+      }); y += 2;
+    }
+    if (quoteLaterItems.length > 0) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
+      doc.text(`${quoteLaterItems.length} item${quoteLaterItems.length > 1 ? 's' : ''} flagged for future quotation`, 18, y); y += 5;
+      quoteLaterItems.forEach(d => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
+        doc.text(`• ${d.crane?.name} — ${d.itemLabel}`, 22, y); y += 4;
+      }); y += 2;
+    }
+    if (allDefects.length === 0) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+      doc.text('All assets are in satisfactory condition. Continue regular scheduled inspections.', 18, y); y += 8;
+    }
+  } else {
+    y = addSectionTitle(doc, y, 'Defects Found');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...DARK);
+    doc.text('No defects found — all assets passed inspection.', 18, y + 4);
+    y += 12;
+
+    // Lifting Equipment Defects section (no defects path)
+    if (liftingDefects && liftingDefects.length > 0) {
+      y = addSectionTitle(doc, y, `Lifting Equipment — Failed / Flagged (${liftingDefects.length})`);
+      const liftingRows = liftingDefects.map(item => {
+        const issues: string[] = [];
+        if (item.equipment_status === 'Failed') issues.push('FAILED');
+        if (item.equipment_status === 'Removed From Service') issues.push('Removed');
+        if (item.tag_present === 'false') issues.push('Tag Missing');
+        if (item.tag_present === 'illegible') issues.push('Tag Illegible');
+        return [
+          item.equipment_type, item.serial_number || item.asset_tag || '—',
+          item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
+          item.manufacturer || '—', issues.join(', ') || item.equipment_status || '—',
+          item.quoteStatus || '—', item.notes || '—',
+        ];
+      });
+      autoTable(doc, {
+        startY: y, head: [['Type', 'Serial/Tag', 'WLL', 'Manufacturer', 'Issue', 'Quote', 'Notes']],
+        body: liftingRows, margin: { left: 14, right: 14 },
+        styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
+        columnStyles: { 0: { cellWidth: 28 }, 6: { cellWidth: 35 } },
+      });
+      y = (doc as any).lastAutoTable.finalY + 4;
+    }
+
+    y = addSectionTitle(doc, y, 'Recommendations');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
+    doc.text('All assets are in satisfactory condition. Continue regular scheduled inspections.', 18, y); y += 8;
   }
   
   // Next Service
