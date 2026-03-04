@@ -37,7 +37,7 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
     setEditing(true);
   };
 
-  const isLink = (v: string) => v?.startsWith('http');
+  const handleSave = () => {
     const standardUpdates: Record<string, any> = {};
     const customFieldUpdates: Record<string, any> = {};
 
@@ -56,6 +56,8 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
     });
     setEditing(false);
   };
+
+  const isLink = (v: string) => v?.startsWith('http');
 
   return (
     <div className="border border-primary/20 rounded-xl p-3 bg-primary/5 space-y-2">
@@ -78,7 +80,7 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
         if (groupFields.length === 0) return null;
 
         // Check if group has any non-empty values (skip empty groups in view mode)
-        const hasValues = groupFields.some(f => clientInfo?.[f.fieldKey]);
+        const hasValues = groupFields.some(f => String(getFieldValue(f) || '').trim().length > 0);
         if (!editing && !hasValues) return null;
 
         return (
