@@ -19,6 +19,7 @@ interface DbInspectionFormProps {
   clientId?: string;
   siteName?: string;
   existingInspectionId?: string;
+  taskId?: string;
   onBack: () => void;
   onSubmitComplete?: () => void;
 }
@@ -31,7 +32,7 @@ interface FormQuestion extends QuestionConfig {
 }
 
 export default function DbInspectionForm({
-  formId, assetName, assetId, clientId, siteName, existingInspectionId, onBack, onSubmitComplete
+  formId, assetName, assetId, clientId, siteName, existingInspectionId, taskId, onBack, onSubmitComplete
 }: DbInspectionFormProps) {
   const { state } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
@@ -378,9 +379,7 @@ export default function DbInspectionForm({
 
       if (!currentInspId) {
         // Create inspection record
-        const { data: newInsp, error } = await supabase
-          .from('db_inspections')
-          .insert({
+        const insertPayload: any = {
             form_id: formId,
             client_id: clientId || null,
             site_name: siteName || null,
@@ -389,7 +388,12 @@ export default function DbInspectionForm({
             technician_id: state.currentUser?.id || 'unknown',
             technician_name: state.currentUser?.name || 'Unknown',
             status,
-          })
+          };
+        if (taskId) insertPayload.task_id = taskId;
+
+        const { data: newInsp, error } = await supabase
+          .from('db_inspections')
+          .insert(insertPayload)
           .select('id')
           .single();
 

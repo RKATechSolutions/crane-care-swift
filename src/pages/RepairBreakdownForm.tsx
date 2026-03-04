@@ -62,6 +62,7 @@ interface RepairBreakdownFormProps {
   assetId?: string;
   clientId?: string;
   siteName?: string;
+  taskId?: string;
   onBack: () => void;
 }
 
