@@ -2,17 +2,18 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
 import FormBuilder from '@/components/FormBuilder';
+import AdminAssets from '@/components/AdminAssets';
 import AdminCustomisation from '@/components/AdminCustomisation';
 import AdminSchedule from '@/components/AdminSchedule';
 import AdminLeaveApproval from '@/components/AdminLeaveApproval';
 import AdminTimesheetReview from '@/components/AdminTimesheetReview';
-import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar, Palmtree, Clock } from 'lucide-react';
+import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar, Palmtree, Clock, Package } from 'lucide-react';
 import { SuggestedQuestion, SentReport } from '@/types/inspection';
 import { useState } from 'react';
 
 export default function AdminDashboard() {
   const { state, dispatch } = useApp();
-  const [tab, setTab] = useState<'suggestions' | 'forms' | 'customise' | 'reports' | 'schedule' | 'leave' | 'timesheets'>('schedule');
+  const [tab, setTab] = useState<'suggestions' | 'forms' | 'customise' | 'reports' | 'schedule' | 'leave' | 'timesheets' | 'assets'>('schedule');
 
   // Gather all suggestions across all inspections
   const allSuggestions: (SuggestedQuestion & { inspectionId: string })[] = [];
@@ -89,6 +90,15 @@ export default function AdminDashboard() {
           Timesheets
         </button>
         <button
+          onClick={() => setTab('assets')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
+            tab === 'assets' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
+          }`}
+        >
+          <Package className="w-4 h-4 inline mr-1" />
+          Assets
+        </button>
+        <button
           onClick={() => setTab('suggestions')}
           className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
             tab === 'suggestions' ? 'border-b-2 border-primary text-foreground' : 'text-muted-foreground'
@@ -136,6 +146,7 @@ export default function AdminDashboard() {
         {tab === 'schedule' && <AdminSchedule />}
         {tab === 'leave' && <AdminLeaveApproval />}
         {tab === 'timesheets' && <AdminTimesheetReview />}
+        {tab === 'assets' && <AdminAssets />}
 
         {tab === 'suggestions' && (
           <div className="p-4 space-y-3">
