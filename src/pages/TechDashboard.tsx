@@ -41,6 +41,13 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
 
   const cards: { id: DashboardView; icon: React.ReactNode; title: string; desc: string; color: string }[] = [
     {
+      id: 'tasks',
+      icon: <Wrench className="w-8 h-8" />,
+      title: 'Jobs',
+      desc: 'Create & manage jobs',
+      color: 'bg-indigo-500/10 text-indigo-600',
+    },
+    {
       id: 'schedule',
       icon: <Calendar className="w-8 h-8" />,
       title: 'Schedule & Leave',
@@ -55,11 +62,11 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       color: 'bg-emerald-500/10 text-emerald-600',
     },
     {
-      id: 'assets',
-      icon: <Package className="w-8 h-8" />,
-      title: 'Assets',
-      desc: 'Search & manage equipment',
-      color: 'bg-amber-500/10 text-amber-600',
+      id: 'quotes',
+      icon: <FileCheck className="w-8 h-8" />,
+      title: 'Quotes',
+      desc: 'View & send pending quotes',
+      color: 'bg-cyan-500/10 text-cyan-600',
     },
     {
       id: 'reports',
@@ -76,13 +83,6 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       color: 'bg-rose-500/10 text-rose-600',
     },
     {
-      id: 'quotes',
-      icon: <FileCheck className="w-8 h-8" />,
-      title: 'Quotes',
-      desc: 'View & send pending quotes',
-      color: 'bg-cyan-500/10 text-cyan-600',
-    },
-    {
       id: 'receipts',
       icon: <Receipt className="w-8 h-8" />,
       title: 'Receipts',
@@ -90,11 +90,11 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       color: 'bg-teal-500/10 text-teal-600',
     },
     {
-      id: 'tasks',
-      icon: <Wrench className="w-8 h-8" />,
-      title: 'Jobs',
-      desc: 'Create & manage jobs',
-      color: 'bg-indigo-500/10 text-indigo-600',
+      id: 'assets',
+      icon: <Package className="w-8 h-8" />,
+      title: 'Assets',
+      desc: 'Search & manage equipment',
+      color: 'bg-amber-500/10 text-amber-600',
     },
   ];
 
