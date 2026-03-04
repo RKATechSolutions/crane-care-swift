@@ -92,7 +92,7 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK);
-  doc.text('RKA Crane Culture &', pageW / 2, y, { align: 'center' });
+  doc.text('RKA Industrial Solutions', pageW / 2, y, { align: 'center' });
   y += 8;
   doc.text('Performance Baseline', pageW / 2, y, { align: 'center' });
   y += 12;

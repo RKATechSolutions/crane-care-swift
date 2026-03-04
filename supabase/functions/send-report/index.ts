@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     const htmlBody = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #228B45; padding: 20px; border-radius: 8px 8px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 22px;">RKA Crane Services</h1>
+          <h1 style="color: white; margin: 0; font-size: 22px;">RKA Industrial Solutions</h1>
           <p style="color: rgba(255,255,255,0.85); margin: 4px 0 0; font-size: 13px;">Crane Inspection &amp; Maintenance</p>
         </div>
         <div style="padding: 24px; border: 1px solid #e5e5e5; border-top: none; border-radius: 0 0 8px 8px;">
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
           </p>
           <hr style="border: none; border-top: 1px solid #e5e5e5; margin: 24px 0;" />
           <p style="font-size: 12px; color: #888;">
-            RKA Crane Services<br/>
+            RKA Industrial Solutions<br/>
             service@reports.rkaindustrialsolutions.com.au
           </p>
         </div>
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "RKA Crane Services <service@reports.rkaindustrialsolutions.com.au>",
+        from: "RKA Industrial Solutions <service@reports.rkaindustrialsolutions.com.au>",
         to: Array.isArray(to) ? to : [to],
         subject: `Service Report — ${siteName || "Crane Inspection"}`,
         html: htmlBody,

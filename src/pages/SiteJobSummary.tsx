@@ -567,7 +567,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
             {isSectionVisible('business_name') && (
               <div>
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Business Name</label>
-                <p className="text-sm font-bold mt-0.5">RKA Crane Services</p>
+                <p className="text-sm font-bold mt-0.5">RKA Industrial Solutions</p>
               </div>
             )}
 

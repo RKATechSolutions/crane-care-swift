@@ -611,7 +611,7 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
     <div className="min-h-screen bg-background flex flex-col">
       {isCustomer ? (
         <div className="bg-primary px-4 py-3">
-          <h1 className="text-base font-bold text-primary-foreground">RKA Crane Culture & Performance Baseline</h1>
+          <h1 className="text-base font-bold text-primary-foreground">RKA Industrial Solutions — Crane Culture & Performance Baseline</h1>
           <p className="text-xs text-primary-foreground/70">{customerSiteName || 'Pre-Visit Assessment'}</p>
         </div>
       ) : (
