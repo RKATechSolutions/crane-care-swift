@@ -7,7 +7,7 @@ import AdminCustomisation from '@/components/AdminCustomisation';
 import AdminSchedule from '@/components/AdminSchedule';
 import AdminLeaveApproval from '@/components/AdminLeaveApproval';
 import AdminTimesheetReview from '@/components/AdminTimesheetReview';
-import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar, Palmtree, Clock } from 'lucide-react';
+import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar, Palmtree, Clock, Package } from 'lucide-react';
 import { SuggestedQuestion, SentReport } from '@/types/inspection';
 import { useState } from 'react';
 
