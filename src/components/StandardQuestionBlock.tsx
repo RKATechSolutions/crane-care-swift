@@ -210,7 +210,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 }`}
               >
                 {opt === 'Pass' ? <CheckCircle className="w-4 h-4" /> : opt === 'Fail' ? <XCircle className="w-4 h-4" /> : <MinusCircle className="w-4 h-4" />}
-                {opt === 'NA' ? 'N/A' : opt}
+                {opt === 'NA' ? 'N/A' : opt === 'Fail' ? 'Defect Noted' : opt}
               </button>
             ))}
           </div>

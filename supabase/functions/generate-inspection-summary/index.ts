@@ -85,15 +85,21 @@ Defects Found: ${defectCount}
 Inspection Responses:
 ${sectionSummary}
 
-Generate a CONCISE executive summary for a busy site manager. Keep it scannable. No waffle. No month-by-month action plan.
+Generate a CONCISE summary for a busy site manager. Short and sweet. No waffle.
 
-1. Executive Summary — MAX 120 words. State overall condition, biggest concerns, and strongest areas.
+## Overall Summary
+Write a direct 80-100 word paragraph covering:
+- Overall condition of the asset
+- Whether it is safe to continue operating
+- The most critical concerns (if any)
+- Strongest areas
 
-2. Key Defects — List each defect found with its urgency and a one-line recommended action.
+## Defects Found
+List each defect as a bullet point with urgency level and a one-line description. Example:
+- **[Urgent]** Wire rope showing signs of wear — schedule replacement before next service
+- **[Monitor]** Minor surface rust on gantry beam — monitor at next inspection
 
-3. Overall Assessment — One paragraph: is this asset safe, what needs immediate attention, and general condition rating.
-
-Use direct, professional tone. No fluff, no sales language. Keep entire output under 350 words total.`;
+Keep entire output under 250 words total. Direct, professional tone. No fluff.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -104,7 +110,7 @@ Use direct, professional tone. No fluff, no sales language. Keep entire output u
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "You are an Australian industrial risk and lifting operations adviser generating professional inspection reports. Always use Australian English spelling and reference Australian Standards." },
+          { role: "system", content: "You are an Australian industrial risk and lifting operations adviser generating professional inspection summaries. Always use Australian English spelling and reference Australian Standards. Keep it short and scannable." },
           { role: "user", content: prompt },
         ],
       }),
