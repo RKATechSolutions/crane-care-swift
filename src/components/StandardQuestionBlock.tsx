@@ -175,7 +175,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
         <Camera className="w-4 h-4" />
         {response.photo_urls.length > 0 ? 'Add Photo' : required ? 'Photo Required' : 'Add Photo (Optional)'}
       </button>
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+      <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
     </div>
   );
 
