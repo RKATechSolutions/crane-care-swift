@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS assets_external_id_unique ON public.assets (external_id) WHERE external_id IS NOT NULL;
