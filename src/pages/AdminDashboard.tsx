@@ -13,7 +13,7 @@ import { useState } from 'react';
 
 export default function AdminDashboard() {
   const { state, dispatch } = useApp();
-  const [tab, setTab] = useState<'suggestions' | 'forms' | 'customise' | 'reports' | 'schedule' | 'leave' | 'timesheets'>('schedule');
+  const [tab, setTab] = useState<'suggestions' | 'forms' | 'customise' | 'reports' | 'schedule' | 'leave' | 'timesheets' | 'assets'>('schedule');
 
   // Gather all suggestions across all inspections
   const allSuggestions: (SuggestedQuestion & { inspectionId: string })[] = [];
