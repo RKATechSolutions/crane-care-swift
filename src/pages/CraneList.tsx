@@ -373,6 +373,7 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
           assetId={activeDbForm.assetId}
           clientId={clientId}
           siteName={site.name}
+          taskId={activeJobId || undefined}
           onBack={() => setActiveDbForm(null)}
         />
       );
@@ -385,12 +386,14 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
         assetId={activeDbForm.assetId}
         clientId={clientId}
         siteName={site.name}
+        taskId={activeJobId || undefined}
         onBack={() => setActiveDbForm(null)}
         onSubmitComplete={() => {
           setActiveDbForm(null);
           dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
         }}
       />
+    );
     );
   }
 
