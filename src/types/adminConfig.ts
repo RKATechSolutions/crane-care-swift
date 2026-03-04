@@ -26,6 +26,43 @@ export interface ClientInfoField {
   options?: string[];     // For select type
 }
 
+export interface JobSummarySectionVisibility {
+  fieldKey: string;
+  label: string;
+  visible: boolean;
+  group: string;
+}
+
+export const DEFAULT_JOB_SUMMARY_SECTIONS: JobSummarySectionVisibility[] = [
+  // Header fields
+  { fieldKey: 'business_name', label: 'Business Name (RKA Crane Services)', visible: true, group: 'Header' },
+  { fieldKey: 'client_info', label: 'Client Info Section', visible: true, group: 'Header' },
+  { fieldKey: 'site_address', label: 'Site Address', visible: true, group: 'Header' },
+  { fieldKey: 'job_type', label: 'Job Type Selector', visible: true, group: 'Header' },
+  { fieldKey: 'technician_name', label: 'Technician Name', visible: true, group: 'Header' },
+  { fieldKey: 'date_time_scheduled', label: 'Date and Time Scheduled', visible: true, group: 'Header' },
+  { fieldKey: 'standards_reference', label: 'Australian Standards Reference', visible: true, group: 'Header' },
+  // Main sections
+  { fieldKey: 'assets_inspected', label: 'Assets Inspected', visible: true, group: 'Sections' },
+  { fieldKey: 'defects_found', label: 'Defects Found — Customer Review', visible: true, group: 'Sections' },
+  { fieldKey: 'lifting_equipment_defects', label: 'Lifting Equipment — Failed/Flagged', visible: true, group: 'Sections' },
+  { fieldKey: 'asset_operational_status', label: 'Asset Operational Status', visible: true, group: 'Sections' },
+  { fieldKey: 'next_inspection_date', label: 'Next Inspection Date & Time', visible: true, group: 'Sections' },
+  // Customer section
+  { fieldKey: 'confirm_booking', label: 'Confirm Booking Button', visible: true, group: 'Customer Section' },
+  { fieldKey: 'customer_name', label: 'Customer Name', visible: true, group: 'Customer Section' },
+  { fieldKey: 'customer_signature', label: 'Customer Signature', visible: true, group: 'Customer Section' },
+  { fieldKey: 'rating', label: 'Star Rating', visible: true, group: 'Customer Section' },
+  { fieldKey: 'customer_feedback', label: 'Customer Feedback', visible: true, group: 'Customer Section' },
+  { fieldKey: 'testimonial_checkbox', label: 'Testimonial Permission Checkbox', visible: true, group: 'Customer Section' },
+  { fieldKey: 'google_review_qr', label: 'Google Review QR (on 5 stars)', visible: true, group: 'Customer Section' },
+  // Technician section
+  { fieldKey: 'technician_signature', label: 'Technician Signature', visible: true, group: 'Technician Section' },
+  // Footer
+  { fieldKey: 'preview_pdf', label: 'Preview PDF Report Button', visible: true, group: 'Footer' },
+  { fieldKey: 'remote_signoff', label: 'Send for Remote Sign-off Button', visible: true, group: 'Footer' },
+];
+
 export interface AdminFormConfig {
   // Report front-page customer detail fields
   reportCustomerFields: FieldVisibility[];
@@ -41,6 +78,9 @@ export interface AdminFormConfig {
 
   // Client info fields shown on Site Job Summary
   clientInfoFields: ClientInfoField[];
+
+  // Job Summary section visibility
+  jobSummarySections: JobSummarySectionVisibility[];
 }
 
 // Default customer detail fields that appear on reports
@@ -149,4 +189,5 @@ export const DEFAULT_ADMIN_CONFIG: AdminFormConfig = {
   assetAddFields: DEFAULT_ASSET_ADD_FIELDS,
   assetDetailFields: DEFAULT_ASSET_DETAIL_FIELDS,
   clientInfoFields: DEFAULT_CLIENT_INFO_FIELDS,
+  jobSummarySections: DEFAULT_JOB_SUMMARY_SECTIONS,
 };

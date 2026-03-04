@@ -27,6 +27,13 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
   const [noteOpen, setNoteOpen] = useState(false);
   const site = state.selectedSite!;
 
+  // Section visibility helper
+  const isSectionVisible = (fieldKey: string) => {
+    const sections = state.adminConfig.jobSummarySections || [];
+    const found = sections.find(s => s.fieldKey === fieldKey);
+    return found ? found.visible : true; // default visible if not configured
+  };
+
   const completedInspections = state.inspections.filter(
     i => i.siteId === site.id && i.status === 'completed'
   );
@@ -550,18 +557,21 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
       <div className="flex-1 overflow-y-auto">
         {/* Job Report Header */}
         <div className="px-4 py-4 border-b border-border bg-muted/30 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground italic">
-            Australian Standards Reference: AS 2550 – Safe Use of Cranes | AS 1418 – Cranes, Hoists &amp; Winches | AS 4991 – Lifting Devices
-          </p>
+          {isSectionVisible('standards_reference') && (
+            <p className="text-xs font-semibold text-muted-foreground italic">
+              Australian Standards Reference: AS 2550 – Safe Use of Cranes | AS 1418 – Cranes, Hoists &amp; Winches | AS 4991 – Lifting Devices
+            </p>
+          )}
 
           <div className="grid grid-cols-1 gap-2">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Business Name</label>
-              <p className="text-sm font-bold mt-0.5">RKA Crane Services</p>
-            </div>
+            {isSectionVisible('business_name') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Business Name</label>
+                <p className="text-sm font-bold mt-0.5">RKA Crane Services</p>
+              </div>
+            )}
 
-            {/* Client Info Section - driven by admin config */}
-            {clientInfo && (
+            {isSectionVisible('client_info') && clientInfo && (
               <ClientInfoSummarySection
                 clientInfo={clientInfo}
                 clientContacts={clientContacts}
@@ -602,35 +612,44 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
               />
             )}
 
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Site Address</label>
-              <p className="text-sm font-medium mt-0.5">{clientInfo?.location_address || site.address}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Type</label>
-              <select
-                value={jobType}
-                onChange={(e) => setJobType(e.target.value)}
-                className="w-full tap-target px-4 border border-border rounded-xl bg-background text-sm font-medium mt-1 appearance-none cursor-pointer"
-              >
-                <option value="Periodic Inspection">Periodic Inspection</option>
-                <option value="Repair">Repair</option>
-                <option value="Breakdown / Fault">Breakdown / Fault</option>
-                <option value="Commissioning">Commissioning</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Name</label>
-              <p className="text-sm font-medium mt-0.5">{state.currentUser?.name || '—'}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date and Time Scheduled</label>
-              <p className="text-sm font-medium mt-0.5">{format(new Date(), 'dd MMM yyyy, HH:mm')}</p>
-            </div>
+            {isSectionVisible('site_address') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Site Address</label>
+                <p className="text-sm font-medium mt-0.5">{clientInfo?.location_address || site.address}</p>
+              </div>
+            )}
+            {isSectionVisible('job_type') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Type</label>
+                <select
+                  value={jobType}
+                  onChange={(e) => setJobType(e.target.value)}
+                  className="w-full tap-target px-4 border border-border rounded-xl bg-background text-sm font-medium mt-1 appearance-none cursor-pointer"
+                >
+                  <option value="Periodic Inspection">Periodic Inspection</option>
+                  <option value="Repair">Repair</option>
+                  <option value="Breakdown / Fault">Breakdown / Fault</option>
+                  <option value="Commissioning">Commissioning</option>
+                </select>
+              </div>
+            )}
+            {isSectionVisible('technician_name') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Name</label>
+                <p className="text-sm font-medium mt-0.5">{state.currentUser?.name || '—'}</p>
+              </div>
+            )}
+            {isSectionVisible('date_time_scheduled') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date and Time Scheduled</label>
+                <p className="text-sm font-medium mt-0.5">{format(new Date(), 'dd MMM yyyy, HH:mm')}</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Assets Inspected */}
+        {isSectionVisible('assets_inspected') && (
         <div className="px-4 py-3 border-b border-border bg-muted/30">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Assets Inspected</p>
           {dbInspections.length > 0 ? (
@@ -685,9 +704,10 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
             <p className="text-sm text-muted-foreground py-2">No inspections completed yet</p>
           )}
         </div>
+        )}
 
         {/* Defect Review for Customer */}
-        {(totalDefectCount > 0 || dbDefectsLoading) && (
+        {isSectionVisible('defects_found') && (totalDefectCount > 0 || dbDefectsLoading) && (
           <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -1077,7 +1097,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
         )}
 
         {/* Lifting Equipment Defects */}
-        {(liftingDefects.length > 0 || liftingDefectsLoading) && (
+        {isSectionVisible('lifting_equipment_defects') && (liftingDefects.length > 0 || liftingDefectsLoading) && (
           <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2 mb-3">
               <Package className="w-4 h-4 text-destructive" />
@@ -1193,7 +1213,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
           </div>
         )}
 
-        {completedInspections.some(i => i.craneStatus) && (
+        {isSectionVisible('asset_operational_status') && completedInspections.some(i => i.craneStatus) && (
           <div className="px-4 py-3 border-b border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asset Operational Status</p>
             {completedInspections.map(insp => {
@@ -1217,25 +1237,29 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
 
         <div className="p-4 space-y-5">
           {/* Next Inspection - filled by technician */}
-          <div id="next-inspection-date">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Inspection Date</label>
-            <input
-              type="date"
-              value={nextDate}
-              onChange={(e) => setNextDate(e.target.value)}
-              className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
-            />
-          </div>
+          {isSectionVisible('next_inspection_date') && (
+            <>
+              <div id="next-inspection-date">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Inspection Date</label>
+                <input
+                  type="date"
+                  value={nextDate}
+                  onChange={(e) => setNextDate(e.target.value)}
+                  className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
+                />
+              </div>
 
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time</label>
-            <input
-              type="time"
-              value={nextTime}
-              onChange={(e) => setNextTime(e.target.value)}
-              className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
-            />
-          </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time</label>
+                <input
+                  type="time"
+                  value={nextTime}
+                  onChange={(e) => setNextTime(e.target.value)}
+                  className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
+                />
+              </div>
+            </>
+          )}
 
           {/* ── Customer Section ── */}
           <div className="border-t-2 border-primary/30 pt-4 mt-2">
@@ -1245,153 +1269,171 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
             </div>
 
             {/* Confirm Booking */}
-            <div className="space-y-1 mb-4">
-              <div className="flex items-center gap-1">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Confirm Booking</label>
-                {!bookingConfirmed && <span className="text-xs font-bold text-rka-red">Required</span>}
+            {isSectionVisible('confirm_booking') && (
+              <div className="space-y-1 mb-4">
+                <div className="flex items-center gap-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Confirm Booking</label>
+                  {!bookingConfirmed && <span className="text-xs font-bold text-rka-red">Required</span>}
+                </div>
+                <button
+                  onClick={() => setBookingConfirmed(!bookingConfirmed)}
+                  className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                    bookingConfirmed
+                      ? 'bg-rka-green text-primary-foreground'
+                      : 'bg-muted text-foreground ring-2 ring-primary/40'
+                  }`}
+                >
+                  {bookingConfirmed && <Check className="w-5 h-5" />}
+                  {bookingConfirmed ? 'Calendar Invite Sent and Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
+                </button>
               </div>
-              <button
-                onClick={() => setBookingConfirmed(!bookingConfirmed)}
-                className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                  bookingConfirmed
-                    ? 'bg-rka-green text-primary-foreground'
-                    : 'bg-muted text-foreground ring-2 ring-primary/40'
-                }`}
-              >
-                {bookingConfirmed && <Check className="w-5 h-5" />}
-                {bookingConfirmed ? 'Calendar Invite Sent and Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
-              </button>
-            </div>
+            )}
 
             {/* Customer Name */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Name</label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
-              />
-            </div>
+            {isSectionVisible('customer_name') && (
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Name</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
+                />
+              </div>
+            )}
 
             {/* Customer Signature */}
-            <div className="mb-4">
-              <div className="flex items-center gap-1 mb-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Signature</span>
-                {!customerSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+            {isSectionVisible('customer_signature') && (
+              <div className="mb-4">
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Signature</span>
+                  {!customerSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+                </div>
+                <div className={`rounded-xl ${!customerSig ? 'ring-2 ring-primary/40' : ''}`}>
+                  <SignaturePad label="" onSave={setCustomerSig} />
+                </div>
               </div>
-              <div className={`rounded-xl ${!customerSig ? 'ring-2 ring-primary/40' : ''}`}>
-                <SignaturePad label="" onSave={setCustomerSig} />
-              </div>
-            </div>
+            )}
 
             {/* Rating */}
-            <div className="mb-4">
-              <div className="flex items-center gap-1 mb-2">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rating</label>
-                {rating === 0 && <span className="text-xs font-bold text-rka-red">Required</span>}
-              </div>
-              <div className={`flex gap-2 p-2 rounded-xl ${rating === 0 ? 'ring-2 ring-primary/40 bg-muted/30' : ''}`}>
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    onClick={() => setRating(star)}
-                    className="tap-target flex items-center justify-center"
-                  >
-                    <Star
-                      className={`w-8 h-8 transition-all ${
-                        star <= rating ? 'fill-rka-yellow text-rka-yellow' : 'text-border'
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-              {rating === 5 && (
-                <div className="mt-3 p-4 rounded-xl bg-rka-green-light text-center space-y-3">
-                  <p className="text-sm font-bold text-rka-green-dark">
-                    Thank you for your rating, please give us a Google Review here!
-                  </p>
-                  <img src={rkaReviewQr} alt="Scan to leave a Google Review" className="w-32 h-32 mx-auto rounded-lg" />
-                  <a
-                    href={GOOGLE_REVIEW_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.open(GOOGLE_REVIEW_URL, '_blank', 'noopener,noreferrer');
-                    }}
-                    className="inline-block text-sm font-bold text-primary underline"
-                  >
-                    Tap here to leave a review →
-                  </a>
+            {isSectionVisible('rating') && (
+              <div className="mb-4">
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rating</label>
+                  {rating === 0 && <span className="text-xs font-bold text-rka-red">Required</span>}
                 </div>
-              )}
-            </div>
+                <div className={`flex gap-2 p-2 rounded-xl ${rating === 0 ? 'ring-2 ring-primary/40 bg-muted/30' : ''}`}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className="tap-target flex items-center justify-center"
+                    >
+                      <Star
+                        className={`w-8 h-8 transition-all ${
+                          star <= rating ? 'fill-rka-yellow text-rka-yellow' : 'text-border'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                {rating === 5 && isSectionVisible('google_review_qr') && (
+                  <div className="mt-3 p-4 rounded-xl bg-rka-green-light text-center space-y-3">
+                    <p className="text-sm font-bold text-rka-green-dark">
+                      Thank you for your rating, please give us a Google Review here!
+                    </p>
+                    <img src={rkaReviewQr} alt="Scan to leave a Google Review" className="w-32 h-32 mx-auto rounded-lg" />
+                    <a
+                      href={GOOGLE_REVIEW_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.open(GOOGLE_REVIEW_URL, '_blank', 'noopener,noreferrer');
+                      }}
+                      className="inline-block text-sm font-bold text-primary underline"
+                    >
+                      Tap here to leave a review →
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Customer Feedback */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Feedback (optional)</label>
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Any feedback or comments from the customer..."
-                className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
-                rows={3}
-              />
-            </div>
+            {isSectionVisible('customer_feedback') && (
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Feedback (optional)</label>
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="Any feedback or comments from the customer..."
+                  className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
+                  rows={3}
+                />
+              </div>
+            )}
 
             {/* Testimonial Checkbox - default ticked */}
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 mb-4">
-              <Checkbox
-                id="testimonial"
-                checked={publishTestimonial}
-                onCheckedChange={(checked) => setPublishTestimonial(checked === true)}
-                className="mt-0.5"
-              />
-              <label htmlFor="testimonial" className="text-sm font-medium leading-snug cursor-pointer">
-                I give permission to publish my feedback as a testimonial
-              </label>
-            </div>
+            {isSectionVisible('testimonial_checkbox') && (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 mb-4">
+                <Checkbox
+                  id="testimonial"
+                  checked={publishTestimonial}
+                  onCheckedChange={(checked) => setPublishTestimonial(checked === true)}
+                  className="mt-0.5"
+                />
+                <label htmlFor="testimonial" className="text-sm font-medium leading-snug cursor-pointer">
+                  I give permission to publish my feedback as a testimonial
+                </label>
+              </div>
+            )}
           </div>
 
           {/* ── Technician Section ── */}
-          <div className="border-t-2 border-border pt-4 mt-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Technician to Complete</p>
-            <div className="flex items-center gap-1 mb-1">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Signature</span>
-              {!techSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+          {isSectionVisible('technician_signature') && (
+            <div className="border-t-2 border-border pt-4 mt-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Technician to Complete</p>
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Signature</span>
+                {!techSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+              </div>
+              <div className={`rounded-xl ${!techSig ? 'ring-2 ring-primary/40' : ''}`}>
+                <SignaturePad label="" onSave={setTechSig} />
+              </div>
             </div>
-            <div className={`rounded-xl ${!techSig ? 'ring-2 ring-primary/40' : ''}`}>
-              <SignaturePad label="" onSave={setTechSig} />
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
       <div className="p-4 border-t border-border space-y-2">
-        <button
-          onClick={handlePreviewPdf}
-          disabled={generatingPreview}
-          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
-        >
-          {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-          {generatingPreview ? 'Generating Preview…' : 'Preview PDF Report'}
-        </button>
+        {isSectionVisible('preview_pdf') && (
+          <button
+            onClick={handlePreviewPdf}
+            disabled={generatingPreview}
+            className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+          >
+            {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+            {generatingPreview ? 'Generating Preview…' : 'Preview PDF Report'}
+          </button>
+        )}
         <button
           onClick={handleSubmit}
-          disabled={!customerSig || !techSig || sending}
+          disabled={(!isSectionVisible('customer_signature') ? false : !customerSig) || (!isSectionVisible('technician_signature') ? false : !techSig) || sending}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base disabled:opacity-40 flex items-center justify-center gap-2"
         >
           {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           {sending ? 'Sending Report…' : 'Complete Job and Send Report'}
         </button>
-        <button
-          onClick={() => {/* TODO: generate shareable link */}}
-          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 text-muted-foreground"
-        >
-          <Send className="w-4 h-4" />
-          Send to Customer for Remote Sign-off
-        </button>
+        {isSectionVisible('remote_signoff') && (
+          <button
+            onClick={() => {/* TODO: generate shareable link */}}
+            className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 text-muted-foreground"
+          >
+            <Send className="w-4 h-4" />
+            Send to Customer for Remote Sign-off
+          </button>
+        )}
       </div>
 
       {/* Fullscreen Photo Preview */}
