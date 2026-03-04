@@ -1,0 +1,1 @@
+ALTER TABLE public.db_inspections ADD COLUMN other_notes text;
