@@ -60,6 +60,7 @@ export type Database = {
           location_name: string | null
           location_num: string | null
           longitude: number | null
+          main_photo_url: string | null
           major_inspection_due_date: string | null
           major_inspection_interval_years: number | null
           manufacturer: string | null
@@ -131,6 +132,7 @@ export type Database = {
           location_name?: string | null
           location_num?: string | null
           longitude?: number | null
+          main_photo_url?: string | null
           major_inspection_due_date?: string | null
           major_inspection_interval_years?: number | null
           manufacturer?: string | null
@@ -202,6 +204,7 @@ export type Database = {
           location_name?: string | null
           location_num?: string | null
           longitude?: number | null
+          main_photo_url?: string | null
           major_inspection_due_date?: string | null
           major_inspection_interval_years?: number | null
           manufacturer?: string | null

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { X, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Save, ChevronDown, ChevronUp, Camera } from 'lucide-react';
 
 interface AssetDetailModalProps {
   asset: {
@@ -21,6 +21,7 @@ interface AssetDetailModalProps {
     serial_number: string | null;
     length_lift: string | null;
     crane_manufacturer: string | null;
+    main_photo_url?: string | null;
   };
   onClose: () => void;
   onSaved: () => void;
@@ -44,6 +45,9 @@ function SectionHeader({ title, open, onToggle }: { title: string; open: boolean
 export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalProps) {
   const [saving, setSaving] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [mainPhotoUrl, setMainPhotoUrl] = useState(asset.main_photo_url || '');
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   // Editable fields
   const [description, setDescription] = useState(asset.description || '');
@@ -57,6 +61,26 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
   const [status, setStatus] = useState(asset.status || 'In Service');
   const [lengthLift, setLengthLift] = useState(asset.length_lift || '');
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `asset-photos/${asset.id}_${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+      const url = urlData.publicUrl;
+      setMainPhotoUrl(url);
+      await supabase.from('assets').update({ main_photo_url: url } as any).eq('id', asset.id);
+      toast.success('Asset photo uploaded');
+    } catch (err: any) {
+      toast.error('Failed to upload photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
   const handleSave = async () => {
     setSaving(true);
     const { error } = await supabase.from('assets').update({
@@ -71,7 +95,8 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
       area_name: areaName.trim() || null,
       status: status,
       length_lift: lengthLift.trim() || null,
-    }).eq('id', asset.id);
+      main_photo_url: mainPhotoUrl || null,
+    } as any).eq('id', asset.id);
 
     if (error) {
       toast.error(error.message || 'Failed to update');
@@ -95,6 +120,31 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-4 space-y-3">
+          {/* Main Asset Photo */}
+          <div>
+            <label className={labelClass}>Main Asset Photo</label>
+            <input type="file" accept="image/*" capture="environment" ref={photoInputRef} className="hidden" onChange={handlePhotoUpload} />
+            {mainPhotoUrl ? (
+              <div className="relative mt-1">
+                <img src={mainPhotoUrl} alt="Asset" className="w-full h-32 object-cover rounded-lg border border-border" />
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  className="absolute bottom-2 right-2 bg-background/80 backdrop-blur rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 border border-border"
+                >
+                  <Camera className="w-3 h-3" /> Replace
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="mt-1 w-full h-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors"
+              >
+                <Camera className="w-5 h-5" />
+                <span className="text-xs">{uploadingPhoto ? 'Uploading…' : 'Add Asset Photo'}</span>
+              </button>
+            )}
+          </div>
           <div>
             <label className={labelClass}>Description / Name</label>
             <input type="text" value={description} onChange={e => setDescription(e.target.value)} className={inputClass} />

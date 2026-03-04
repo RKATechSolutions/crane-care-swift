@@ -28,6 +28,7 @@ interface InspectionPdfData {
   sections: { name: string; questions: InspectionResponse[] }[];
   aiSummary?: string;
   otherNotes?: string;
+  assetPhotoUrl?: string;
 }
 
 const RKA_GREEN: [number, number, number] = [96, 179, 76];
@@ -41,6 +42,7 @@ const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
@@ -48,7 +50,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function generateInspectionPdf(data: InspectionPdfData): Promise<jsPDF> {
-  const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections, aiSummary } = data;
+  const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections, aiSummary, assetPhotoUrl } = data;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -56,6 +58,11 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   let logoImg: HTMLImageElement | undefined;
   try { logoImg = await loadImage(rkaLogoUrl); } catch { /* skip */ }
+
+  let assetImg: HTMLImageElement | undefined;
+  if (assetPhotoUrl) {
+    try { assetImg = await loadImage(assetPhotoUrl); } catch { /* skip */ }
+  }
 
   const addHeader = () => {
     if (logoImg) {
@@ -164,7 +171,19 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   }
   y += 10;
 
-  // AI Summary on cover
+  // Asset photo on cover
+  if (assetImg) {
+    const maxPhotoW = 100;
+    const maxPhotoH = 70;
+    const ratio = Math.min(maxPhotoW / assetImg.width, maxPhotoH / assetImg.height);
+    const imgW = assetImg.width * ratio;
+    const imgH = assetImg.height * ratio;
+    const imgX = (pageW - imgW) / 2;
+    doc.addImage(assetImg, 'JPEG', imgX, y, imgW, imgH);
+    y += imgH + 6;
+  }
+
+  // Summary on cover (no heading titles like "Key Defects" etc)
   if (aiSummary) {
     y += 2;
     doc.setFillColor(...RKA_GREEN);
@@ -179,14 +198,12 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...DARK);
 
-    // Parse markdown-style headings for better formatting
     const summaryClean = aiSummary.replace(/[*_`]/g, '');
     const summaryParts = summaryClean.split('\n');
     for (const part of summaryParts) {
       const trimmed = part.trim();
       if (!trimmed) { y += 2; continue; }
 
-      // Check for heading patterns (## or ### or bold-like markers)
       const headingMatch = trimmed.match(/^#{1,3}\s+(.+)/);
       if (headingMatch) {
         if (y > pageH - 20) { doc.addPage(); addHeader(); addFooter(); y = 22; }
@@ -214,7 +231,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   addFooter();
 
-  // ========== PAGE 2: DEFECT REGISTER (at top) ==========
+  // ========== PAGE 2: DEFECT REGISTER ==========
   const urgencyOrder: Record<string, number> = { 'Immediate': 0, 'Urgent': 1, 'Scheduled': 2, 'Monitor': 3 };
   const allDefects = sections.flatMap(s => s.questions.filter(q => q.defect_flag))
     .sort((a, b) => (urgencyOrder[a.urgency || ''] ?? 99) - (urgencyOrder[b.urgency || ''] ?? 99));
@@ -224,7 +241,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     addHeader();
     let dy = 18;
 
-    // Red section header
     doc.setFillColor(...RKA_RED);
     doc.rect(15, dy, pageW - 30, 8, 'F');
     doc.setFontSize(11);
@@ -233,7 +249,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     doc.text(`Defect Register — ${allDefects.length} Item${allDefects.length !== 1 ? 's' : ''} Requiring Action`, pageW / 2, dy + 5.5, { align: 'center' });
     dy += 12;
 
-    // Each defect as a card with photo beside it
     for (let i = 0; i < allDefects.length; i++) {
       const d = allDefects[i];
       const hasPhotos = d.photo_urls.length > 0;
@@ -241,20 +256,17 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
       if (dy > pageH - cardH - 18) { doc.addPage(); addHeader(); addFooter(); dy = 18; }
 
-      // Alternating background
       if (i % 2 === 0) {
         doc.setFillColor(...LIGHT_GRAY);
         doc.rect(15, dy - 2, pageW - 30, cardH + 4, 'F');
       }
 
-      // Urgency color strip
       const urgColor = d.urgency === 'Immediate' ? RKA_RED : d.urgency === 'Urgent' ? RKA_ORANGE : [180, 180, 180] as [number, number, number];
       doc.setFillColor(...(urgColor as [number, number, number]));
       doc.rect(15, dy - 2, 3, cardH + 4, 'F');
 
       const textAreaW = hasPhotos ? pageW - 80 : pageW - 36;
 
-      // Defect number + question
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...DARK);
@@ -265,7 +277,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         ty += 3.5;
       }
 
-      // Urgency + categories
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       if (d.urgency) {
@@ -283,7 +294,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         ty += 3.5;
       }
 
-      // Comment
       if (d.comment) {
         doc.setFont('helvetica', 'italic');
         doc.setTextColor(80, 80, 80);
@@ -294,7 +304,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         }
       }
 
-      // Photo beside the defect (right side)
       if (hasPhotos) {
         const photoX = pageW - 55;
         let photoY = dy - 1;
@@ -310,7 +319,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
             photoY += h + 2;
           } catch { /* skip */ }
         }
-        // Adjust card height if photos are taller
         const photoBottom = photoY - dy + 2;
         if (photoBottom > cardH) {
           dy += photoBottom + 4;
@@ -338,7 +346,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
     if (sy > pageH - bottomMargin - 20) { doc.addPage(); addHeader(); addFooter(); sy = 18; }
 
-    // Green section header bar
     doc.setFillColor(...RKA_GREEN);
     doc.rect(15, sy, pageW - 30, 7, 'F');
     doc.setFontSize(9);
@@ -347,11 +354,9 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     doc.text(section.name, pageW / 2, sy + 5, { align: 'center' });
     sy += 10;
 
-    // Split items: ones with comments get full width, rest get 2-col
     const itemsWithComments = passedItems.filter(q => q.comment);
     const itemsNoComments = passedItems.filter(q => !q.comment);
 
-    // 2-column layout for items without comments
     if (itemsNoComments.length > 0) {
       const colW = (pageW - 34) / 2;
       const half = Math.ceil(itemsNoComments.length / 2);
@@ -363,18 +368,15 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       for (let r = 0; r < maxRows; r++) {
         if (sy > pageH - bottomMargin - 6) { doc.addPage(); addHeader(); addFooter(); sy = 18; }
 
-        // Alternate row background
         if (r % 2 === 0) {
           doc.setFillColor(...LIGHT_GRAY);
           doc.rect(15, sy - 3, pageW - 30, 5, 'F');
         }
 
-        // Col 1
         if (col1[r]) {
           const status = col1[r].pass_fail_status || col1[r].answer_value || '—';
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...DARK);
-          // Allow more chars — truncate at 55 instead of 45
           const maxChars = 55;
           const truncated = col1[r].question_text.length > maxChars ? col1[r].question_text.substring(0, maxChars - 3) + '…' : col1[r].question_text;
           doc.text(truncated, 16, sy);
@@ -383,7 +385,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
           doc.text(status, 15 + colW - 2, sy, { align: 'right' });
         }
 
-        // Col 2
         if (col2[r]) {
           const status = col2[r].pass_fail_status || col2[r].answer_value || '—';
           doc.setFont('helvetica', 'normal');
@@ -400,7 +401,6 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       }
     }
 
-    // Items with comments in full-width rows
     if (itemsWithComments.length > 0) {
       for (const q of itemsWithComments) {
         if (sy > pageH - bottomMargin - 10) { doc.addPage(); addHeader(); addFooter(); sy = 18; }

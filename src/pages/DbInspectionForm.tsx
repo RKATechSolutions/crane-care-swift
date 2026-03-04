@@ -47,6 +47,7 @@ export default function DbInspectionForm({
   const [aiSummary, setAiSummary] = useState<string>('');
   const [generatingAI, setGeneratingAI] = useState(false);
   const [otherNotes, setOtherNotes] = useState<string>('');
+  const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | undefined>(undefined);
 
   // Load questions for this form
   useEffect(() => {
@@ -60,6 +61,16 @@ export default function DbInspectionForm({
         .eq('form_id', formId)
         .single();
       if (formData) setFormName(formData.form_name);
+
+      // Fetch asset photo
+      if (assetId) {
+        const { data: assetData } = await supabase
+          .from('assets')
+          .select('main_photo_url')
+          .eq('id', assetId)
+          .single();
+        if (assetData?.main_photo_url) setAssetPhotoUrl(assetData.main_photo_url);
+      }
 
       // Get questions via bridge table
       const { data: bridgeData } = await supabase
@@ -320,6 +331,7 @@ export default function DbInspectionForm({
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
         otherNotes: otherNotes || undefined,
+        assetPhotoUrl,
       });
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
