@@ -63,7 +63,10 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const [editForm, setEditForm] = useState<Partial<RegisterItem>>({});
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoTargetId, setPhotoTargetId] = useState<string | null>(null);
 
   const refreshItems = async () => {
     let query = supabase.from('lifting_register').select('*').order('created_at', { ascending: false });
