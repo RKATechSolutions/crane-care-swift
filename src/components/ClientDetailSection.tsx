@@ -65,7 +65,7 @@ const CUSTOM_FIELDS: { key: keyof ClientData; label: string; group: string }[] =
   { key: 'inspectall_code', label: 'Inspectall Code', group: 'External Links' },
 ];
 
-const CHECKBOX_FIELDS = new Set<string>(['automatic_service_package', 'priority_service_package', 'send_schedule_reminders']);
+const CHECKBOX_FIELDS = new Set<string>(['automatic_service_package', 'priority_service_package', 'site_induction_details']);
 
 const GROUPS = ['Contact Details', 'Service & Scheduling', 'Business Info', 'External Links'];
 
