@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import {
   User, Site, Crane, Inspection, InspectionItemResult,
   InspectionTemplate, CraneOperationalStatus, SiteJobSummary, AdminNote,
