@@ -24,6 +24,7 @@ const Index = () => {
   const [dashboardView, setDashboardView] = useState<DashboardView>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [clientInitialTab, setClientInitialTab] = useState<'details' | 'assets' | undefined>(undefined);
   const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[]; fromQuotesPage?: boolean; draftQuote?: any; estimateNotes?: string }>({ active: false });
 
   if (!state.currentUser) return <Login />;
@@ -64,7 +65,7 @@ const Index = () => {
   }
 
   if (state.selectedSite && (dashboardView === 'clients' || dashboardView === 'assets')) {
-    return <CraneList activeJobId={activeJobId} onSetActiveJob={setActiveJobId} />;
+    return <CraneList activeJobId={activeJobId} onSetActiveJob={setActiveJobId} initialTab={clientInitialTab} />;
   }
 
   if (dashboardView === 'schedule') return <SchedulePage onBack={() => setDashboardView(null)} />;
@@ -86,6 +87,14 @@ const Index = () => {
   if (dashboardView === 'tasks') return <TasksPage onBack={() => setDashboardView(null)} onOpenJob={(id) => {
     setSelectedJobId(id);
     setActiveJobId(id);
+  }} onOpenClient={async (clientName) => {
+    // Look up the client by name and navigate to their details
+    const { data } = await supabase.from('clients').select('id, client_name, location_address, primary_contact_name, primary_contact_mobile').eq('client_name', clientName).maybeSingle();
+    if (data) {
+      dispatch({ type: 'SELECT_SITE', payload: { id: `db-${data.id}`, name: data.client_name, address: data.location_address || '', contactName: data.primary_contact_name || '', contactPhone: data.primary_contact_mobile || '', cranes: [] } });
+      setClientInitialTab('details');
+      setDashboardView('clients');
+    }
   }} />;
   
 
