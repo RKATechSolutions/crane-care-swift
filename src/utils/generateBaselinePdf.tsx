@@ -17,10 +17,15 @@ interface BaselinePdfData {
     adjustedCost: number;
     trainingCoverage: number;
   };
+  aiSummary?: string;
 }
 
 const DARK: [number, number, number] = [40, 32, 39];
 const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
+const RKA_GREEN: [number, number, number] = [34, 139, 34];
+const RKA_ORANGE: [number, number, number] = [255, 165, 0];
+const RKA_RED: [number, number, number] = [220, 53, 69];
+const RKA_BLUE: [number, number, number] = [41, 98, 255];
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -36,8 +41,25 @@ function fmtNum(v: number | null | undefined, prefix = '', suffix = ''): string 
   return `${prefix}${v.toLocaleString('en-AU', { maximumFractionDigits: 1 })}${suffix}`;
 }
 
+// Score a select answer: Yes=2, Partially/Somewhat/Slightly=1, No=0
+function scoreAnswer(v: string | null | undefined): number {
+  if (!v) return -1;
+  const lower = v.toLowerCase();
+  if (lower === 'yes') return 2;
+  if (['partially', 'somewhat', 'slightly'].includes(lower)) return 1;
+  if (lower === 'no' || lower === 'significantly') return 0;
+  return -1;
+}
+
+function getScoreColor(score: number, max: number): [number, number, number] {
+  const pct = max > 0 ? score / max : 0;
+  if (pct >= 0.75) return RKA_GREEN;
+  if (pct >= 0.5) return RKA_ORANGE;
+  return RKA_RED;
+}
+
 export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF> {
-  const { siteName, companyName, technicianName, formData, calculations } = data;
+  const { siteName, companyName, technicianName, formData, calculations, aiSummary } = data;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -47,7 +69,7 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
 
   const addHeader = () => {
     if (logoImg) {
-      const logoH = 16;
+      const logoH = 14;
       const logoW = logoH * (logoImg.width / logoImg.height);
       doc.addImage(logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
     }
@@ -66,7 +88,7 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
 
   // Cover page
   addHeader();
-  let y = 30;
+  let y = 26;
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DARK);
@@ -87,8 +109,12 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
   y += 14;
 
   // Section helper
+  const checkPage = (needed = 30) => {
+    if (y > pageH - needed) { doc.addPage(); addHeader(); y = 24; }
+  };
+
   const addSectionTitle = (title: string) => {
-    if (y > pageH - 30) { doc.addPage(); addHeader(); y = 28; }
+    checkPage(35);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...DARK);
@@ -110,10 +136,10 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
       alternateRowStyles: { fillColor: LIGHT_GRAY },
       didDrawPage: () => addHeader(),
     });
-    y = (doc as any).lastAutoTable?.finalY + 8 || y + 8;
+    y = (doc as any).lastAutoTable?.finalY + 6 || y + 6;
   };
 
-  // Section 1
+  // ─── Section 1: Site & Ops ───
   addSectionTitle('Site & Operations Overview');
   addTable([
     ['Company Name', str('company_name')],
@@ -127,7 +153,7 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
     ['Production Increased?', str('production_increased')],
   ]);
 
-  // Section 2
+  // ─── Section 2: Breakdown Data ───
   addSectionTitle('Breakdown & Downtime History');
   addTable([
     ['Breakdowns (12 Months)', numStr('breakdowns')],
@@ -139,26 +165,100 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
     ['First-Time Fix Rate', numStr('first_time_fix', '%')],
   ]);
 
-  addSectionTitle('Calculated Metrics');
-  addTable([
-    ['Est. Annual Downtime', fmtNum(calculations.annualDowntime, '', ' hrs')],
-    ['Reactive Maintenance Ratio', fmtNum(calculations.reactiveRatio, '', '%')],
-    ['Mean Time To Repair', fmtNum(calculations.mttr, '', ' hrs')],
-  ]);
+  // ─── Visual: Reliability Gauges ───
+  checkPage(55);
+  addSectionTitle('Reliability Metrics');
 
-  // Section 3
+  const gaugeData = [
+    { label: 'Annual Downtime', value: calculations.annualDowntime, unit: ' hrs', target: 100, explainer: 'Total hours cranes are out of action per year' },
+    { label: 'Reactive Ratio', value: calculations.reactiveRatio, unit: '%', target: 100, explainer: 'Percentage of maintenance that is unplanned' },
+    { label: 'Mean Time To Repair', value: calculations.mttr, unit: ' hrs', target: 24, explainer: 'Average hours from breakdown to back in service' },
+  ];
+
+  const gaugeW = (pageW - 40) / 3;
+  gaugeData.forEach((g, i) => {
+    const gx = 15 + i * (gaugeW + 5);
+    const gy = y;
+    const barH = 8;
+    const pct = Math.min(g.value / g.target, 1);
+    const color = pct <= 0.33 ? RKA_GREEN : pct <= 0.66 ? RKA_ORANGE : RKA_RED;
+
+    // Label
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...DARK);
+    doc.text(g.label, gx, gy);
+
+    // Bar background
+    doc.setFillColor(230, 230, 230);
+    doc.roundedRect(gx, gy + 2, gaugeW, barH, 2, 2, 'F');
+
+    // Bar fill
+    doc.setFillColor(...color);
+    const fillW = Math.max(pct * gaugeW, 2);
+    doc.roundedRect(gx, gy + 2, fillW, barH, 2, 2, 'F');
+
+    // Value
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(fmtNum(g.value, '', g.unit), gx + gaugeW / 2, gy + 7.5, { align: 'center' });
+
+    // Explainer
+    doc.setFontSize(5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(g.explainer, gx, gy + 14);
+  });
+  y += 20;
+
+  // ─── Section 3: Financial ───
+  checkPage(55);
   addSectionTitle('Financial Downtime Impact');
-  addTable([
-    ['Revenue/Production Hour', numStr('rev_hour', '$')],
-    ['Labour Cost/Downtime Hour', numStr('labour_cost_per_hour', '$')],
-    ['Backup Crane Available', str('backup_crane')],
-    ['Cost Per Breakdown', fmtNum(calculations.costPerBreakdown, '$')],
-    ['Annual Downtime Cost', fmtNum(calculations.annualCost, '$')],
-    ...(str('backup_crane') === 'No' ? [['Adjusted Cost (No Backup)', fmtNum(calculations.adjustedCost, '$')]] : []),
-  ]);
 
-  // Sections 4-9 as select-field tables
-  const selectSections: { title: string; fields: [string, string][] }[] = [
+  // Visual: cost bars
+  const costItems = [
+    { label: 'Cost Per Breakdown', value: calculations.costPerBreakdown, explainer: 'Revenue lost each time a crane goes down' },
+    { label: 'Annual Downtime Cost', value: calculations.annualCost, explainer: 'Total yearly revenue impact from all downtime' },
+  ];
+  if (str('backup_crane') === 'No') {
+    costItems.push({
+      label: 'Adjusted Cost (No Backup)',
+      value: calculations.adjustedCost,
+      explainer: 'Includes 20% buffer for overtime, delays & penalties',
+    });
+  }
+
+  const maxCost = Math.max(...costItems.map(c => c.value), 1);
+  costItems.forEach((item, i) => {
+    const iy = y + i * 16;
+    checkPage(20);
+
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...DARK);
+    doc.text(item.label, 15, iy);
+
+    const barMaxW = pageW - 80;
+    const barPct = Math.min(item.value / maxCost, 1);
+    const barColor = i === costItems.length - 1 && str('backup_crane') === 'No' ? RKA_RED : RKA_BLUE;
+
+    doc.setFillColor(230, 230, 230);
+    doc.roundedRect(15, iy + 2, barMaxW, 6, 1.5, 1.5, 'F');
+    doc.setFillColor(...barColor);
+    doc.roundedRect(15, iy + 2, Math.max(barPct * barMaxW, 2), 6, 1.5, 1.5, 'F');
+
+    doc.setFontSize(9);
+    doc.text(fmtNum(item.value, '$'), 15 + barMaxW + 3, iy + 7);
+
+    doc.setFontSize(5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(item.explainer, 15, iy + 12);
+  });
+  y += costItems.length * 16 + 4;
+
+  // ─── Culture Sections with Scoring ───
+  const cultureSections: { title: string; fields: [string, string][] }[] = [
     {
       title: 'Environment & Workplace Standards',
       fields: [
@@ -194,8 +294,6 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
     {
       title: 'Education & Training',
       fields: [
-        ['Total Crane Operators', 'total_operators'],
-        ['Refresher-Trained Operators', 'refresher_operators'],
         ['Competency matrix exists', 'competency_matrix'],
         ['Supervisors trained', 'supervisors_trained'],
         ['Near misses recorded', 'near_misses_recorded'],
@@ -215,8 +313,6 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
     {
       title: 'Service Provider Review',
       fields: [
-        ['Avg Response Time', 'provider_response_time'],
-        ['First-Time Fix Rate', 'provider_fix_rate'],
         ['Reports electronic & detailed', 'reports_electronic'],
         ['Reports include risk ranking', 'reports_risk_ranking'],
         ['Engineering advice provided', 'engineering_advice'],
@@ -225,17 +321,63 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
     },
   ];
 
-  for (const sec of selectSections) {
+  // Draw culture sections with visual score bars
+  for (const sec of cultureSections) {
+    checkPage(40);
     addSectionTitle(sec.title);
-    const rows = sec.fields.map(([label, key]) => [label, str(key)]);
+
+    let sectionScore = 0;
+    let sectionMax = 0;
+    const rows: string[][] = [];
+    sec.fields.forEach(([label, key]) => {
+      const val = str(key);
+      rows.push([label, val]);
+      const s = scoreAnswer(val);
+      if (s >= 0) { sectionScore += s; sectionMax += 2; }
+    });
+
+    // Section score bar
+    if (sectionMax > 0) {
+      const pct = sectionScore / sectionMax;
+      const barW = 60;
+      const color = getScoreColor(sectionScore, sectionMax);
+
+      doc.setFillColor(230, 230, 230);
+      doc.roundedRect(pageW - 15 - barW, y - 5, barW, 5, 1.5, 1.5, 'F');
+      doc.setFillColor(...color);
+      doc.roundedRect(pageW - 15 - barW, y - 5, Math.max(pct * barW, 2), 5, 1.5, 1.5, 'F');
+
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...color);
+      doc.text(`${Math.round(pct * 100)}%`, pageW - 15 - barW - 8, y - 1.5);
+    }
+
     addTable(rows);
   }
 
-  // Training calc
+  // Training Coverage
+  checkPage(20);
   addSectionTitle('Training Coverage');
-  addTable([['Training Coverage Rate', fmtNum(calculations.trainingCoverage, '', '%')]]);
+  const tcPct = Math.min(calculations.trainingCoverage / 100, 1);
+  const tcColor = tcPct >= 0.8 ? RKA_GREEN : tcPct >= 0.5 ? RKA_ORANGE : RKA_RED;
+  doc.setFillColor(230, 230, 230);
+  doc.roundedRect(15, y, pageW - 30, 8, 2, 2, 'F');
+  doc.setFillColor(...tcColor);
+  doc.roundedRect(15, y, Math.max(tcPct * (pageW - 30), 2), 8, 2, 2, 'F');
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(`${fmtNum(calculations.trainingCoverage, '', '%')}`, pageW / 2, y + 6, { align: 'center' });
+  doc.setTextColor(...DARK);
+  y += 12;
+  doc.setFontSize(6);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(120, 120, 120);
+  doc.text('Percentage of operators with current refresher training. Below 80% indicates a training gap.', 15, y);
+  y += 8;
 
-  // Provider open-ended
+  // Provider Feedback
   if (str('value_most') !== '—' || str('most_frustrating') !== '—' || str('magic_wand') !== '—') {
     addSectionTitle('Provider Feedback');
     const feedbackRows: string[][] = [];
@@ -245,20 +387,101 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
     addTable(feedbackRows);
   }
 
-  // Performance Summary
-  addSectionTitle('Performance Snapshot');
-  addTable([
-    ['Annual Downtime', fmtNum(calculations.annualDowntime, '', ' hrs')],
-    ['Reactive Ratio', fmtNum(calculations.reactiveRatio, '', '%')],
-    ['MTTR', fmtNum(calculations.mttr, '', ' hrs')],
-    ['Cost Per Breakdown', fmtNum(calculations.costPerBreakdown, '$')],
-    ['Annual Downtime Cost', fmtNum(calculations.annualCost, '$')],
-    ...(str('backup_crane') === 'No' ? [['Adjusted Cost', fmtNum(calculations.adjustedCost, '$')]] : []),
-    ['Training Coverage', fmtNum(calculations.trainingCoverage, '', '%')],
-  ]);
+  // ─── AI Summary Page ───
+  if (aiSummary) {
+    doc.addPage();
+    addHeader();
+    y = 24;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...DARK);
+    doc.text('AI Strategic Summary', pageW / 2, y, { align: 'center' });
+    y += 8;
+
+    doc.setDrawColor(...RKA_BLUE);
+    doc.setLineWidth(0.5);
+    doc.line(15, y, pageW - 15, y);
+    y += 6;
+
+    // Strip markdown and render
+    const cleanText = aiSummary
+      .replace(/^#{1,3}\s+/gm, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1');
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...DARK);
+
+    const lines = doc.splitTextToSize(cleanText, pageW - 30);
+    for (const line of lines) {
+      if (y > pageH - 20) { doc.addPage(); addHeader(); y = 24; }
+      doc.text(line, 15, y);
+      y += 4;
+    }
+  }
+
+  // ─── Performance Snapshot (Visual Summary Page) ───
+  doc.addPage();
+  addHeader();
+  y = 24;
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...DARK);
+  doc.text('Performance Snapshot', pageW / 2, y, { align: 'center' });
+  y += 10;
+
+  // Summary cards
+  const summaryItems = [
+    { label: 'Annual Downtime', value: fmtNum(calculations.annualDowntime, '', ' hrs'), explainer: 'Total crane downtime per year from all breakdowns', color: calculations.annualDowntime > 50 ? RKA_RED : calculations.annualDowntime > 20 ? RKA_ORANGE : RKA_GREEN },
+    { label: 'Reactive Ratio', value: fmtNum(calculations.reactiveRatio, '', '%'), explainer: 'Share of maintenance that is unplanned emergency work', color: calculations.reactiveRatio > 60 ? RKA_RED : calculations.reactiveRatio > 30 ? RKA_ORANGE : RKA_GREEN },
+    { label: 'Mean Time To Repair', value: fmtNum(calculations.mttr, '', ' hrs'), explainer: 'Average hours from breakdown to crane back in service', color: calculations.mttr > 8 ? RKA_RED : calculations.mttr > 4 ? RKA_ORANGE : RKA_GREEN },
+    { label: 'Cost Per Breakdown', value: fmtNum(calculations.costPerBreakdown, '$'), explainer: 'Revenue lost each time a crane goes down', color: RKA_BLUE },
+    { label: 'Annual Downtime Cost', value: fmtNum(calculations.annualCost, '$'), explainer: 'Total yearly revenue impact from all crane downtime', color: RKA_BLUE },
+    ...(str('backup_crane') === 'No' ? [{ label: 'Adjusted Cost (No Backup)', value: fmtNum(calculations.adjustedCost, '$'), explainer: 'Includes 20% buffer for overtime, delays and penalties when no backup crane is available', color: RKA_RED }] : []),
+    { label: 'Training Coverage', value: fmtNum(calculations.trainingCoverage, '', '%'), explainer: 'Percentage of operators with current refresher training', color: calculations.trainingCoverage >= 80 ? RKA_GREEN : calculations.trainingCoverage >= 50 ? RKA_ORANGE : RKA_RED },
+  ];
+
+  const cardW = (pageW - 35) / 2;
+  summaryItems.forEach((item, i) => {
+    const col = i % 2;
+    const cx = 15 + col * (cardW + 5);
+    if (col === 0 && i > 0) y += 28;
+    if (col === 0) checkPage(32);
+    const cy = y;
+
+    // Card background
+    doc.setFillColor(248, 248, 248);
+    doc.roundedRect(cx, cy, cardW, 24, 3, 3, 'F');
+
+    // Color indicator
+    doc.setFillColor(...item.color);
+    doc.roundedRect(cx, cy, 3, 24, 1.5, 1.5, 'F');
+
+    // Label
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(item.label, cx + 7, cy + 6);
+
+    // Value
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...DARK);
+    doc.text(item.value, cx + 7, cy + 14);
+
+    // Explainer
+    doc.setFontSize(5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    const expLines = doc.splitTextToSize(item.explainer, cardW - 12);
+    doc.text(expLines[0], cx + 7, cy + 19);
+  });
+  y += 32;
 
   // Static text
-  if (y > pageH - 40) { doc.addPage(); addHeader(); y = 28; }
+  checkPage(20);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
