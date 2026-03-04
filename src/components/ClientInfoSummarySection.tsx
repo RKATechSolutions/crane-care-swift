@@ -37,7 +37,7 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
     setEditing(true);
   };
 
-  const handleSave = () => {
+  const isLink = (v: string) => v?.startsWith('http');
     const standardUpdates: Record<string, any> = {};
     const customFieldUpdates: Record<string, any> = {};
 
