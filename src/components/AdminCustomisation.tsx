@@ -25,6 +25,9 @@ export default function AdminCustomisation() {
   // Client info editing
   const [editingFieldKey, setEditingFieldKey] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
+  const [editFieldType, setEditFieldType] = useState<ClientInfoField['fieldType']>('text');
+  const [editFieldGroup, setEditFieldGroup] = useState('Contact Details');
+  const [editFieldOptions, setEditFieldOptions] = useState('');
   const [newClientLabel, setNewClientLabel] = useState('');
   const [newClientType, setNewClientType] = useState<ClientInfoField['fieldType']>('text');
   const [newClientGroup, setNewClientGroup] = useState('Contact Details');
@@ -87,10 +90,24 @@ export default function AdminCustomisation() {
     updateConfig({ clientInfoFields: updated });
   };
 
-  const renameClientField = (fieldKey: string) => {
+  const startEditingClientField = (f: ClientInfoField) => {
+    setEditingFieldKey(f.fieldKey);
+    setEditLabel(f.label);
+    setEditFieldType(f.fieldType || 'text');
+    setEditFieldGroup(f.group);
+    setEditFieldOptions(f.options?.join(', ') || '');
+  };
+
+  const saveClientFieldEdit = (fieldKey: string) => {
     if (!editLabel.trim()) return;
     const updated = config.clientInfoFields.map(f =>
-      f.fieldKey === fieldKey ? { ...f, label: editLabel.trim() } : f
+      f.fieldKey === fieldKey ? {
+        ...f,
+        label: editLabel.trim(),
+        fieldType: editFieldType,
+        group: editFieldGroup,
+        options: editFieldType === 'select' ? editFieldOptions.split(',').map(o => o.trim()).filter(Boolean) : f.options,
+      } : f
     );
     updateConfig({ clientInfoFields: updated });
     setEditingFieldKey(null);
@@ -298,88 +315,131 @@ export default function AdminCustomisation() {
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 border-b border-border pb-1">{group}</p>
               <div className="space-y-1">
                 {groupFields.map((f, idx) => (
-                  <div
-                    key={f.fieldKey}
-                    className={`flex items-center gap-2 p-2.5 rounded-lg transition-colors ${
-                      f.visible ? 'bg-muted' : 'bg-muted/40 opacity-60'
-                    }`}
-                  >
-                    {/* Reorder buttons */}
-                    <div className="flex flex-col gap-0.5">
-                      <button
-                        onClick={() => moveClientField(f.fieldKey, 'up')}
-                        className="p-0.5 text-muted-foreground hover:text-foreground"
-                        disabled={idx === 0}
-                      >
-                        <ArrowUp className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => moveClientField(f.fieldKey, 'down')}
-                        className="p-0.5 text-muted-foreground hover:text-foreground"
-                        disabled={idx === groupFields.length - 1}
-                      >
-                        <ArrowDown className="w-3 h-3" />
-                      </button>
-                    </div>
-
-                    {/* Visibility toggle */}
-                    <button
-                      onClick={() => toggleClientFieldVisibility(f.fieldKey)}
-                      className="flex-shrink-0"
+                  <div key={f.fieldKey} className="space-y-0">
+                    <div
+                      className={`flex items-center gap-2 p-2.5 rounded-lg transition-colors ${
+                        f.visible ? 'bg-muted' : 'bg-muted/40 opacity-60'
+                      }`}
                     >
-                      {f.visible
-                        ? <Eye className="w-4 h-4 text-rka-green" />
-                        : <EyeOff className="w-4 h-4 text-muted-foreground" />
-                      }
-                    </button>
+                      {/* Reorder buttons */}
+                      <div className="flex flex-col gap-0.5">
+                        <button onClick={() => moveClientField(f.fieldKey, 'up')} className="p-0.5 text-muted-foreground hover:text-foreground" disabled={idx === 0}>
+                          <ArrowUp className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => moveClientField(f.fieldKey, 'down')} className="p-0.5 text-muted-foreground hover:text-foreground" disabled={idx === groupFields.length - 1}>
+                          <ArrowDown className="w-3 h-3" />
+                        </button>
+                      </div>
 
-                    {/* Label (editable on tap) */}
-                    <div className="flex-1 min-w-0">
-                      {editingFieldKey === f.fieldKey ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            value={editLabel}
-                            onChange={e => setEditLabel(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && renameClientField(f.fieldKey)}
-                            className="flex-1 h-7 px-2 border border-primary rounded text-sm bg-background"
-                            autoFocus
-                          />
-                          <button onClick={() => renameClientField(f.fieldKey)} className="p-1 text-primary">
-                            <Check className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
+                      {/* Visibility toggle */}
+                      <button onClick={() => toggleClientFieldVisibility(f.fieldKey)} className="flex-shrink-0">
+                        {f.visible ? <Eye className="w-4 h-4 text-rka-green" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
+                      </button>
+
+                      {/* Label + info */}
+                      <div className="flex-1 min-w-0">
                         <button
-                          onClick={() => { setEditingFieldKey(f.fieldKey); setEditLabel(f.label); }}
+                          onClick={() => startEditingClientField(f)}
                           className="text-sm font-medium text-left w-full truncate flex items-center gap-1"
                         >
                           {f.label}
                           <Pencil className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
                         </button>
-                      )}
+                        <div className="flex gap-1 mt-0.5 flex-wrap">
+                          <span className="text-[10px] bg-background px-1.5 py-0.5 rounded font-medium">{f.fieldType || 'text'}</span>
+                          {f.isCustom && <span className="text-[10px] text-primary font-medium">Custom</span>}
+                          {f.options && f.options.length > 0 && <span className="text-[10px] text-muted-foreground">{f.options.join(', ')}</span>}
+                        </div>
+                      </div>
+
+                      {/* Editable toggle */}
+                      <button
+                        onClick={() => toggleClientFieldEditable(f.fieldKey)}
+                        className={`flex-shrink-0 p-1 rounded ${f.editable ? 'text-primary' : 'text-muted-foreground/40'}`}
+                        title={f.editable ? 'Editable by tech' : 'Read-only for tech'}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Delete (custom only) */}
                       {f.isCustom && (
-                        <span className="text-[10px] text-primary font-medium">Custom field</span>
+                        <button onClick={() => removeClientField(f.fieldKey)} className="p-1 text-muted-foreground active:text-destructive">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       )}
                     </div>
 
-                    {/* Editable toggle */}
-                    <button
-                      onClick={() => toggleClientFieldEditable(f.fieldKey)}
-                      className={`flex-shrink-0 p-1 rounded ${f.editable ? 'text-primary' : 'text-muted-foreground/40'}`}
-                      title={f.editable ? 'Editable by tech' : 'Read-only for tech'}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-
-                    {/* Delete (custom only) */}
-                    {f.isCustom && (
-                      <button
-                        onClick={() => removeClientField(f.fieldKey)}
-                        className="p-1 text-muted-foreground active:text-destructive"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    {/* Inline edit panel */}
+                    {editingFieldKey === f.fieldKey && (
+                      <div className="bg-muted rounded-b-xl p-3 space-y-2 border-2 border-primary/20 -mt-1">
+                        <div>
+                          <label className="text-[10px] font-semibold text-muted-foreground">Label</label>
+                          <input
+                            type="text"
+                            value={editLabel}
+                            onChange={e => setEditLabel(e.target.value)}
+                            className="w-full h-8 px-2 border border-border rounded-md bg-background text-sm"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] font-semibold text-muted-foreground">Field Type</label>
+                            <select
+                              value={editFieldType || 'text'}
+                              onChange={e => setEditFieldType(e.target.value as ClientInfoField['fieldType'])}
+                              className="w-full h-8 px-2 border border-border rounded-md bg-background text-sm"
+                            >
+                              <option value="text">Text</option>
+                              <option value="textarea">Multi-line Text</option>
+                              <option value="number">Number</option>
+                              <option value="date">Date</option>
+                              <option value="select">Dropdown</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-semibold text-muted-foreground">Group</label>
+                            <select
+                              value={editFieldGroup}
+                              onChange={e => setEditFieldGroup(e.target.value)}
+                              className="w-full h-8 px-2 border border-border rounded-md bg-background text-sm"
+                            >
+                              <option value="Contact Details">Contact Details</option>
+                              <option value="Service & Scheduling">Service & Scheduling</option>
+                              <option value="Business Info">Business Info</option>
+                              <option value="Links">Links</option>
+                              <option value="Custom">Custom</option>
+                            </select>
+                          </div>
+                        </div>
+                        {editFieldType === 'select' && (
+                          <div>
+                            <label className="text-[10px] font-semibold text-muted-foreground">Options (comma separated)</label>
+                            <input
+                              type="text"
+                              value={editFieldOptions}
+                              onChange={e => setEditFieldOptions(e.target.value)}
+                              placeholder="e.g. Yes, No, N/A"
+                              className="w-full h-8 px-2 border border-border rounded-md bg-background text-sm"
+                            />
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveClientFieldEdit(f.fieldKey)}
+                            disabled={!editLabel.trim()}
+                            className="flex-1 h-8 bg-primary text-primary-foreground rounded-lg font-bold text-xs flex items-center justify-center gap-1 disabled:opacity-40"
+                          >
+                            <Check className="w-3.5 h-3.5" /> Save
+                          </button>
+                          <button
+                            onClick={() => setEditingFieldKey(null)}
+                            className="px-3 h-8 bg-muted rounded-lg font-semibold text-xs border border-border"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}
