@@ -129,6 +129,7 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
         }
 
         const inspectionIds = inspections.map(i => i.id);
+        setDbInspections(inspections as DbInspection[]);
 
         // Get defect responses
         const { data: responses } = await supabase
