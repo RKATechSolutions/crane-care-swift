@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2, Camera, ImageIcon } from 'lucide-react';
+import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
 import { format } from 'date-fns';
@@ -66,7 +66,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const [uploadingPhotoId, setUploadingPhotoId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const [photoTargetId, setPhotoTargetId] = useState<string | null>(null);
+  const photoTargetIdRef = useRef<string | null>(null);
 
   const refreshItems = async () => {
     let query = supabase.from('lifting_register').select('*').order('created_at', { ascending: false });
@@ -77,12 +77,8 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   };
 
   useEffect(() => {
-    const fetchItems = async () => {
-      setLoading(true);
-      await refreshItems();
-      setLoading(false);
-    };
-    fetchItems();
+    const fetch = async () => { setLoading(true); await refreshItems(); setLoading(false); };
+    fetch();
   }, [clientId, siteName]);
 
   const statusIcon = (status: string | null) => {
@@ -100,48 +96,41 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   // ─── Share ──────────────────────────────────────────────
   const handleShare = async () => {
     if (items.length === 0) { toast.error('No items to share'); return; }
-    const lines = [
-      `LIFTING EQUIPMENT REGISTER`, `Site: ${siteName}`,
-      `Date: ${new Date().toLocaleDateString('en-AU')}`, `Total Items: ${items.length}`, '', `${'—'.repeat(40)}`,
-    ];
+    const lines = [`LIFTING EQUIPMENT REGISTER`, `Site: ${siteName}`, `Date: ${new Date().toLocaleDateString('en-AU')}`, `Total Items: ${items.length}`, '', `${'—'.repeat(40)}`];
     items.forEach((item, i) => {
       lines.push(`${i + 1}. ${item.equipment_type}`);
       if (item.serial_number) lines.push(`   Serial: ${item.serial_number}`);
       if (item.asset_tag) lines.push(`   Tag: ${item.asset_tag}`);
       if (item.wll_value) lines.push(`   WLL: ${item.wll_value} ${item.wll_unit || 'kg'}`);
-      if (item.manufacturer) lines.push(`   Manufacturer: ${item.manufacturer}`);
       lines.push(`   Status: ${item.equipment_status || 'Unknown'}`);
+      if (item.notes) lines.push(`   Notes: ${item.notes}`);
       lines.push('');
     });
     const text = lines.join('\n');
     if (navigator.share) {
-      try { await navigator.share({ title: `Lifting Register - ${siteName}`, text }); toast.success('Shared'); } catch { /* cancelled */ }
-    } else {
-      await navigator.clipboard.writeText(text);
-      toast.success('Register copied to clipboard');
-    }
+      try { await navigator.share({ title: `Lifting Register - ${siteName}`, text }); } catch { /* cancelled */ }
+    } else { await navigator.clipboard.writeText(text); toast.success('Register copied to clipboard'); }
   };
 
-  // ─── PDF / CSV downloads ────────────────────────────────
+  // ─── PDF / CSV ──────────────────────────────────────────
   const handleDownloadPdf = async () => {
     if (items.length === 0) { toast.error('No items to export'); return; }
     try {
       const pdf = await generateLiftingRegisterPdf({ siteName, clientName: clientName || siteName, technicianName: 'Technician', items });
-      const safeName = (clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_');
-      pdf.save(`${safeName}_LiftingRegister_${format(new Date(), 'yyyyMMdd')}.pdf`);
+      pdf.save(`${(clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_')}_LiftingRegister_${format(new Date(), 'yyyyMMdd')}.pdf`);
       toast.success('PDF downloaded');
     } catch (err) { console.error('PDF error:', err); toast.error('Failed to generate PDF'); }
   };
 
   const handleDownloadCsv = () => {
     if (items.length === 0) { toast.error('No items to export'); return; }
-    const headers = ['Equipment Type', 'Serial Number', 'Asset Tag', 'WLL', 'Unit', 'Manufacturer', 'Model', 'Grade', 'Length (m)', 'Status', 'Tag Present', 'Registered By', 'Date'];
-    const rows = items.map(item => [
-      item.equipment_type, item.serial_number || '', item.asset_tag || '',
+    const headers = ['#', 'Equipment Type', 'Serial Number', 'Asset Tag', 'WLL', 'Unit', 'Manufacturer', 'Model', 'Grade', 'Length (m)', 'Status', 'Notes', 'Photo', 'Registered By', 'Date'];
+    const rows = items.map((item, idx) => [
+      idx + 1, item.equipment_type, item.serial_number || '', item.asset_tag || '',
       item.wll_value ?? '', item.wll_unit || '', item.manufacturer || '',
       item.model || '', item.grade || '', item.length_m ?? '',
-      item.equipment_status || '', item.tag_present || '', item.registered_by_name,
-      new Date(item.created_at).toLocaleDateString('en-AU'),
+      item.equipment_status || '', item.notes || '', item.overall_photo_url || '',
+      item.registered_by_name, new Date(item.created_at).toLocaleDateString('en-AU'),
     ]);
     const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -154,7 +143,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     toast.success('CSV downloaded');
   };
 
-  // ─── Import (CSV / Excel) ──────────────────────────────
+  // ─── Import ─────────────────────────────────────────────
   const headerMap: Record<string, string> = {
     'equipment type': 'equipment_type', 'type': 'equipment_type',
     'manufacturer': 'manufacturer', 'make': 'manufacturer', 'brand': 'manufacturer',
@@ -166,7 +155,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     'length': 'length_m', 'length (m)': 'length_m', 'length_m': 'length_m',
     'grade': 'grade',
     'status': 'equipment_status', 'equipment status': 'equipment_status',
-    'notes': 'notes', 'comment': 'notes',
+    'notes': 'notes', 'comment': 'notes', 'comments': 'notes',
     'configuration': 'sling_configuration', 'sling configuration': 'sling_configuration',
     'legs': 'sling_leg_count', 'leg count': 'sling_leg_count',
     'lift height': 'lift_height_m', 'lift height (m)': 'lift_height_m',
@@ -198,8 +187,6 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     try {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-
-      // Find the sheet with the most data rows
       let bestSheet: any[][] = [];
       let bestSheetName = '';
       for (const sheetName of workbook.SheetNames) {
@@ -208,15 +195,11 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
         const nonEmpty = data.filter(row => row.some(cell => cell != null && String(cell).trim() !== ''));
         if (nonEmpty.length > bestSheet.length) { bestSheet = nonEmpty; bestSheetName = sheetName; }
       }
-      console.log(`Using sheet "${bestSheetName}" with ${bestSheet.length} rows from ${workbook.SheetNames.length} sheets`);
-
-      if (bestSheet.length < 2) { toast.error('No sheet found with a header row and data'); setImporting(false); return; }
-
+      console.log(`Using sheet "${bestSheetName}" with ${bestSheet.length} rows`);
+      if (bestSheet.length < 2) { toast.error('No sheet found with header and data'); setImporting(false); return; }
       const headers = bestSheet[0].map((h: any) => String(h || ''));
       const rows = parseRowsToInsert(headers, bestSheet.slice(1));
-
       if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
-
       const { error } = await supabase.from('lifting_register').insert(rows);
       if (error) { console.error('Import error:', error); toast.error('Import failed: ' + error.message); }
       else { toast.success(`Imported ${rows.length} items`); await refreshItems(); }
@@ -225,29 +208,47 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ─── Edit ───────────────────────────────────────────────
-  const openEdit = (item: RegisterItem) => {
-    setEditItem(item);
-    setEditForm({ ...item });
+  // ─── Photo Upload ───────────────────────────────────────
+  const triggerPhotoUpload = (itemId: string) => {
+    photoTargetIdRef.current = itemId;
+    photoInputRef.current?.click();
   };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const targetId = photoTargetIdRef.current;
+    if (!file || !targetId) return;
+    setUploadingPhotoId(targetId);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const filePath = `lifting-register/${targetId}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('job-documents').upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(filePath);
+      const photoUrl = urlData.publicUrl;
+      const { error: updateError } = await supabase.from('lifting_register').update({ overall_photo_url: photoUrl }).eq('id', targetId);
+      if (updateError) throw updateError;
+      setItems(prev => prev.map(i => i.id === targetId ? { ...i, overall_photo_url: photoUrl } : i));
+      toast.success('Photo uploaded');
+    } catch (err) { console.error('Photo upload error:', err); toast.error('Failed to upload photo'); }
+    setUploadingPhotoId(null);
+    if (photoInputRef.current) photoInputRef.current.value = '';
+  };
+
+  // ─── Edit ───────────────────────────────────────────────
+  const openEdit = (item: RegisterItem) => { setEditItem(item); setEditForm({ ...item }); };
 
   const handleSaveEdit = async () => {
     if (!editItem) return;
     setSaving(true);
     const { error } = await supabase.from('lifting_register').update({
       equipment_type: editForm.equipment_type || editItem.equipment_type,
-      manufacturer: editForm.manufacturer || null,
-      model: editForm.model || null,
-      serial_number: editForm.serial_number || null,
-      asset_tag: editForm.asset_tag || null,
-      wll_value: editForm.wll_value ?? null,
-      wll_unit: editForm.wll_unit || null,
-      length_m: editForm.length_m ?? null,
-      grade: editForm.grade || null,
-      equipment_status: editForm.equipment_status || null,
-      notes: editForm.notes || null,
+      manufacturer: editForm.manufacturer || null, model: editForm.model || null,
+      serial_number: editForm.serial_number || null, asset_tag: editForm.asset_tag || null,
+      wll_value: editForm.wll_value ?? null, wll_unit: editForm.wll_unit || null,
+      length_m: editForm.length_m ?? null, grade: editForm.grade || null,
+      equipment_status: editForm.equipment_status || null, notes: editForm.notes || null,
     }).eq('id', editItem.id);
-
     if (error) { toast.error('Failed to save'); console.error(error); }
     else { toast.success('Item updated'); await refreshItems(); setEditItem(null); }
     setSaving(false);
@@ -260,6 +261,9 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     else { toast.success('Item deleted'); setItems(prev => prev.filter(i => i.id !== id)); }
     setDeleteConfirm(null);
   };
+
+  // Sequential numbering across all items
+  let globalIndex = 0;
 
   // Group by equipment type
   const grouped = items.reduce((acc, item) => {
@@ -284,12 +288,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           <Button onClick={handleDownloadCsv} variant="outline" className="flex-1 gap-1 text-xs">
             <Download className="w-3.5 h-3.5" /> CSV
           </Button>
-          <Button
-            variant="outline"
-            className="flex-1 gap-1 text-xs"
-            disabled={importing}
-            onClick={() => fileInputRef.current?.click()}
-          >
+          <Button variant="outline" className="flex-1 gap-1 text-xs" disabled={importing} onClick={() => fileInputRef.current?.click()}>
             {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             {importing ? 'Importing...' : 'Import'}
           </Button>
@@ -305,6 +304,9 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
         </div>
       </div>
 
+      {/* Hidden photo input */}
+      <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handlePhotoUpload} />
+
       <div className="flex-1 overflow-auto">
         {loading && (
           <div className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
@@ -316,7 +318,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           <div className="p-8 text-center text-muted-foreground">
             <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="font-medium">No lifting equipment registered</p>
-            <p className="text-sm mt-1">Tap "Add Item" or "Import" to add lifting equipment</p>
+            <p className="text-sm mt-1">Tap "Add Item" or "Import" to add equipment</p>
           </div>
         )}
 
@@ -327,52 +329,83 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 <Package className="w-3.5 h-3.5" /> {type} ({typeItems.length})
               </p>
             </div>
-            {typeItems.map(item => (
-              <Card key={item.id} className="mx-4 my-2 p-3 border">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-bold text-sm">{item.equipment_type}</p>
-                      <Badge variant="outline" className={`text-[10px] ${statusColor(item.equipment_status)}`}>
-                        {item.equipment_status || 'Unknown'}
-                      </Badge>
+            {typeItems.map(item => {
+              globalIndex++;
+              return (
+                <Card key={item.id} className="mx-4 my-2 p-3 border">
+                  <div className="flex items-start gap-3">
+                    {/* Sequential Number */}
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                      {globalIndex}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-                      {item.serial_number && <p>SN: {item.serial_number}</p>}
-                      {item.asset_tag && <p>Tag: {item.asset_tag}</p>}
-                      {item.wll_value && (
-                        <p className="font-medium text-foreground">WLL: {item.wll_value} {item.wll_unit || 'kg'}</p>
+
+                    {/* Photo thumbnail */}
+                    <div className="flex-shrink-0">
+                      {item.overall_photo_url ? (
+                        <button onClick={() => triggerPhotoUpload(item.id)} className="relative group">
+                          <img src={item.overall_photo_url} alt={item.equipment_type} className="w-14 h-14 rounded-md object-cover border border-border" />
+                          <div className="absolute inset-0 bg-black/40 rounded-md opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Camera className="w-4 h-4 text-white" />
+                          </div>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => triggerPhotoUpload(item.id)}
+                          disabled={uploadingPhotoId === item.id}
+                          className="w-14 h-14 rounded-md border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors"
+                        >
+                          {uploadingPhotoId === item.id
+                            ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                            : <Camera className="w-5 h-5 text-muted-foreground/50" />
+                          }
+                        </button>
                       )}
-                      {item.manufacturer && <p>{item.manufacturer}{item.model ? ` — ${item.model}` : ''}</p>}
-                      {item.grade && <p>Grade: {item.grade}</p>}
-                      {item.length_m && <p>Length: {item.length_m}m</p>}
-                      {item.sling_configuration && <p>Config: {item.sling_configuration}</p>}
-                      {item.sling_leg_count && <p>Legs: {item.sling_leg_count}</p>}
-                      {item.lift_height_m && <p>Lift Height: {item.lift_height_m}m</p>}
-                      {item.span_m && <p>Span: {item.span_m}m</p>}
                     </div>
-                    {item.tag_present === 'false' && (
-                      <div className="flex items-center gap-1 mt-1">
-                        <AlertTriangle className="w-3 h-3 text-amber-500" />
-                        <span className="text-[10px] text-amber-600 font-medium">Tag Missing</span>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-sm">{item.equipment_type}</p>
+                        <Badge variant="outline" className={`text-[10px] ${statusColor(item.equipment_status)}`}>
+                          {item.equipment_status || 'Unknown'}
+                        </Badge>
                       </div>
-                    )}
+                      <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                        {item.serial_number && <p><span className="font-medium text-foreground">SN:</span> {item.serial_number}</p>}
+                        {item.asset_tag && <p>Tag: {item.asset_tag}</p>}
+                        {item.wll_value && (
+                          <p className="font-medium text-foreground">WLL: {item.wll_value} {item.wll_unit || 'kg'}</p>
+                        )}
+                        {item.manufacturer && <p>{item.manufacturer}{item.model ? ` — ${item.model}` : ''}</p>}
+                        {item.grade && <p>Grade: {item.grade}</p>}
+                        {item.length_m && <p>Length: {item.length_m}m</p>}
+                        {item.notes && <p className="italic text-muted-foreground">💬 {item.notes}</p>}
+                      </div>
+                      {item.tag_present === 'false' && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <AlertTriangle className="w-3 h-3 text-amber-500" />
+                          <span className="text-[10px] text-amber-600 font-medium">Tag Missing</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-1">
+                      {statusIcon(item.equipment_status)}
+                      <button onClick={() => openEdit(item)} className="p-1 rounded hover:bg-muted" title="Edit">
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                      <button onClick={() => setDeleteConfirm(item.id)} className="p-1 rounded hover:bg-destructive/10" title="Delete">
+                        <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    {statusIcon(item.equipment_status)}
-                    <button onClick={() => openEdit(item)} className="p-1 rounded hover:bg-muted" title="Edit">
-                      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                    <button onClick={() => setDeleteConfirm(item.id)} className="p-1 rounded hover:bg-destructive/10" title="Delete">
-                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                  </div>
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-2">
-                  Registered by {item.registered_by_name} • {new Date(item.created_at).toLocaleDateString('en-AU')}
-                </p>
-              </Card>
-            ))}
+                  <p className="text-[10px] text-muted-foreground mt-2 pl-10">
+                    Registered by {item.registered_by_name} • {new Date(item.created_at).toLocaleDateString('en-AU')}
+                  </p>
+                </Card>
+              );
+            })}
           </div>
         ))}
       </div>
@@ -380,84 +413,50 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       {/* Edit Dialog */}
       <Dialog open={!!editItem} onOpenChange={(open) => { if (!open) setEditItem(null); }}>
         <DialogContent className="max-w-md max-h-[85vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Equipment</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Edit Equipment</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
               <Label className="text-xs">Equipment Type</Label>
               <Select value={editForm.equipment_type || ''} onValueChange={v => setEditForm(f => ({ ...f, equipment_type: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {EQUIPMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{EQUIPMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Manufacturer</Label>
-                <Input value={editForm.manufacturer || ''} onChange={e => setEditForm(f => ({ ...f, manufacturer: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs">Model</Label>
-                <Input value={editForm.model || ''} onChange={e => setEditForm(f => ({ ...f, model: e.target.value }))} />
-              </div>
+              <div><Label className="text-xs">Manufacturer</Label><Input value={editForm.manufacturer || ''} onChange={e => setEditForm(f => ({ ...f, manufacturer: e.target.value }))} /></div>
+              <div><Label className="text-xs">Model</Label><Input value={editForm.model || ''} onChange={e => setEditForm(f => ({ ...f, model: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Serial Number</Label>
-                <Input value={editForm.serial_number || ''} onChange={e => setEditForm(f => ({ ...f, serial_number: e.target.value }))} />
-              </div>
-              <div>
-                <Label className="text-xs">Asset Tag</Label>
-                <Input value={editForm.asset_tag || ''} onChange={e => setEditForm(f => ({ ...f, asset_tag: e.target.value }))} />
-              </div>
+              <div><Label className="text-xs">Serial Number</Label><Input value={editForm.serial_number || ''} onChange={e => setEditForm(f => ({ ...f, serial_number: e.target.value }))} /></div>
+              <div><Label className="text-xs">Asset Tag</Label><Input value={editForm.asset_tag || ''} onChange={e => setEditForm(f => ({ ...f, asset_tag: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              <div>
-                <Label className="text-xs">WLL</Label>
-                <Input type="number" value={editForm.wll_value ?? ''} onChange={e => setEditForm(f => ({ ...f, wll_value: e.target.value ? Number(e.target.value) : null }))} />
-              </div>
+              <div><Label className="text-xs">WLL</Label><Input type="number" value={editForm.wll_value ?? ''} onChange={e => setEditForm(f => ({ ...f, wll_value: e.target.value ? Number(e.target.value) : null }))} /></div>
               <div>
                 <Label className="text-xs">Unit</Label>
                 <Select value={editForm.wll_unit || 'kg'} onValueChange={v => setEditForm(f => ({ ...f, wll_unit: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="kg">kg</SelectItem>
-                    <SelectItem value="t">t</SelectItem>
-                  </SelectContent>
+                  <SelectContent><SelectItem value="kg">kg</SelectItem><SelectItem value="t">t</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label className="text-xs">Grade</Label>
-                <Input value={editForm.grade || ''} onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))} />
-              </div>
+              <div><Label className="text-xs">Grade</Label><Input value={editForm.grade || ''} onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))} /></div>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Length (m)</Label>
-                <Input type="number" value={editForm.length_m ?? ''} onChange={e => setEditForm(f => ({ ...f, length_m: e.target.value ? Number(e.target.value) : null }))} />
-              </div>
+              <div><Label className="text-xs">Length (m)</Label><Input type="number" value={editForm.length_m ?? ''} onChange={e => setEditForm(f => ({ ...f, length_m: e.target.value ? Number(e.target.value) : null }))} /></div>
               <div>
                 <Label className="text-xs">Status</Label>
                 <Select value={editForm.equipment_status || 'In Service'} onValueChange={v => setEditForm(f => ({ ...f, equipment_status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
+                  <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
-            <div>
-              <Label className="text-xs">Notes</Label>
-              <Input value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
-            </div>
+            <div><Label className="text-xs">Notes / Comments</Label><Input value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
             <Button onClick={handleSaveEdit} disabled={saving}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-              Save
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null} Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -466,10 +465,8 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       {/* Delete Confirmation */}
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete Item</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">Are you sure you want to delete this lifting equipment item? This cannot be undone.</p>
+          <DialogHeader><DialogTitle>Delete Item</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Are you sure? This cannot be undone.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
             <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</Button>
