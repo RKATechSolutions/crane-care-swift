@@ -2,7 +2,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2, Users, FileBarChart, Briefcase, DollarSign } from 'lucide-react';
+import { PlayCircle, Package, Plus, Pencil, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2, Users, FileBarChart, Briefcase, DollarSign, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
@@ -66,6 +66,9 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
   const [existingBaseline, setExistingBaseline] = useState<{ id: string; status: string } | null>(null);
   const [clientQuotes, setClientQuotes] = useState<any[]>([]);
   const [clientJobs, setClientJobs] = useState<any[]>([]);
+  const [showJobPrompt, setShowJobPrompt] = useState(false);
+  const [pendingFormAction, setPendingFormAction] = useState<(() => void) | null>(null);
+  const [activeJobName, setActiveJobName] = useState<string | null>(null);
   const [clientReports, setClientReports] = useState<any[]>([]);
   const site = state.selectedSite;
 
