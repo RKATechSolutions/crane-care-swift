@@ -898,11 +898,23 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
               <div>
                 <p className="font-bold text-base">Select Inspection Form</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{templatePickerCrane.name}</p>
+                {activeJobId && activeJobName && (
+                  <p className="text-[10px] text-primary font-medium mt-0.5">🔗 Linked to: {activeJobName}</p>
+                )}
               </div>
               <button onClick={() => setTemplatePickerCrane(null)} className="p-2 rounded-lg hover:bg-muted">
                 <X className="w-5 h-5" />
               </button>
             </div>
+            {/* Warn if no job linked */}
+            {!activeJobId && (
+              <div className="px-4 pt-3">
+                <div className="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <p className="text-[10px] text-amber-700">No job linked — forms won't appear in a Job Site Summary. <button onClick={() => { setTemplatePickerCrane(null); setShowJobPrompt(true); }} className="underline font-bold">Link a job first</button></p>
+                </div>
+              </div>
+            )}
             <div className="p-4 space-y-2 max-h-[60vh] overflow-auto">
               {dbFormTemplates.map(ft => (
                 <button
@@ -921,6 +933,62 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
                   </div>
                 </button>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Job Link Prompt Modal */}
+      {showJobPrompt && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={() => setShowJobPrompt(false)}>
+          <div
+            className="bg-background w-full max-w-lg rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <p className="font-bold text-base">Link to a Scheduled Job</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Select a job to scope all forms to this visit</p>
+              </div>
+              <button onClick={() => setShowJobPrompt(false)} className="p-2 rounded-lg hover:bg-muted">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-2 max-h-[60vh] overflow-auto">
+              {clientJobs.filter(j => j.status !== 'completed').length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm font-medium">No open jobs for this client</p>
+                  <p className="text-xs mt-1">Create a job from the Jobs tab first</p>
+                </div>
+              ) : (
+                clientJobs.filter(j => j.status !== 'completed').map(j => (
+                  <button
+                    key={j.id}
+                    onClick={() => {
+                      if (onSetActiveJob) onSetActiveJob(j.id);
+                      setActiveJobName(j.title);
+                      setShowJobPrompt(false);
+                      if (pendingFormAction) {
+                        pendingFormAction();
+                        setPendingFormAction(null);
+                      }
+                    }}
+                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-3 ${
+                      activeJobId === j.id
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-primary hover:bg-primary/5'
+                    }`}
+                  >
+                    <Briefcase className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm truncate">{j.title}</p>
+                      <p className="text-xs text-muted-foreground">{j.job_type || 'General'} • {j.scheduled_date ? new Date(j.scheduled_date).toLocaleDateString() : 'No date'}</p>
+                    </div>
+                    {activeJobId === j.id && <span className="text-xs font-bold text-primary">Active</span>}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         </div>
