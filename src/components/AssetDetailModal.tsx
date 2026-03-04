@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { X, Save, ChevronDown, ChevronUp, Camera } from 'lucide-react';
+import { X, Save, ChevronDown, ChevronUp, Camera, Plus, Trash2 } from 'lucide-react';
 
 interface AssetDetailModalProps {
   asset: {
