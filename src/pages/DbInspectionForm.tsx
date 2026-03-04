@@ -62,6 +62,16 @@ export default function DbInspectionForm({
         .single();
       if (formData) setFormName(formData.form_name);
 
+      // Fetch asset photo
+      if (assetId) {
+        const { data: assetData } = await supabase
+          .from('assets')
+          .select('main_photo_url')
+          .eq('id', assetId)
+          .single();
+        if (assetData?.main_photo_url) setAssetPhotoUrl(assetData.main_photo_url);
+      }
+
       // Get questions via bridge table
       const { data: bridgeData } = await supabase
         .from('form_template_questions')
