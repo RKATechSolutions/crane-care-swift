@@ -332,6 +332,7 @@ export type Database = {
           automatic_service_package: string | null
           business_type: string | null
           casual_service_rates: string | null
+          client_custom_fields: Json
           client_name: string
           comments_or_notes: string | null
           created_at: string
@@ -365,6 +366,7 @@ export type Database = {
           automatic_service_package?: string | null
           business_type?: string | null
           casual_service_rates?: string | null
+          client_custom_fields?: Json
           client_name: string
           comments_or_notes?: string | null
           created_at?: string
@@ -398,6 +400,7 @@ export type Database = {
           automatic_service_package?: string | null
           business_type?: string | null
           casual_service_rates?: string | null
+          client_custom_fields?: Json
           client_name?: string
           comments_or_notes?: string | null
           created_at?: string
