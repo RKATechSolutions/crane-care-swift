@@ -4,7 +4,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download } from 'lucide-react';
+import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
 import { format } from 'date-fns';
@@ -44,6 +44,7 @@ interface RegisterItem {
 export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew, onInspect }: LiftingRegisterListProps) {
   const [items, setItems] = useState<RegisterItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -168,6 +169,101 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     toast.success('CSV downloaded');
   };
 
+  const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) { toast.error('CSV must have a header row and at least one data row'); setImporting(false); return; }
+
+        const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim().toLowerCase());
+
+        // Map common header names to DB fields
+        const headerMap: Record<string, string> = {
+          'equipment type': 'equipment_type', 'type': 'equipment_type',
+          'manufacturer': 'manufacturer', 'make': 'manufacturer', 'brand': 'manufacturer',
+          'model': 'model',
+          'serial number': 'serial_number', 'serial': 'serial_number', 'sn': 'serial_number',
+          'asset tag': 'asset_tag', 'tag': 'asset_tag', 'id': 'asset_tag', 'asset id': 'asset_tag',
+          'wll': 'wll_value', 'swl': 'wll_value', 'wll value': 'wll_value',
+          'wll unit': 'wll_unit', 'unit': 'wll_unit',
+          'length': 'length_m', 'length (m)': 'length_m', 'length_m': 'length_m',
+          'grade': 'grade',
+          'status': 'equipment_status', 'equipment status': 'equipment_status',
+          'notes': 'notes', 'comment': 'notes',
+          'configuration': 'sling_configuration', 'sling configuration': 'sling_configuration',
+          'legs': 'sling_leg_count', 'leg count': 'sling_leg_count',
+          'lift height': 'lift_height_m', 'lift height (m)': 'lift_height_m',
+          'span': 'span_m', 'span (m)': 'span_m',
+        };
+
+        const colMap = headers.map(h => headerMap[h] || null);
+
+        const techName = localStorage.getItem('technicianName') || 'Import';
+        const techId = localStorage.getItem('technicianId') || 'import';
+
+        const rows: any[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          // Parse CSV row respecting quoted commas
+          const vals = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(v => v.replace(/^"|"$/g, '').trim()) || lines[i].split(',').map(v => v.trim());
+          
+          const row: any = {
+            registered_by_name: techName,
+            registered_by_id: techId,
+            site_name: siteName,
+            client_id: clientId || null,
+          };
+
+          colMap.forEach((field, idx) => {
+            if (!field || !vals[idx]) return;
+            const val = vals[idx];
+            if (['wll_value', 'length_m', 'lift_height_m', 'span_m'].includes(field)) {
+              row[field] = parseFloat(val) || null;
+            } else if (field === 'sling_leg_count') {
+              row[field] = parseInt(val) || null;
+            } else {
+              row[field] = val;
+            }
+          });
+
+          if (!row.equipment_type) {
+            row.equipment_type = 'Unknown';
+          }
+
+          rows.push(row);
+        }
+
+        if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
+
+        const { error } = await supabase.from('lifting_register').insert(rows);
+        if (error) {
+          console.error('Import error:', error);
+          toast.error('Import failed: ' + error.message);
+        } else {
+          toast.success(`Imported ${rows.length} items`);
+          // Refresh list
+          let query = supabase.from('lifting_register').select('*').order('created_at', { ascending: false });
+          if (clientId) query = query.eq('client_id', clientId);
+          else query = query.eq('site_name', siteName);
+          const { data } = await query;
+          setItems((data as RegisterItem[]) || []);
+        }
+      } catch (err) {
+        console.error('CSV parse error:', err);
+        toast.error('Failed to parse CSV');
+      }
+      setImporting(false);
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  };
+
   // Group by equipment type
   const grouped = items.reduce((acc, item) => {
     const key = item.equipment_type;
@@ -198,6 +294,22 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
             <Download className="w-3.5 h-3.5" />
             CSV
           </Button>
+          <Button
+            variant="outline"
+            className="flex-1 gap-1 text-xs"
+            disabled={importing}
+            onClick={() => document.getElementById('csv-import-input')?.click()}
+          >
+            {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            {importing ? 'Importing...' : 'Import'}
+          </Button>
+          <input
+            id="csv-import-input"
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleImportCsv}
+          />
         </div>
         <div className="flex gap-2">
           {onInspect && (
