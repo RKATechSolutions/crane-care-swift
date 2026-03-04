@@ -14,6 +14,18 @@ export interface FieldVisibility {
   visible: boolean;
 }
 
+export interface ClientInfoField {
+  fieldKey: string;       // DB column name or 'custom_xxx' for custom fields
+  label: string;          // Display label (editable by admin)
+  visible: boolean;       // Whether shown on Site Job Summary
+  editable: boolean;      // Whether techs can edit it
+  sortOrder: number;      // Display order
+  group: string;          // Grouping header
+  isCustom?: boolean;     // True for admin-added custom fields
+  fieldType?: 'text' | 'number' | 'date' | 'select' | 'textarea';
+  options?: string[];     // For select type
+}
+
 export interface AdminFormConfig {
   // Report front-page customer detail fields
   reportCustomerFields: FieldVisibility[];
@@ -26,6 +38,9 @@ export interface AdminFormConfig {
   // Asset form field visibility
   assetAddFields: FieldVisibility[];
   assetDetailFields: FieldVisibility[];
+
+  // Client info fields shown on Site Job Summary
+  clientInfoFields: ClientInfoField[];
 }
 
 // Default customer detail fields that appear on reports
@@ -38,6 +53,38 @@ export const DEFAULT_REPORT_CUSTOMER_FIELDS: FieldVisibility[] = [
   { fieldKey: 'primary_contact_mobile', label: 'Contact Phone', visible: true },
   { fieldKey: 'site_induction_details', label: 'Site Induction Details', visible: false },
   { fieldKey: 'send_schedule_reminders', label: 'Send Schedule Reminders', visible: false },
+];
+
+// Default client info fields shown on Site Job Summary for techs
+export const DEFAULT_CLIENT_INFO_FIELDS: ClientInfoField[] = [
+  // Contact Details
+  { fieldKey: 'client_name', label: 'Client Name', visible: true, editable: false, sortOrder: 0, group: 'Contact Details' },
+  { fieldKey: 'location_address', label: 'Site Address', visible: true, editable: true, sortOrder: 1, group: 'Contact Details' },
+  { fieldKey: 'primary_contact_name', label: 'Primary Contact', visible: true, editable: true, sortOrder: 2, group: 'Contact Details' },
+  { fieldKey: 'primary_contact_email', label: 'Contact Email', visible: true, editable: true, sortOrder: 3, group: 'Contact Details' },
+  { fieldKey: 'primary_contact_mobile', label: 'Contact Mobile', visible: true, editable: true, sortOrder: 4, group: 'Contact Details' },
+  { fieldKey: 'primary_contact_position', label: 'Contact Position', visible: false, editable: true, sortOrder: 5, group: 'Contact Details' },
+  { fieldKey: 'abn', label: 'ABN', visible: false, editable: false, sortOrder: 6, group: 'Contact Details' },
+  { fieldKey: 'business_type', label: 'Business Type', visible: false, editable: false, sortOrder: 7, group: 'Contact Details' },
+  // Service & Scheduling
+  { fieldKey: 'site_induction_details', label: 'Site Induction Details', visible: true, editable: true, sortOrder: 10, group: 'Service & Scheduling', fieldType: 'textarea' },
+  { fieldKey: 'required_to_complete_work', label: 'Required to Complete Work', visible: true, editable: true, sortOrder: 11, group: 'Service & Scheduling', fieldType: 'textarea' },
+  { fieldKey: 'preferred_days_and_times', label: 'Preferred Days & Times', visible: false, editable: true, sortOrder: 12, group: 'Service & Scheduling' },
+  { fieldKey: 'planned_service_dates', label: 'Planned Service Dates', visible: false, editable: true, sortOrder: 13, group: 'Service & Scheduling' },
+  { fieldKey: 'automatic_service_package', label: 'Auto Service Package', visible: false, editable: false, sortOrder: 14, group: 'Service & Scheduling' },
+  { fieldKey: 'priority_service_package', label: 'Priority Service Package', visible: false, editable: false, sortOrder: 15, group: 'Service & Scheduling' },
+  { fieldKey: 'casual_service_rates', label: 'Casual Service Rates', visible: false, editable: false, sortOrder: 16, group: 'Service & Scheduling' },
+  { fieldKey: 'travel_time_from_base', label: 'Travel Time from Base', visible: false, editable: false, sortOrder: 17, group: 'Service & Scheduling' },
+  { fieldKey: 'send_schedule_reminders', label: 'Send Reminders', visible: false, editable: false, sortOrder: 18, group: 'Service & Scheduling' },
+  // Business Info
+  { fieldKey: 'payment_days', label: 'Payment Terms', visible: false, editable: false, sortOrder: 20, group: 'Business Info' },
+  { fieldKey: 'lead_or_referral_source', label: 'Lead / Referral Source', visible: false, editable: false, sortOrder: 21, group: 'Business Info' },
+  { fieldKey: 'services_interested_in', label: 'Services Interested In', visible: false, editable: false, sortOrder: 22, group: 'Business Info' },
+  { fieldKey: 'comments_or_notes', label: 'Comments / Notes', visible: true, editable: true, sortOrder: 23, group: 'Business Info', fieldType: 'textarea' },
+  // Links
+  { fieldKey: 'google_drive_link', label: 'Google Drive', visible: false, editable: false, sortOrder: 30, group: 'Links' },
+  { fieldKey: 'inspectall_account_link', label: 'InspectAll Link', visible: false, editable: false, sortOrder: 31, group: 'Links' },
+  { fieldKey: 'inspectall_code', label: 'InspectAll Code', visible: false, editable: false, sortOrder: 32, group: 'Links' },
 ];
 
 // Default asset add form fields
@@ -101,4 +148,5 @@ export const DEFAULT_ADMIN_CONFIG: AdminFormConfig = {
   privateAssetFields: [],
   assetAddFields: DEFAULT_ASSET_ADD_FIELDS,
   assetDetailFields: DEFAULT_ASSET_DETAIL_FIELDS,
+  clientInfoFields: DEFAULT_CLIENT_INFO_FIELDS,
 };
