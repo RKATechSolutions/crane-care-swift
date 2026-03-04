@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Building2, Pencil, Save, ExternalLink } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AdminFormConfig, ClientInfoField } from '@/types/adminConfig';
 
 interface Props {
@@ -105,7 +106,15 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
                   <div key={f.fieldKey}>
                     <label className="text-[11px] font-medium text-muted-foreground">{f.label}</label>
                     {editing && f.editable ? (
-                      f.fieldType === 'textarea' ? (
+                      f.fieldType === 'checkbox' ? (
+                        <div className="flex items-center gap-2 py-1">
+                          <Checkbox
+                            checked={draft[f.fieldKey] === 'Yes'}
+                            onCheckedChange={(checked) => setDraft(prev => ({ ...prev, [f.fieldKey]: checked ? 'Yes' : 'No' }))}
+                          />
+                          <span className="text-sm">{draft[f.fieldKey] === 'Yes' ? 'Yes' : 'No'}</span>
+                        </div>
+                      ) : f.fieldType === 'textarea' ? (
                         <textarea
                           value={draft[f.fieldKey] || ''}
                           onChange={e => setDraft(prev => ({ ...prev, [f.fieldKey]: e.target.value }))}
@@ -131,7 +140,12 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
                       )
                     ) : (
                       <div className="text-sm min-h-[20px]">
-                        {isLink(val) ? (
+                        {f.fieldType === 'checkbox' ? (
+                          <div className="flex items-center gap-2">
+                            <Checkbox checked={val === 'Yes'} disabled />
+                            <span className="font-medium">{val === 'Yes' ? 'Yes' : 'No'}</span>
+                          </div>
+                        ) : isLink(val) ? (
                           <a href={val} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center gap-1 truncate">
                             {val.replace(/https?:\/\//, '').slice(0, 40)}
                             <ExternalLink className="w-3 h-3 flex-shrink-0" />

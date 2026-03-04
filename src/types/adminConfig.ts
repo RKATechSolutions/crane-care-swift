@@ -22,7 +22,7 @@ export interface ClientInfoField {
   sortOrder: number;      // Display order
   group: string;          // Grouping header
   isCustom?: boolean;     // True for admin-added custom fields
-  fieldType?: 'text' | 'number' | 'date' | 'select' | 'textarea';
+  fieldType?: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox';
   options?: string[];     // For select type
 }
 
