@@ -939,6 +939,32 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
 
+      {/* Delete Report Confirmation */}
+      {deletingReportId && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setDeletingReportId(null)}>
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Delete Report?</h3>
+            <p className="text-sm text-muted-foreground">This will permanently delete the inspection report and all its responses. This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingReportId(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border font-semibold text-sm"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteReport(deletingReportId)}
+                className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editingAsset && (
         <AssetDetailModal
           asset={editingAsset}
