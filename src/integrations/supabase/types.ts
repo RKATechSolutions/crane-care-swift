@@ -575,6 +575,7 @@ export type Database = {
           id: string
           inspection_date: string
           inspection_type: string
+          other_notes: string | null
           site_name: string | null
           status: string
           technician_id: string
@@ -596,6 +597,7 @@ export type Database = {
           id?: string
           inspection_date?: string
           inspection_type?: string
+          other_notes?: string | null
           site_name?: string | null
           status?: string
           technician_id: string
@@ -617,6 +619,7 @@ export type Database = {
           id?: string
           inspection_date?: string
           inspection_type?: string
+          other_notes?: string | null
           site_name?: string | null
           status?: string
           technician_id?: string

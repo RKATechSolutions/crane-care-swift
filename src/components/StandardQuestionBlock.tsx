@@ -429,15 +429,15 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                   {renderPhotosSection(response.urgency === 'Immediate' || question.requires_photo_on_fail)}
                 </div>
 
-                {/* Internal Note (Admin only) */}
+                {/* Technician Internal / Quoting Notes */}
                 <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-1.5">Internal Note (Admin only)</p>
+                  <p className="text-xs font-bold text-rka-orange uppercase tracking-wide mb-1.5">Technician Internal or Quoting Notes</p>
                   <textarea
                     value={response.internal_note || ''}
                     onChange={(e) => update({ internal_note: e.target.value || null })}
                     placeholder="Internal note – not shown on customer report…"
                     rows={2}
-                    className="w-full p-2.5 border border-border rounded-lg bg-muted/50 text-sm resize-none"
+                    className="w-full p-2.5 border border-rka-orange/30 rounded-lg bg-rka-orange/5 text-sm resize-none"
                   />
                 </div>
               </div>

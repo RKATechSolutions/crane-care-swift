@@ -46,6 +46,7 @@ export default function DbInspectionForm({
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [otherNotes, setOtherNotes] = useState<string>('');
 
   // Load questions for this form
   useEffect(() => {
@@ -156,13 +157,14 @@ export default function DbInspectionForm({
           });
         }
 
-        // Load existing AI summary
+        // Load existing AI summary and other notes
         const { data: inspData } = await supabase
           .from('db_inspections')
-          .select('ai_summary')
+          .select('ai_summary, other_notes')
           .eq('id', existingInspectionId)
           .single();
         if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
+        if ((inspData as any)?.other_notes) setOtherNotes((inspData as any).other_notes);
       }
 
       setResponses(initResponses);
@@ -246,15 +248,35 @@ export default function DbInspectionForm({
   }, []);
 
   // Pass All checklist items in current section
+  // Pass All checklist items in current section (including SingleSelect positive values)
   const handlePassAll = useCallback(() => {
     if (!currentSection) return;
     const updates = { ...responses };
     currentSection.questions.forEach(q => {
-      if ((q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') && !updates[q.question_id]?.pass_fail_status) {
+      const existing = updates[q.question_id];
+      if (existing?.pass_fail_status === 'Fail' || existing?.defect_flag) return; // Don't override defects
+      
+      if ((q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') && !existing?.pass_fail_status) {
         updates[q.question_id] = {
           ...updates[q.question_id],
           pass_fail_status: 'Pass',
           answer_value: q.answer_type === 'YesNoNA' ? 'Yes' : 'Pass',
+          defect_flag: false,
+        };
+      } else if (q.answer_type === 'YesNo' && !existing?.answer_value) {
+        updates[q.question_id] = {
+          ...updates[q.question_id],
+          pass_fail_status: 'Pass',
+          answer_value: 'Yes',
+          defect_flag: false,
+        };
+      } else if (q.answer_type === 'SingleSelect' && q.options && q.options.length > 0 && !existing?.answer_value) {
+        // Select first (positive) option
+        const firstOpt = q.options[0];
+        updates[q.question_id] = {
+          ...updates[q.question_id],
+          pass_fail_status: 'Pass',
+          answer_value: firstOpt,
           defect_flag: false,
         };
       }
@@ -262,10 +284,11 @@ export default function DbInspectionForm({
     setResponses(updates);
   }, [currentSection, responses]);
 
-  const hasChecklistItems = currentSection?.questions.some(q => q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') || false;
+  const passableTypes = ['PassFailNA', 'YesNoNA', 'YesNo', 'SingleSelect'];
+  const hasChecklistItems = currentSection?.questions.some(q => passableTypes.includes(q.answer_type)) || false;
   const allChecklistPassed = currentSection?.questions
-    .filter(q => q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA')
-    .every(q => responses[q.question_id]?.pass_fail_status === 'Pass') || false;
+    .filter(q => passableTypes.includes(q.answer_type))
+    .every(q => responses[q.question_id]?.pass_fail_status === 'Pass' || (responses[q.question_id]?.answer_value && !responses[q.question_id]?.defect_flag)) || false;
 
   const handlePreviewPdf = async () => {
     setGeneratingPreview(true);
@@ -283,6 +306,8 @@ export default function DbInspectionForm({
           photo_urls: responses[q.question_id]?.photo_urls || [],
           standard_ref: q.standard_ref || null,
           urgency: responses[q.question_id]?.urgency || null,
+          defect_types: responses[q.question_id]?.defect_types || [],
+          internal_note: responses[q.question_id]?.internal_note || null,
         })),
       }));
 
@@ -294,6 +319,7 @@ export default function DbInspectionForm({
         inspectionDate: new Date().toISOString(),
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
+        otherNotes: otherNotes || undefined,
       });
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
@@ -358,10 +384,9 @@ export default function DbInspectionForm({
         currentInspId = newInsp.id;
         setInspectionId(currentInspId);
       } else {
-        // Update status
         await supabase
           .from('db_inspections')
-          .update({ status, updated_at: new Date().toISOString() })
+          .update({ status, updated_at: new Date().toISOString(), other_notes: otherNotes || null } as any)
           .eq('id', currentInspId);
       }
 
@@ -557,7 +582,21 @@ export default function DbInspectionForm({
         })}
       </div>
 
-      {/* Section Navigation */}
+      {/* Other / Additional Notes — free text for anything missed */}
+      {currentSectionIdx === sections.length - 1 && (
+        <div className="px-4 py-3 border-b border-border bg-muted/30 space-y-2">
+          <p className="text-sm font-bold text-foreground">Other Notes / Additional Observations</p>
+          <p className="text-xs text-muted-foreground">Use this for anything not covered by the form questions above.</p>
+          <textarea
+            value={otherNotes}
+            onChange={(e) => setOtherNotes(e.target.value)}
+            placeholder="Enter any additional observations, findings, or notes…"
+            rows={3}
+            className="w-full p-2.5 border border-border rounded-lg bg-background text-sm resize-none"
+          />
+        </div>
+      )}
+
       <div className="px-4 py-2 border-t border-border flex gap-2">
         {currentSectionIdx > 0 && (
           <button
