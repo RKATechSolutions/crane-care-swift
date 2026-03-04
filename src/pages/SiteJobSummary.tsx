@@ -434,6 +434,14 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
       const summaryPayload = buildSummaryPayload();
       dispatch({ type: 'SAVE_SITE_JOB_SUMMARY', payload: summaryPayload });
 
+      // Save service package selections back to client
+      if (clientInfo?.id) {
+        await supabase.from('clients').update({
+          automatic_service_package: autoServicePkg ? 'Yes' : null,
+          priority_service_package: priorityServicePkg ? 'Yes' : null,
+        }).eq('id', clientInfo.id);
+      }
+
       // Generate PDF
       const template = state.templates[0];
       const pdf = await generateJobPdf({
