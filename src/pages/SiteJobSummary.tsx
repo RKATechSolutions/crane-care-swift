@@ -1290,134 +1290,150 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
             )}
 
             {/* Customer Name */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Name</label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
-              />
-            </div>
+            {isSectionVisible('customer_name') && (
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Name</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
+                />
+              </div>
+            )}
 
             {/* Customer Signature */}
-            <div className="mb-4">
-              <div className="flex items-center gap-1 mb-1">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Signature</span>
-                {!customerSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+            {isSectionVisible('customer_signature') && (
+              <div className="mb-4">
+                <div className="flex items-center gap-1 mb-1">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Signature</span>
+                  {!customerSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+                </div>
+                <div className={`rounded-xl ${!customerSig ? 'ring-2 ring-primary/40' : ''}`}>
+                  <SignaturePad label="" onSave={setCustomerSig} />
+                </div>
               </div>
-              <div className={`rounded-xl ${!customerSig ? 'ring-2 ring-primary/40' : ''}`}>
-                <SignaturePad label="" onSave={setCustomerSig} />
-              </div>
-            </div>
+            )}
 
             {/* Rating */}
-            <div className="mb-4">
-              <div className="flex items-center gap-1 mb-2">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rating</label>
-                {rating === 0 && <span className="text-xs font-bold text-rka-red">Required</span>}
-              </div>
-              <div className={`flex gap-2 p-2 rounded-xl ${rating === 0 ? 'ring-2 ring-primary/40 bg-muted/30' : ''}`}>
-                {[1, 2, 3, 4, 5].map(star => (
-                  <button
-                    key={star}
-                    onClick={() => setRating(star)}
-                    className="tap-target flex items-center justify-center"
-                  >
-                    <Star
-                      className={`w-8 h-8 transition-all ${
-                        star <= rating ? 'fill-rka-yellow text-rka-yellow' : 'text-border'
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-              {rating === 5 && (
-                <div className="mt-3 p-4 rounded-xl bg-rka-green-light text-center space-y-3">
-                  <p className="text-sm font-bold text-rka-green-dark">
-                    Thank you for your rating, please give us a Google Review here!
-                  </p>
-                  <img src={rkaReviewQr} alt="Scan to leave a Google Review" className="w-32 h-32 mx-auto rounded-lg" />
-                  <a
-                    href={GOOGLE_REVIEW_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      window.open(GOOGLE_REVIEW_URL, '_blank', 'noopener,noreferrer');
-                    }}
-                    className="inline-block text-sm font-bold text-primary underline"
-                  >
-                    Tap here to leave a review →
-                  </a>
+            {isSectionVisible('rating') && (
+              <div className="mb-4">
+                <div className="flex items-center gap-1 mb-2">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Rating</label>
+                  {rating === 0 && <span className="text-xs font-bold text-rka-red">Required</span>}
                 </div>
-              )}
-            </div>
+                <div className={`flex gap-2 p-2 rounded-xl ${rating === 0 ? 'ring-2 ring-primary/40 bg-muted/30' : ''}`}>
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className="tap-target flex items-center justify-center"
+                    >
+                      <Star
+                        className={`w-8 h-8 transition-all ${
+                          star <= rating ? 'fill-rka-yellow text-rka-yellow' : 'text-border'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                {rating === 5 && isSectionVisible('google_review_qr') && (
+                  <div className="mt-3 p-4 rounded-xl bg-rka-green-light text-center space-y-3">
+                    <p className="text-sm font-bold text-rka-green-dark">
+                      Thank you for your rating, please give us a Google Review here!
+                    </p>
+                    <img src={rkaReviewQr} alt="Scan to leave a Google Review" className="w-32 h-32 mx-auto rounded-lg" />
+                    <a
+                      href={GOOGLE_REVIEW_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.open(GOOGLE_REVIEW_URL, '_blank', 'noopener,noreferrer');
+                      }}
+                      className="inline-block text-sm font-bold text-primary underline"
+                    >
+                      Tap here to leave a review →
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Customer Feedback */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Feedback (optional)</label>
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Any feedback or comments from the customer..."
-                className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
-                rows={3}
-              />
-            </div>
+            {isSectionVisible('customer_feedback') && (
+              <div className="mb-4">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Customer Feedback (optional)</label>
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="Any feedback or comments from the customer..."
+                  className="w-full p-3 border border-border rounded-xl bg-background text-sm resize-none mt-1"
+                  rows={3}
+                />
+              </div>
+            )}
 
             {/* Testimonial Checkbox - default ticked */}
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 mb-4">
-              <Checkbox
-                id="testimonial"
-                checked={publishTestimonial}
-                onCheckedChange={(checked) => setPublishTestimonial(checked === true)}
-                className="mt-0.5"
-              />
-              <label htmlFor="testimonial" className="text-sm font-medium leading-snug cursor-pointer">
-                I give permission to publish my feedback as a testimonial
-              </label>
-            </div>
+            {isSectionVisible('testimonial_checkbox') && (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 mb-4">
+                <Checkbox
+                  id="testimonial"
+                  checked={publishTestimonial}
+                  onCheckedChange={(checked) => setPublishTestimonial(checked === true)}
+                  className="mt-0.5"
+                />
+                <label htmlFor="testimonial" className="text-sm font-medium leading-snug cursor-pointer">
+                  I give permission to publish my feedback as a testimonial
+                </label>
+              </div>
+            )}
           </div>
 
           {/* ── Technician Section ── */}
-          <div className="border-t-2 border-border pt-4 mt-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Technician to Complete</p>
-            <div className="flex items-center gap-1 mb-1">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Signature</span>
-              {!techSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+          {isSectionVisible('technician_signature') && (
+            <div className="border-t-2 border-border pt-4 mt-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Technician to Complete</p>
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Signature</span>
+                {!techSig && <span className="text-xs font-bold text-rka-red">Required</span>}
+              </div>
+              <div className={`rounded-xl ${!techSig ? 'ring-2 ring-primary/40' : ''}`}>
+                <SignaturePad label="" onSave={setTechSig} />
+              </div>
             </div>
-            <div className={`rounded-xl ${!techSig ? 'ring-2 ring-primary/40' : ''}`}>
-              <SignaturePad label="" onSave={setTechSig} />
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
       <div className="p-4 border-t border-border space-y-2">
-        <button
-          onClick={handlePreviewPdf}
-          disabled={generatingPreview}
-          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
-        >
-          {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-          {generatingPreview ? 'Generating Preview…' : 'Preview PDF Report'}
-        </button>
+        {isSectionVisible('preview_pdf') && (
+          <button
+            onClick={handlePreviewPdf}
+            disabled={generatingPreview}
+            className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+          >
+            {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+            {generatingPreview ? 'Generating Preview…' : 'Preview PDF Report'}
+          </button>
+        )}
         <button
           onClick={handleSubmit}
-          disabled={!customerSig || !techSig || sending}
+          disabled={(!isSectionVisible('customer_signature') ? false : !customerSig) || (!isSectionVisible('technician_signature') ? false : !techSig) || sending}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base disabled:opacity-40 flex items-center justify-center gap-2"
         >
           {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           {sending ? 'Sending Report…' : 'Complete Job and Send Report'}
         </button>
-        <button
-          onClick={() => {/* TODO: generate shareable link */}}
-          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 text-muted-foreground"
-        >
-          <Send className="w-4 h-4" />
-          Send to Customer for Remote Sign-off
-        </button>
+        {isSectionVisible('remote_signoff') && (
+          <button
+            onClick={() => {/* TODO: generate shareable link */}}
+            className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 text-muted-foreground"
+          >
+            <Send className="w-4 h-4" />
+            Send to Customer for Remote Sign-off
+          </button>
+        )}
       </div>
 
       {/* Fullscreen Photo Preview */}
