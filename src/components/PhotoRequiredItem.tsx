@@ -79,7 +79,6 @@ export function PhotoRequiredItem({ item, result, onUpdate }: PhotoRequiredItemP
           ref={fileRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleCapture}
           className="hidden"
         />

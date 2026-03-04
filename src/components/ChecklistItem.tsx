@@ -242,7 +242,6 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 ref={unresolvedFileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 onChange={(e) => handlePhotoUpload(e, 'unresolved')}
                 multiple
@@ -307,7 +306,6 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 onChange={(e) => handlePhotoUpload(e, 'pass')}
                 multiple
@@ -417,7 +415,6 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 ref={defectFileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 onChange={(e) => handlePhotoUpload(e, 'defect')}
                 multiple
