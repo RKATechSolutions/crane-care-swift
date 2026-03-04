@@ -70,6 +70,9 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
   const [pendingFormAction, setPendingFormAction] = useState<(() => void) | null>(null);
   const [activeJobName, setActiveJobName] = useState<string | null>(null);
   const [clientReports, setClientReports] = useState<any[]>([]);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const site = state.selectedSite;
 
   // Fetch active job name
@@ -323,7 +326,33 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
     if (data) setDbAssets(data);
   };
 
-  // Group DB assets by class_name
+  const refreshReports = async () => {
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+    let query = supabase.from('db_inspections').select('id, asset_name, inspection_date, status, technician_name, crane_status, form_id');
+    if (clientId) query = query.eq('client_id', clientId);
+    else query = query.eq('site_name', site.name);
+    const { data } = await query.order('created_at', { ascending: false });
+    if (data) setClientReports(data);
+  };
+
+  const handleDeleteReport = async (reportId: string) => {
+    setDeleting(true);
+    try {
+      // Delete responses first, then the inspection
+      await supabase.from('inspection_responses').delete().eq('inspection_id', reportId);
+      const { error } = await supabase.from('db_inspections').delete().eq('id', reportId);
+      if (error) throw error;
+      toast({ title: 'Report deleted', description: 'The inspection report has been removed.' });
+      setClientReports(prev => prev.filter(r => r.id !== reportId));
+    } catch (err: any) {
+      console.error('Delete error:', err);
+      toast({ title: 'Delete failed', description: err.message, variant: 'destructive' });
+    }
+    setDeleting(false);
+    setDeletingReportId(null);
+  };
+
+
   const groupedAssets = displayAssets.reduce((acc, asset) => {
     const key = asset.class_name;
     if (!acc[key]) acc[key] = [];
@@ -396,10 +425,13 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
         assetId={activeDbForm.assetId}
         clientId={clientId}
         siteName={site.name}
+        existingInspectionId={editingReportId || undefined}
         taskId={activeJobId || undefined}
-        onBack={() => setActiveDbForm(null)}
+        onBack={() => { setActiveDbForm(null); setEditingReportId(null); refreshReports(); }}
         onSubmitComplete={() => {
           setActiveDbForm(null);
+          setEditingReportId(null);
+          refreshReports();
           dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
         }}
       />
@@ -819,6 +851,37 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
                     }`}>{r.status}</span>
                   </div>
                 </div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => {
+                      // Open the inspection form in edit mode
+                      const crane: Crane = {
+                        id: `report-${r.id}`,
+                        siteId: site.id,
+                        name: r.asset_name || 'Site Inspection',
+                        type: 'Single Girder Overhead',
+                        serialNumber: 'N/A',
+                        capacity: 'N/A',
+                        manufacturer: 'N/A',
+                        yearInstalled: 0,
+                      };
+                      setActiveDbForm({ formId: r.form_id, crane, assetId: undefined });
+                      // Set existing inspection ID by storing it for the form
+                      setEditingReportId(r.id);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setDeletingReportId(r.id)}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-bold"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -875,6 +938,32 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
       )}
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
+
+      {/* Delete Report Confirmation */}
+      {deletingReportId && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setDeletingReportId(null)}>
+          <div className="bg-background rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="font-bold text-lg">Delete Report?</h3>
+            <p className="text-sm text-muted-foreground">This will permanently delete the inspection report and all its responses. This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeletingReportId(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border font-semibold text-sm"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteReport(deletingReportId)}
+                className="flex-1 py-2.5 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm"
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editingAsset && (
         <AssetDetailModal
