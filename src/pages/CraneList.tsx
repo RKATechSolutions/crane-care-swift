@@ -15,6 +15,7 @@ import { AddAssetForm } from '@/components/AddAssetForm';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
 import { LiftingRegisterList } from '@/components/LiftingRegisterList';
 import { LiftingRegisterInspectionForm } from '@/components/LiftingRegisterInspectionForm';
+import { ClientDetailSection } from '@/components/ClientDetailSection';
 
 interface DbAsset {
   id: string;
