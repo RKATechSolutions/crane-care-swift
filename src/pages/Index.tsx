@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { supabase } from '@/integrations/supabase/client';
 import Login from './Login';
 import Sites from './Sites';
 import CraneList from './CraneList';
