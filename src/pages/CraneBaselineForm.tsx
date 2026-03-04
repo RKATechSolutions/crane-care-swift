@@ -3,7 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronRight, ChevronLeft, CheckCircle, Loader2, Save, FileText, Sparkles, Send, Link2, Copy } from 'lucide-react';
+import { ChevronRight, ChevronLeft, CheckCircle, Loader2, Save, FileText, Sparkles, Send } from 'lucide-react';
 import { generateBaselinePdf } from '@/utils/generateBaselinePdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import type jsPDF from 'jspdf';
