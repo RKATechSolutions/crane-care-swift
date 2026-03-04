@@ -33,6 +33,7 @@ interface DbAsset {
   serial_number: string | null;
   length_lift: string | null;
   crane_manufacturer: string | null;
+  main_photo_url: string | null;
 }
 
 export default function CraneList() {
@@ -114,7 +115,7 @@ export default function CraneList() {
     }
     const fetchAssets = async () => {
       setLoading(true);
-      const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer';
+      const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer, main_photo_url';
 
       // 1. Try client_id if this is a DB client site
       if (site.id.startsWith('db-')) {
@@ -264,7 +265,7 @@ export default function CraneList() {
   };
 
   const refreshAssets = async () => {
-    const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer';
+    const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer, main_photo_url';
     const cId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
     if (cId) {
       const { data } = await supabase.from('assets').select(selectFields).eq('client_id', cId).order('class_name');
@@ -546,6 +547,13 @@ export default function CraneList() {
                 <div key={asset.id} className="border-b border-border">
                   <div className="px-4 py-4">
                     <div onClick={() => setEditingAsset(asset)} role="button" tabIndex={0} className="flex items-start gap-3 cursor-pointer active:bg-muted/50 rounded-lg -mx-1 px-1 py-1 transition-colors">
+                      {asset.main_photo_url ? (
+                        <img src={asset.main_photo_url} alt={crane.name} className="w-14 h-14 rounded-lg object-cover border border-border flex-shrink-0" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
+                          <Package className="w-6 h-6 text-muted-foreground/50" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-base">{crane.name}</p>

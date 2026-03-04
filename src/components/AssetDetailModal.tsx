@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { X, Save, ChevronDown, ChevronUp, Camera } from 'lucide-react';
+import { X, Save, ChevronDown, ChevronUp, Camera, Plus, Trash2 } from 'lucide-react';
 
 interface AssetDetailModalProps {
   asset: {
@@ -47,7 +47,11 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
   const [showMore, setShowMore] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [mainPhotoUrl, setMainPhotoUrl] = useState(asset.main_photo_url || '');
+  const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; photo_url: string; caption: string | null }[]>([]);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Editable fields
   const [description, setDescription] = useState(asset.description || '');
@@ -81,6 +85,59 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
       setUploadingPhoto(false);
     }
   };
+
+  // Load gallery photos
+  useEffect(() => {
+    const loadPhotos = async () => {
+      const { data } = await supabase
+        .from('asset_photos')
+        .select('id, photo_url, caption')
+        .eq('asset_id', asset.id)
+        .order('created_at', { ascending: false });
+      if (data) setGalleryPhotos(data as any);
+    };
+    loadPhotos();
+  }, [asset.id]);
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingGallery(true);
+    try {
+      for (const file of Array.from(files)) {
+        const ext = file.name.split('.').pop();
+        const path = `asset-photos/${asset.id}_gallery_${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+        await supabase.from('asset_photos').insert({
+          asset_id: asset.id,
+          photo_url: urlData.publicUrl,
+          uploaded_by: 'technician',
+        } as any);
+      }
+      // Refresh
+      const { data } = await supabase
+        .from('asset_photos')
+        .select('id, photo_url, caption')
+        .eq('asset_id', asset.id)
+        .order('created_at', { ascending: false });
+      if (data) setGalleryPhotos(data as any);
+      toast.success('Photos added');
+    } catch {
+      toast.error('Failed to upload photos');
+    } finally {
+      setUploadingGallery(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteGalleryPhoto = async (photoId: string) => {
+    await supabase.from('asset_photos').delete().eq('id', photoId);
+    setGalleryPhotos(prev => prev.filter(p => p.id !== photoId));
+    toast.success('Photo removed');
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const { error } = await supabase.from('assets').update({
@@ -212,6 +269,35 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
               {asset.asset_id2 && (
                 <div className="text-xs text-muted-foreground">Asset ID2: {asset.asset_id2}</div>
               )}
+            </div>
+          )}
+
+          {/* Asset Photo Gallery */}
+          <SectionHeader title={`Asset Photos (${galleryPhotos.length})`} open={showGallery} onToggle={() => setShowGallery(!showGallery)} />
+          {showGallery && (
+            <div className="space-y-2 pl-1 border-l-2 border-primary/20">
+              <input type="file" accept="image/*" multiple ref={galleryInputRef} className="hidden" onChange={handleGalleryUpload} />
+              <div className="grid grid-cols-3 gap-2">
+                {galleryPhotos.map(photo => (
+                  <div key={photo.id} className="relative group">
+                    <img src={photo.photo_url} alt="Asset" className="w-full h-20 object-cover rounded-lg border border-border" />
+                    <button
+                      onClick={() => handleDeleteGalleryPhoto(photo.id)}
+                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={uploadingGallery}
+                  className="w-full h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-[10px]">{uploadingGallery ? 'Uploading…' : 'Add Photos'}</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

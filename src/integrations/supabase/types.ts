@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_photos: {
+        Row: {
+          asset_id: string
+          caption: string | null
+          created_at: string
+          id: string
+          photo_url: string
+          uploaded_by: string
+        }
+        Insert: {
+          asset_id: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          photo_url: string
+          uploaded_by: string
+        }
+        Update: {
+          asset_id?: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          photo_url?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_photos_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           access_suggestion: string | null
