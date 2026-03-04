@@ -438,6 +438,14 @@ export default function CraneList() {
 
   const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
 
+  const TAB_ITEMS: { key: ClientTab; label: string; icon: React.ReactNode }[] = [
+    { key: 'details', label: 'Details', icon: <Users className="w-4 h-4" /> },
+    { key: 'assets', label: 'Assets', icon: <Package className="w-4 h-4" /> },
+    { key: 'quotes', label: 'Quotes', icon: <DollarSign className="w-4 h-4" /> },
+    { key: 'reports', label: 'Reports', icon: <FileBarChart className="w-4 h-4" /> },
+    { key: 'jobs', label: 'Jobs', icon: <Briefcase className="w-4 h-4" /> },
+  ];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader
@@ -447,165 +455,244 @@ export default function CraneList() {
         onNoteToAdmin={() => setNoteOpen(true)}
       />
 
-      {clientId && <ClientDetailSection clientId={clientId} />}
-
-      <div className="px-4 py-2 border-b border-border space-y-2">
-        {/* Crane Culture & Performance Baseline */}
-        <div className="space-y-1.5">
+      {/* Tab Navigation */}
+      <div className="flex border-b border-border bg-muted/30 overflow-x-auto">
+        {TAB_ITEMS.map(tab => (
           <button
-            onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
-            className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              existingBaseline?.status === 'completed'
-                ? 'bg-muted text-foreground border border-border'
-                : 'bg-primary text-primary-foreground shadow-lg'
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2.5 px-1 text-[11px] font-medium transition-colors relative ${
+              activeTab === tab.key
+                ? 'text-primary'
+                : 'text-muted-foreground'
             }`}
           >
-            <BarChart3 className="w-4 h-4" />
-            {existingBaseline?.status === 'completed' ? 'View Crane Performance Baseline' : 'Crane Performance Baseline'}
+            {tab.icon}
+            <span className="truncate">{tab.label}</span>
+            {activeTab === tab.key && (
+              <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-primary rounded-full" />
+            )}
           </button>
-          {existingBaseline?.id && (
-            <button
-              onClick={() => {
-                const url = `${window.location.origin}/baseline?id=${existingBaseline.id}`;
-                navigator.clipboard.writeText(url);
-                toast({ title: 'Link Copied', description: 'Customer baseline link copied to clipboard. Send it to the customer.' });
-              }}
-              className="w-full h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 bg-accent text-accent-foreground border border-border"
-            >
-              <Link2 className="w-3.5 h-3.5" />
-              Copy Customer Pre-Visit Link
-            </button>
-          )}
-          {!existingBaseline && (
-            <button
-              onClick={async () => {
-                const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
-                const payload: any = { site_name: site.name, company_name: site.name, status: 'in_progress' };
-                if (clientId) payload.client_id = clientId;
-                const { data } = await supabase.from('crane_baselines').insert(payload).select('id').single();
-                if (data) {
-                  setExistingBaseline({ id: data.id, status: 'in_progress' });
-                  const url = `${window.location.origin}/baseline?id=${data.id}`;
-                  navigator.clipboard.writeText(url);
-                  toast({ title: 'Link Created & Copied', description: 'Customer baseline link copied to clipboard.' });
-                }
-              }}
-              className="w-full h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 bg-accent text-accent-foreground border border-border"
-            >
-              <Link2 className="w-3.5 h-3.5" />
-              Create & Send Customer Pre-Visit Link
-            </button>
-          )}
-        </div>
-        <button
-          onClick={() => {
-            dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
-          }}
-          className="w-full tap-target bg-foreground text-background rounded-xl font-bold text-base"
-        >
-          Complete Site Job Summary
-        </button>
-
-        {/* Initial Site Inspection */}
-        <button
-          onClick={() => {
-            setShowAssessment({
-              type: 'Initial Site Baseline',
-              existingId: initialAssessment?.id,
-            });
-          }}
-          className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-            initialAssessment?.status === 'completed'
-              ? 'bg-muted text-foreground border border-border'
-              : 'bg-primary text-primary-foreground shadow-lg'
-          }`}
-        >
-          <ClipboardCheck className="w-4 h-4" />
-          {initialAssessment?.status === 'completed' ? 'View Initial Site Inspection' : 'Initial Site Inspection'}
-        </button>
-
-        {/* Annual Site Review - only visible after initial is complete */}
-        {initialAssessment?.status === 'completed' && (
-          <button
-            onClick={() => {
-              setShowAssessment({ type: '12-Month Review' });
-            }}
-            className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Annual Site Review
-          </button>
-        )}
-
-        {/* Initial Site Inspection V2 - Fast Tap */}
-        <button
-          onClick={() => setShowSiteInspectionV2(true)}
-          className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-border"
-        >
-          <ClipboardCheck className="w-4 h-4" />
-          Initial Site Inspection V2
-        </button>
-
-        <button
-          onClick={() => setShowLiftingRegisterList(true)}
-          className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
-        >
-          <ClipboardList className="w-4 h-4" />
-          Lifting Equipment Register
-        </button>
-
-        <button
-          onClick={() => setShowAddAsset(!showAddAsset)}
-          className="w-full h-9 bg-primary text-primary-foreground rounded-lg font-medium text-xs flex items-center justify-center gap-1.5"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Add Asset
-        </button>
+        ))}
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {loading && (
-          <div className="p-8 text-center text-muted-foreground">Loading assets...</div>
-        )}
+      {/* Tab: Client Details */}
+      {activeTab === 'details' && clientId && (
+        <ClientDetailSection clientId={clientId} />
+      )}
+      {activeTab === 'details' && !clientId && (
+        <div className="p-8 text-center text-muted-foreground">
+          <p className="font-medium">No client record linked</p>
+          <p className="text-sm mt-1">This site doesn't have a database client record</p>
+        </div>
+      )}
 
-        {!loading && hasDbAssets && Object.entries(groupedAssets).map(([className, assets]) => (
-          <div key={className}>
-            <div className="px-4 py-2 bg-muted/50 border-b border-border">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Package className="w-3.5 h-3.5" />
-                {className} ({assets.length})
-              </p>
+      {/* Tab: Assets */}
+      {activeTab === 'assets' && (
+        <>
+          <div className="px-4 py-2 border-b border-border space-y-2">
+            {/* Crane Culture & Performance Baseline */}
+            <div className="space-y-1.5">
+              <button
+                onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
+                className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                  existingBaseline?.status === 'completed'
+                    ? 'bg-muted text-foreground border border-border'
+                    : 'bg-primary text-primary-foreground shadow-lg'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                {existingBaseline?.status === 'completed' ? 'View Crane Performance Baseline' : 'Crane Performance Baseline'}
+              </button>
+              {existingBaseline?.id && (
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/baseline?id=${existingBaseline.id}`;
+                    navigator.clipboard.writeText(url);
+                    toast({ title: 'Link Copied', description: 'Customer baseline link copied to clipboard. Send it to the customer.' });
+                  }}
+                  className="w-full h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 bg-accent text-accent-foreground border border-border"
+                >
+                  <Link2 className="w-3.5 h-3.5" />
+                  Copy Customer Pre-Visit Link
+                </button>
+              )}
+              {!existingBaseline && (
+                <button
+                  onClick={async () => {
+                    const cId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+                    const payload: any = { site_name: site.name, company_name: site.name, status: 'in_progress' };
+                    if (cId) payload.client_id = cId;
+                    const { data } = await supabase.from('crane_baselines').insert(payload).select('id').single();
+                    if (data) {
+                      setExistingBaseline({ id: data.id, status: 'in_progress' });
+                      const url = `${window.location.origin}/baseline?id=${data.id}`;
+                      navigator.clipboard.writeText(url);
+                      toast({ title: 'Link Created & Copied', description: 'Customer baseline link copied to clipboard.' });
+                    }
+                  }}
+                  className="w-full h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 bg-accent text-accent-foreground border border-border"
+                >
+                  <Link2 className="w-3.5 h-3.5" />
+                  Create & Send Customer Pre-Visit Link
+                </button>
+              )}
             </div>
-            {assets.map(asset => {
-              const crane = assetToCrane(asset);
+            <button
+              onClick={() => {
+                dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
+              }}
+              className="w-full tap-target bg-foreground text-background rounded-xl font-bold text-base"
+            >
+              Complete Site Job Summary
+            </button>
+
+            {/* Initial Site Inspection */}
+            <button
+              onClick={() => {
+                setShowAssessment({
+                  type: 'Initial Site Baseline',
+                  existingId: initialAssessment?.id,
+                });
+              }}
+              className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                initialAssessment?.status === 'completed'
+                  ? 'bg-muted text-foreground border border-border'
+                  : 'bg-primary text-primary-foreground shadow-lg'
+              }`}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              {initialAssessment?.status === 'completed' ? 'View Initial Site Inspection' : 'Initial Site Inspection'}
+            </button>
+
+            {/* Annual Site Review */}
+            {initialAssessment?.status === 'completed' && (
+              <button
+                onClick={() => {
+                  setShowAssessment({ type: '12-Month Review' });
+                }}
+                className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Annual Site Review
+              </button>
+            )}
+
+            {/* Initial Site Inspection V2 */}
+            <button
+              onClick={() => setShowSiteInspectionV2(true)}
+              className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-border"
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              Initial Site Inspection V2
+            </button>
+
+            <button
+              onClick={() => setShowLiftingRegisterList(true)}
+              className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+            >
+              <ClipboardList className="w-4 h-4" />
+              Lifting Equipment Register
+            </button>
+
+            <button
+              onClick={() => setShowAddAsset(!showAddAsset)}
+              className="w-full h-9 bg-primary text-primary-foreground rounded-lg font-medium text-xs flex items-center justify-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Asset
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-auto">
+            {loading && (
+              <div className="p-8 text-center text-muted-foreground">Loading assets...</div>
+            )}
+
+            {!loading && hasDbAssets && Object.entries(groupedAssets).map(([className, assets]) => (
+              <div key={className}>
+                <div className="px-4 py-2 bg-muted/50 border-b border-border">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                    <Package className="w-3.5 h-3.5" />
+                    {className} ({assets.length})
+                  </p>
+                </div>
+                {assets.map(asset => {
+                  const crane = assetToCrane(asset);
+                  const existing = getInspectionStatus(crane.id);
+
+                  return (
+                    <div key={asset.id} className="border-b border-border">
+                      <div className="px-4 py-4">
+                        <div onClick={() => setEditingAsset(asset)} role="button" tabIndex={0} className="flex items-start gap-3 cursor-pointer active:bg-muted/50 rounded-lg -mx-1 px-1 py-1 transition-colors">
+                          {asset.main_photo_url ? (
+                            <img src={asset.main_photo_url} alt={crane.name} className="w-14 h-14 rounded-lg object-cover border border-border flex-shrink-0" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
+                              <Package className="w-6 h-6 text-muted-foreground/50" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-base">{crane.name}</p>
+                              <Pencil className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {asset.asset_type || asset.class_name}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {[asset.capacity, crane.manufacturer, asset.serial_number ? `SN: ${asset.serial_number}` : null]
+                                .filter(Boolean).join(' • ') || 'No details'}
+                            </p>
+                            {asset.location_name && (
+                              <p className="text-xs text-muted-foreground">📍 {asset.location_name}{asset.area_name ? ` — ${asset.area_name}` : ''}</p>
+                            )}
+                          </div>
+                          {existing?.status === 'completed' && (
+                            <span className={`text-xs font-bold px-2 py-1 rounded ${
+                              existing.craneStatus === 'Safe to Operate' ? 'bg-rka-green-light text-rka-green-dark' :
+                              existing.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
+                              'bg-rka-orange-light text-rka-orange'
+                            }`}>
+                              {existing.craneStatus}
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleStartInspection(crane)}
+                          className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
+                            existing?.status === 'completed'
+                              ? 'bg-muted text-foreground'
+                              : existing?.status === 'in_progress'
+                              ? 'bg-rka-orange text-destructive-foreground'
+                              : 'bg-primary text-primary-foreground shadow-lg'
+                          }`}
+                        >
+                          <PlayCircle className="w-5 h-5" />
+                          {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+
+            {/* Fallback to mock cranes if no DB assets */}
+            {!loading && !hasDbAssets && mockCranes.map(crane => {
               const existing = getInspectionStatus(crane.id);
 
               return (
-                <div key={asset.id} className="border-b border-border">
+                <div key={crane.id} className="border-b border-border">
                   <div className="px-4 py-4">
-                    <div onClick={() => setEditingAsset(asset)} role="button" tabIndex={0} className="flex items-start gap-3 cursor-pointer active:bg-muted/50 rounded-lg -mx-1 px-1 py-1 transition-colors">
-                      {asset.main_photo_url ? (
-                        <img src={asset.main_photo_url} alt={crane.name} className="w-14 h-14 rounded-lg object-cover border border-border flex-shrink-0" />
-                      ) : (
-                        <div className="w-14 h-14 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
-                          <Package className="w-6 h-6 text-muted-foreground/50" />
-                        </div>
-                      )}
+                    <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold text-base">{crane.name}</p>
-                          <Pencil className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {asset.asset_type || asset.class_name}
-                        </p>
+                        <p className="font-bold text-base">{crane.name}</p>
+                        <p className="text-sm text-muted-foreground">{crane.type}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {[asset.capacity, crane.manufacturer, asset.serial_number ? `SN: ${asset.serial_number}` : null]
-                            .filter(Boolean).join(' • ') || 'No details'}
+                          {crane.capacity} • {crane.manufacturer} • SN: {crane.serialNumber}
                         </p>
-                        {asset.location_name && (
-                          <p className="text-xs text-muted-foreground">📍 {asset.location_name}{asset.area_name ? ` — ${asset.area_name}` : ''}</p>
-                        )}
                       </div>
                       {existing?.status === 'completed' && (
                         <span className={`text-xs font-bold px-2 py-1 rounded ${
@@ -635,60 +722,110 @@ export default function CraneList() {
                 </div>
               );
             })}
-          </div>
-        ))}
 
-        {/* Fallback to mock cranes if no DB assets */}
-        {!loading && !hasDbAssets && mockCranes.map(crane => {
-          const existing = getInspectionStatus(crane.id);
-
-          return (
-            <div key={crane.id} className="border-b border-border">
-              <div className="px-4 py-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-base">{crane.name}</p>
-                    <p className="text-sm text-muted-foreground">{crane.type}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {crane.capacity} • {crane.manufacturer} • SN: {crane.serialNumber}
-                    </p>
-                  </div>
-                  {existing?.status === 'completed' && (
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${
-                      existing.craneStatus === 'Safe to Operate' ? 'bg-rka-green-light text-rka-green-dark' :
-                      existing.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
-                      'bg-rka-orange-light text-rka-orange'
-                    }`}>
-                      {existing.craneStatus}
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => handleStartInspection(crane)}
-                  className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                    existing?.status === 'completed'
-                      ? 'bg-muted text-foreground'
-                      : existing?.status === 'in_progress'
-                      ? 'bg-rka-orange text-destructive-foreground'
-                      : 'bg-primary text-primary-foreground shadow-lg'
-                  }`}
-                >
-                  <PlayCircle className="w-5 h-5" />
-                  {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
-                </button>
+            {!loading && !hasDbAssets && mockCranes.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground">
+                <p className="font-medium">No assets found for this site</p>
+                <p className="text-sm mt-1">Import assets via the admin tools</p>
               </div>
-            </div>
-          );
-        })}
-
-        {!loading && !hasDbAssets && mockCranes.length === 0 && (
-          <div className="p-8 text-center text-muted-foreground">
-            <p className="font-medium">No assets found for this site</p>
-            <p className="text-sm mt-1">Import assets via the admin tools</p>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* Tab: Quotes */}
+      {activeTab === 'quotes' && (
+        <div className="flex-1 overflow-auto">
+          {clientQuotes.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="font-medium">No quotes found</p>
+            </div>
+          ) : (
+            clientQuotes.map(q => (
+              <div key={q.id} className="px-4 py-3 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm">{q.quote_number || 'Draft Quote'}</p>
+                    <p className="text-xs text-muted-foreground">{q.asset_name || 'General'} • {new Date(q.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-bold text-sm">${Number(q.total || 0).toLocaleString()}</p>
+                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                      q.status === 'accepted' ? 'bg-rka-green-light text-rka-green-dark' :
+                      q.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                      'bg-muted text-muted-foreground'
+                    }`}>{q.status}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Tab: Reports */}
+      {activeTab === 'reports' && (
+        <div className="flex-1 overflow-auto">
+          {clientReports.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <FileBarChart className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="font-medium">No inspection reports found</p>
+            </div>
+          ) : (
+            clientReports.map(r => (
+              <div key={r.id} className="px-4 py-3 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm">{r.asset_name || 'Site Inspection'}</p>
+                    <p className="text-xs text-muted-foreground">{r.technician_name} • {new Date(r.inspection_date).toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {r.crane_status && (
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        r.crane_status === 'Safe to Operate' ? 'bg-rka-green-light text-rka-green-dark' :
+                        r.crane_status === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
+                        'bg-rka-orange-light text-rka-orange'
+                      }`}>{r.crane_status}</span>
+                    )}
+                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                      r.status === 'Completed' ? 'bg-rka-green-light text-rka-green-dark' : 'bg-muted text-muted-foreground'
+                    }`}>{r.status}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* Tab: Jobs */}
+      {activeTab === 'jobs' && (
+        <div className="flex-1 overflow-auto">
+          {clientJobs.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p className="font-medium">No jobs found</p>
+            </div>
+          ) : (
+            clientJobs.map(j => (
+              <div key={j.id} className="px-4 py-3 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm truncate">{j.title}</p>
+                    <p className="text-xs text-muted-foreground">{j.job_type || 'General'} • {j.scheduled_date ? new Date(j.scheduled_date).toLocaleDateString() : 'No date'}</p>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${
+                    j.status === 'completed' ? 'bg-rka-green-light text-rka-green-dark' :
+                    j.status === 'in_progress' ? 'bg-rka-orange-light text-rka-orange' :
+                    'bg-muted text-muted-foreground'
+                  }`}>{j.status}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
       {showAddAsset && (
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
@@ -709,7 +846,7 @@ export default function CraneList() {
             />
           </div>
         </div>
-        )}
+      )}
 
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
 
