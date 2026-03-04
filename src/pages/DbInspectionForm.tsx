@@ -664,7 +664,10 @@ export default function DbInspectionForm({
           {generatingPreview ? 'Generating Preview…' : 'Preview Report'}
         </button>
         <button
-          onClick={() => saveInspection('Draft')}
+          onClick={async () => {
+            await saveInspection('Draft');
+            onBack();
+          }}
           disabled={saving}
           className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
         >
