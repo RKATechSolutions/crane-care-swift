@@ -62,6 +62,7 @@ interface RepairBreakdownFormProps {
   assetId?: string;
   clientId?: string;
   siteName?: string;
+  taskId?: string;
   onBack: () => void;
 }
 
@@ -98,7 +99,7 @@ const initialFormData: RepairFormData = {
 type SectionKey = 'a' | 'b' | 'c' | 'd' | 'e';
 
 export default function RepairBreakdownForm({
-  assetName, assetId, clientId, siteName, onBack
+  assetName, assetId, clientId, siteName, taskId, onBack
 }: RepairBreakdownFormProps) {
   const { state, dispatch } = useApp();
   const [formData, setFormData] = useState<RepairFormData>(initialFormData);
@@ -141,7 +142,7 @@ export default function RepairBreakdownForm({
     setSaving(true);
     try {
       const alertReasons = getAlertReasons();
-      const { error } = await supabase.from('repair_jobs').insert({
+      const insertPayload: any = {
         asset_id: assetId || null,
         asset_name: assetName,
         client_id: clientId || null,
@@ -177,8 +178,10 @@ export default function RepairBreakdownForm({
         internal_photos: formData.internal_photos,
         admin_alert_triggered: alertReasons.length > 0,
         admin_alert_reasons: alertReasons,
-      } as any);
+      };
+      if (taskId) insertPayload.task_id = taskId;
 
+      const { error } = await supabase.from('repair_jobs').insert(insertPayload);
       if (error) throw error;
       toast.success(status === 'Submitted' ? 'Repair job submitted!' : 'Draft saved');
       if (status === 'Submitted') onBack();

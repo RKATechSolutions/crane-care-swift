@@ -23,6 +23,7 @@ const Index = () => {
   const { state, dispatch } = useApp();
   const [dashboardView, setDashboardView] = useState<DashboardView>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[]; fromQuotesPage?: boolean; draftQuote?: any; estimateNotes?: string }>({ active: false });
 
   if (!state.currentUser) return <Login />;
@@ -51,11 +52,11 @@ const Index = () => {
   }
 
   if (state.selectedCrane?.id === '__site_summary__') {
-    return <SiteJobSummary onCreateQuote={(defects) => setQuoteMode({ active: true, defects })} />;
+    return <SiteJobSummary onCreateQuote={(defects) => setQuoteMode({ active: true, defects })} activeJobId={activeJobId} />;
   }
 
   if (state.selectedSite && (dashboardView === 'clients' || dashboardView === 'assets')) {
-    return <CraneList />;
+    return <CraneList activeJobId={activeJobId} onSetActiveJob={setActiveJobId} />;
   }
 
   if (dashboardView === 'schedule') return <SchedulePage onBack={() => setDashboardView(null)} />;
@@ -74,7 +75,10 @@ const Index = () => {
   }} />;
   if (dashboardView === 'receipts') return <ReceiptsPage onBack={() => setDashboardView(null)} />;
   if (dashboardView === 'todo') return <ToDoPage onBack={() => setDashboardView(null)} onGoToQuotes={() => setDashboardView('quotes')} />;
-  if (dashboardView === 'tasks') return <TasksPage onBack={() => setDashboardView(null)} onOpenJob={(id) => setSelectedJobId(id)} />;
+  if (dashboardView === 'tasks') return <TasksPage onBack={() => setDashboardView(null)} onOpenJob={(id) => {
+    setSelectedJobId(id);
+    setActiveJobId(id);
+  }} />;
   
 
   return <TechDashboard onNavigate={setDashboardView} />;

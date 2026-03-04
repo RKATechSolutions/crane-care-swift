@@ -19,9 +19,10 @@ const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
 interface SiteJobSummaryProps {
   onCreateQuote?: (defects: any[]) => void;
+  activeJobId?: string | null;
 }
 
-export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
+export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSummaryProps) {
   const { state, dispatch } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
   const site = state.selectedSite!;
@@ -117,11 +118,18 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
     const loadDbDefects = async () => {
       setDbDefectsLoading(true);
       try {
-        // Find inspections for this site
-        const { data: inspections } = await supabase
+        // Find inspections for this site — scoped to active job if available
+        let inspQuery = supabase
           .from('db_inspections')
-          .select('id, asset_name, site_name, status, inspection_date, form_id, crane_status, technician_name')
-          .eq('site_name', site.name);
+          .select('id, asset_name, site_name, status, inspection_date, form_id, crane_status, technician_name');
+        
+        if (activeJobId) {
+          inspQuery = inspQuery.eq('task_id', activeJobId);
+        } else {
+          inspQuery = inspQuery.eq('site_name', site.name);
+        }
+        
+        const { data: inspections } = await inspQuery;
 
         if (!inspections || inspections.length === 0) {
           setDbDefectsLoading(false);

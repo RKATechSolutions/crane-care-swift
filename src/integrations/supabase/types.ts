@@ -670,6 +670,7 @@ export type Database = {
           other_notes: string | null
           site_name: string | null
           status: string
+          task_id: string | null
           technician_id: string
           technician_name: string
           technician_signature: string | null
@@ -692,6 +693,7 @@ export type Database = {
           other_notes?: string | null
           site_name?: string | null
           status?: string
+          task_id?: string | null
           technician_id: string
           technician_name: string
           technician_signature?: string | null
@@ -714,6 +716,7 @@ export type Database = {
           other_notes?: string | null
           site_name?: string | null
           status?: string
+          task_id?: string | null
           technician_id?: string
           technician_name?: string
           technician_signature?: string | null
@@ -740,6 +743,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "form_templates"
             referencedColumns: ["form_id"]
+          },
+          {
+            foreignKeyName: "db_inspections_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1512,6 +1522,7 @@ export type Database = {
           site_name: string | null
           started_at: string | null
           status: string
+          task_id: string | null
           technician_id: string
           technician_name: string
           updated_at: string
@@ -1554,6 +1565,7 @@ export type Database = {
           site_name?: string | null
           started_at?: string | null
           status?: string
+          task_id?: string | null
           technician_id: string
           technician_name: string
           updated_at?: string
@@ -1596,6 +1608,7 @@ export type Database = {
           site_name?: string | null
           started_at?: string | null
           status?: string
+          task_id?: string | null
           technician_id?: string
           technician_name?: string
           updated_at?: string
@@ -1616,6 +1629,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repair_jobs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
