@@ -28,7 +28,7 @@ export default function DefectSummary() {
       setShowStatusPicker(true);
       return;
     }
-    dispatch({ type: 'BACK_TO_CRANES' });
+    dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
   };
 
   return (
@@ -177,7 +177,7 @@ export default function DefectSummary() {
           onClick={handleComplete}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base"
         >
-          Complete Form and Return to Asset List
+          Submit & Go to Job Site Summary
         </button>
       </div>
 
@@ -198,7 +198,7 @@ export default function DefectSummary() {
                 onClick={() => {
                   dispatch({ type: 'SET_CRANE_STATUS', payload: { status, overridden: true } });
                   setShowStatusPicker(false);
-                  dispatch({ type: 'BACK_TO_CRANES' });
+                  dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
                 }}
                 className={`w-full tap-target rounded-xl font-bold text-base ${
                   status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :

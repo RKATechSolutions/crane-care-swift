@@ -332,7 +332,7 @@ export default function InspectionForm() {
               className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
             >
               <CheckCircle className="w-5 h-5" />
-              Complete Inspection ({totalCompleted}/{totalItems})
+              Submit Form & Complete Job Site Summary ({totalCompleted}/{totalItems})
             </button>
           </>
         )}
