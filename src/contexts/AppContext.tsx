@@ -283,6 +283,8 @@ function reducer(state: AppState, action: Action): AppState {
     case 'UPDATE_ADMIN_CONFIG': {
       const newConfig = { ...state.adminConfig, ...action.payload };
       try { localStorage.setItem('rka_admin_config', JSON.stringify(newConfig)); } catch {}
+      // Also persist to database
+      supabase.from('admin_config').upsert({ id: 'default', config: newConfig as any, updated_at: new Date().toISOString() }).then();
       return { ...state, adminConfig: newConfig };
     }
     default:
