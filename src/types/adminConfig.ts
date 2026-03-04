@@ -189,4 +189,5 @@ export const DEFAULT_ADMIN_CONFIG: AdminFormConfig = {
   assetAddFields: DEFAULT_ASSET_ADD_FIELDS,
   assetDetailFields: DEFAULT_ASSET_DETAIL_FIELDS,
   clientInfoFields: DEFAULT_CLIENT_INFO_FIELDS,
+  jobSummarySections: DEFAULT_JOB_SUMMARY_SECTIONS,
 };
