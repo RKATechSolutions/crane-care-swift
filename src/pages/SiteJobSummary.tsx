@@ -250,6 +250,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
             ...matchedClient,
             client_custom_fields: matchedClient.client_custom_fields || {},
           });
+          setAutoServicePkg(matchedClient.automatic_service_package === 'Yes');
+          setPriorityServicePkg(matchedClient.priority_service_package === 'Yes');
 
           const { data: contacts } = await supabase
             .from('client_contacts')
