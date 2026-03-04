@@ -65,6 +65,8 @@ const CUSTOM_FIELDS: { key: keyof ClientData; label: string; group: string }[] =
   { key: 'inspectall_code', label: 'Inspectall Code', group: 'External Links' },
 ];
 
+const CHECKBOX_FIELDS = new Set<string>(['automatic_service_package', 'priority_service_package', 'send_schedule_reminders']);
+
 const GROUPS = ['Contact Details', 'Service & Scheduling', 'Business Info', 'External Links'];
 
 export function ClientDetailSection({ clientId }: { clientId: string }) {
@@ -168,7 +170,18 @@ export function ClientDetailSection({ clientId }: { clientId: string }) {
                       <div className="flex-1 min-w-0">
                         <label className="text-[11px] font-medium text-muted-foreground">{f.label}</label>
                         {editing ? (
-                          f.key === 'comments_or_notes' || f.key === 'site_induction_details' ? (
+                          CHECKBOX_FIELDS.has(f.key) ? (
+                            <button
+                              onClick={() => setDraft(prev => ({ ...prev, [f.key]: prev[f.key] === 'Yes' ? '' : 'Yes' }))}
+                              className={`mt-1 w-full h-9 rounded-lg text-sm font-medium border transition-colors flex items-center justify-center gap-2 ${
+                                val === 'Yes'
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-background text-muted-foreground border-border hover:border-primary/50'
+                              }`}
+                            >
+                              {val === 'Yes' ? '✓ Yes' : 'No'}
+                            </button>
+                          ) : f.key === 'comments_or_notes' || f.key === 'site_induction_details' ? (
                             <textarea
                               value={val}
                               onChange={e => setDraft(prev => ({ ...prev, [f.key]: e.target.value }))}

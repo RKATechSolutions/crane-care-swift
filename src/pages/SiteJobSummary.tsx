@@ -68,6 +68,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
   const [generatingPreview, setGeneratingPreview] = useState(false);
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
+  const [autoServicePkg, setAutoServicePkg] = useState(false);
+  const [priorityServicePkg, setPriorityServicePkg] = useState(false);
   const [clientContacts, setClientContacts] = useState<any[]>([]);
   // DB inspections (assets inspected)
   interface DbInspection {
@@ -248,6 +250,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
             ...matchedClient,
             client_custom_fields: matchedClient.client_custom_fields || {},
           });
+          setAutoServicePkg(matchedClient.automatic_service_package === 'Yes');
+          setPriorityServicePkg(matchedClient.priority_service_package === 'Yes');
 
           const { data: contacts } = await supabase
             .from('client_contacts')
@@ -429,6 +433,14 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
     try {
       const summaryPayload = buildSummaryPayload();
       dispatch({ type: 'SAVE_SITE_JOB_SUMMARY', payload: summaryPayload });
+
+      // Save service package selections back to client
+      if (clientInfo?.id) {
+        await supabase.from('clients').update({
+          automatic_service_package: autoServicePkg ? 'Yes' : null,
+          priority_service_package: priorityServicePkg ? 'Yes' : null,
+        }).eq('id', clientInfo.id);
+      }
 
       // Generate PDF
       const template = state.templates[0];
@@ -1286,6 +1298,27 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
                   {bookingConfirmed && <Check className="w-5 h-5" />}
                   {bookingConfirmed ? 'Calendar Invite Sent and Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
                 </button>
+              </div>
+            )}
+
+            {/* Service Package Selection */}
+            {clientInfo && (
+              <div className="mb-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Service Packages</p>
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30 cursor-pointer">
+                  <Checkbox
+                    checked={autoServicePkg}
+                    onCheckedChange={(v) => setAutoServicePkg(!!v)}
+                  />
+                  <span className="text-sm font-medium">Automatic Service Package</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30 cursor-pointer">
+                  <Checkbox
+                    checked={priorityServicePkg}
+                    onCheckedChange={(v) => setPriorityServicePkg(!!v)}
+                  />
+                  <span className="text-sm font-medium">Priority Service Package</span>
+                </label>
               </div>
             )}
 
