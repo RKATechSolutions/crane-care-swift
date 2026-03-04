@@ -341,6 +341,7 @@ export type Database = {
       }
       crane_baselines: {
         Row: {
+          ai_summary: string | null
           avg_downtime: number | null
           avg_response_time: number | null
           backup_crane: string | null
@@ -410,6 +411,7 @@ export type Database = {
           workshop_tidy: string | null
         }
         Insert: {
+          ai_summary?: string | null
           avg_downtime?: number | null
           avg_response_time?: number | null
           backup_crane?: string | null
@@ -479,6 +481,7 @@ export type Database = {
           workshop_tidy?: string | null
         }
         Update: {
+          ai_summary?: string | null
           avg_downtime?: number | null
           avg_response_time?: number | null
           backup_crane?: string | null
