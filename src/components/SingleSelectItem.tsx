@@ -14,6 +14,7 @@ export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemPro
   const [showSuggest, setShowSuggest] = useState(false);
   const [suggestInput, setSuggestInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const selectedValue = result.selectedValue;
   const isSuggested = !!result.suggestedValue && selectedValue === result.suggestedValue;
   const needsComment = item.conditionalCommentOn && selectedValue === item.conditionalCommentOn;
@@ -175,12 +176,18 @@ export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemPro
               rows={2}
             />
             {/* Photo upload for conditional comment */}
-            <div className="mt-2">
+            <div className="mt-2 flex items-center gap-3">
               <button
-                onClick={handlePhotoCapture}
-                className="flex items-center gap-2 text-xs font-semibold text-muted-foreground active:text-foreground"
+                onClick={() => { if (fileInputRef.current) { fileInputRef.current.capture = 'environment'; fileInputRef.current.click(); } }}
+                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground active:text-foreground"
               >
-                <Camera className="w-4 h-4" /> Add Photo
+                <Camera className="w-4 h-4" /> Take Photo
+              </button>
+              <button
+                onClick={() => galleryInputRef.current?.click()}
+                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground active:text-foreground"
+              >
+                <ImagePlus className="w-4 h-4" /> Upload
               </button>
             </div>
           </div>
@@ -205,16 +212,30 @@ export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemPro
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
               className="hidden"
               onChange={handleFileChange}
             />
             {!needsComment && (
-              <div className="mt-2">
+              <div className="mt-2 flex items-center gap-3">
                 <button
-                  onClick={handlePhotoCapture}
-                  className="flex items-center gap-2 text-xs font-semibold text-muted-foreground active:text-foreground"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground active:text-foreground"
                 >
-                  <Camera className="w-4 h-4" /> Add Photo
+                  <Camera className="w-4 h-4" /> Take Photo
+                </button>
+                <button
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground active:text-foreground"
+                >
+                  <ImagePlus className="w-4 h-4" /> Upload
                 </button>
               </div>
             )}
