@@ -411,17 +411,52 @@ export default function CraneList() {
 
       <div className="px-4 py-2 border-b border-border space-y-2">
         {/* Crane Culture & Performance Baseline */}
-        <button
-          onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
-          className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-            existingBaseline?.status === 'completed'
-              ? 'bg-muted text-foreground border border-border'
-              : 'bg-primary text-primary-foreground shadow-lg'
-          }`}
-        >
-          <BarChart3 className="w-4 h-4" />
-          {existingBaseline?.status === 'completed' ? 'View Crane Performance Baseline' : 'Crane Performance Baseline'}
-        </button>
+        <div className="space-y-1.5">
+          <button
+            onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
+            className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+              existingBaseline?.status === 'completed'
+                ? 'bg-muted text-foreground border border-border'
+                : 'bg-primary text-primary-foreground shadow-lg'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            {existingBaseline?.status === 'completed' ? 'View Crane Performance Baseline' : 'Crane Performance Baseline'}
+          </button>
+          {existingBaseline?.id && (
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/baseline?id=${existingBaseline.id}`;
+                navigator.clipboard.writeText(url);
+                toast({ title: 'Link Copied', description: 'Customer baseline link copied to clipboard. Send it to the customer.' });
+              }}
+              className="w-full h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 bg-accent text-accent-foreground border border-border"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              Copy Customer Pre-Visit Link
+            </button>
+          )}
+          {!existingBaseline && (
+            <button
+              onClick={async () => {
+                const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+                const payload: any = { site_name: site.name, company_name: site.name, status: 'in_progress' };
+                if (clientId) payload.client_id = clientId;
+                const { data } = await supabase.from('crane_baselines').insert(payload).select('id').single();
+                if (data) {
+                  setExistingBaseline({ id: data.id, status: 'in_progress' });
+                  const url = `${window.location.origin}/baseline?id=${data.id}`;
+                  navigator.clipboard.writeText(url);
+                  toast({ title: 'Link Created & Copied', description: 'Customer baseline link copied to clipboard.' });
+                }
+              }}
+              className="w-full h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 bg-accent text-accent-foreground border border-border"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              Create & Send Customer Pre-Visit Link
+            </button>
+          )}
+        </div>
         <button
           onClick={() => {
             dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
