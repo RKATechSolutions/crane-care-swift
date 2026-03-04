@@ -541,13 +541,17 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
         </button>
       </div>
 
-      {previewPdfDoc && (
-        <PdfPreviewModal
-          pdfDoc={previewPdfDoc}
-          fileName={`${str('company_name') || site.name}_Crane_Baseline_${new Date().toISOString().slice(0, 10)}.pdf`}
-          onClose={() => setPreviewPdfDoc(null)}
-        />
-      )}
+      <PdfPreviewModal
+        open={!!previewPdfDoc}
+        pdfDoc={previewPdfDoc}
+        title="Crane Baseline Report"
+        onClose={() => setPreviewPdfDoc(null)}
+        onDownload={() => {
+          if (previewPdfDoc) {
+            previewPdfDoc.save(`${str('company_name') || site.name}_Crane_Baseline_${new Date().toISOString().slice(0, 10)}.pdf`);
+          }
+        }}
+      />
     </div>
   );
 }

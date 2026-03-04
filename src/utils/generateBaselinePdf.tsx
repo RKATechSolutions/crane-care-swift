@@ -20,11 +20,7 @@ interface BaselinePdfData {
 }
 
 const DARK: [number, number, number] = [40, 32, 39];
-const WHITE: [number, number, number] = [255, 255, 255];
 const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
-const RKA_GREEN: [number, number, number] = [96, 179, 76];
-const RKA_ORANGE: [number, number, number] = [230, 126, 13];
-const RKA_RED: [number, number, number] = [204, 41, 41];
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
