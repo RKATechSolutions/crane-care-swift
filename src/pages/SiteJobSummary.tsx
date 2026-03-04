@@ -1289,6 +1289,27 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
               </div>
             )}
 
+            {/* Service Package Selection */}
+            {clientInfo && (
+              <div className="mb-4 space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Service Packages</p>
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30 cursor-pointer">
+                  <Checkbox
+                    checked={autoServicePkg}
+                    onCheckedChange={(v) => setAutoServicePkg(!!v)}
+                  />
+                  <span className="text-sm font-medium">Automatic Service Package</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/30 cursor-pointer">
+                  <Checkbox
+                    checked={priorityServicePkg}
+                    onCheckedChange={(v) => setPriorityServicePkg(!!v)}
+                  />
+                  <span className="text-sm font-medium">Priority Service Package</span>
+                </label>
+              </div>
+            )}
+
             {/* Customer Name */}
             {isSectionVisible('customer_name') && (
               <div className="mb-4">
