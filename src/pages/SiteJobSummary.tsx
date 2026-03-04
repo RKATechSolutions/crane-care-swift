@@ -120,7 +120,7 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
         // Find inspections for this site
         const { data: inspections } = await supabase
           .from('db_inspections')
-          .select('id, asset_name, site_name, status')
+          .select('id, asset_name, site_name, status, inspection_date, form_id, crane_status, technician_name')
           .eq('site_name', site.name);
 
         if (!inspections || inspections.length === 0) {
