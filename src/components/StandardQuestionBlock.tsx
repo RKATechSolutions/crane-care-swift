@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { CheckCircle, XCircle, MinusCircle, Camera, X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, MinusCircle, Camera, X, ChevronDown, ChevronUp, AlertTriangle, ImagePlus } from 'lucide-react';
 
 export interface QuestionConfig {
   question_id: string;
@@ -60,6 +60,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
   const [showPhotos, setShowPhotos] = useState(response.photo_urls.length > 0);
   const [defectExpanded, setDefectExpanded] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   const failTriggers = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
   const isFail = failTriggers.includes(response.pass_fail_status || '') || failTriggers.includes(response.answer_value || '');
@@ -188,6 +189,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
           Upload
         </button>
       </div>
+    </div>
   );
 
   return (
