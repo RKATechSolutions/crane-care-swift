@@ -305,6 +305,8 @@ export default function DbInspectionForm({
           photo_urls: responses[q.question_id]?.photo_urls || [],
           standard_ref: q.standard_ref || null,
           urgency: responses[q.question_id]?.urgency || null,
+          defect_types: responses[q.question_id]?.defect_types || [],
+          internal_note: responses[q.question_id]?.internal_note || null,
         })),
       }));
 
@@ -316,6 +318,7 @@ export default function DbInspectionForm({
         inspectionDate: new Date().toISOString(),
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
+        otherNotes: otherNotes || undefined,
       });
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
