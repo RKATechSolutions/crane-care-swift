@@ -85,6 +85,59 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
       setUploadingPhoto(false);
     }
   };
+
+  // Load gallery photos
+  useEffect(() => {
+    const loadPhotos = async () => {
+      const { data } = await supabase
+        .from('asset_photos')
+        .select('id, photo_url, caption')
+        .eq('asset_id', asset.id)
+        .order('created_at', { ascending: false });
+      if (data) setGalleryPhotos(data as any);
+    };
+    loadPhotos();
+  }, [asset.id]);
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploadingGallery(true);
+    try {
+      for (const file of Array.from(files)) {
+        const ext = file.name.split('.').pop();
+        const path = `asset-photos/${asset.id}_gallery_${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
+        if (uploadErr) throw uploadErr;
+        const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+        await supabase.from('asset_photos').insert({
+          asset_id: asset.id,
+          photo_url: urlData.publicUrl,
+          uploaded_by: 'technician',
+        } as any);
+      }
+      // Refresh
+      const { data } = await supabase
+        .from('asset_photos')
+        .select('id, photo_url, caption')
+        .eq('asset_id', asset.id)
+        .order('created_at', { ascending: false });
+      if (data) setGalleryPhotos(data as any);
+      toast.success('Photos added');
+    } catch {
+      toast.error('Failed to upload photos');
+    } finally {
+      setUploadingGallery(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteGalleryPhoto = async (photoId: string) => {
+    await supabase.from('asset_photos').delete().eq('id', photoId);
+    setGalleryPhotos(prev => prev.filter(p => p.id !== photoId));
+    toast.success('Photo removed');
+  };
+
   const handleSave = async () => {
     setSaving(true);
     const { error } = await supabase.from('assets').update({
