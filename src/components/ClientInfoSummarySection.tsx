@@ -18,20 +18,42 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const groups = [...new Set(fields.map(f => f.group))];
+  const editableFieldCount = fields.filter(f => f.editable).length;
+
+  const getFieldValue = (field: ClientInfoField) => {
+    if (field.isCustom || field.fieldKey.startsWith('custom_')) {
+      return clientInfo?.client_custom_fields?.[field.fieldKey] ?? '';
+    }
+    return clientInfo?.[field.fieldKey] ?? '';
+  };
 
   const startEditing = () => {
+    if (editableFieldCount === 0) return;
     const d: Record<string, string> = {};
-    fields.forEach(f => { d[f.fieldKey] = String(clientInfo?.[f.fieldKey] || ''); });
+    fields.forEach(f => {
+      d[f.fieldKey] = String(getFieldValue(f) || '');
+    });
     setDraft(d);
     setEditing(true);
   };
 
   const handleSave = () => {
-    const updates: Record<string, any> = {};
+    const standardUpdates: Record<string, any> = {};
+    const customFieldUpdates: Record<string, any> = {};
+
     fields.filter(f => f.editable).forEach(f => {
-      updates[f.fieldKey] = draft[f.fieldKey]?.trim() || null;
+      const value = draft[f.fieldKey]?.trim() || null;
+      if (f.isCustom || f.fieldKey.startsWith('custom_')) {
+        customFieldUpdates[f.fieldKey] = value;
+      } else {
+        standardUpdates[f.fieldKey] = value;
+      }
     });
-    onUpdateClientInfo(updates);
+
+    onUpdateClientInfo({
+      ...standardUpdates,
+      __custom_fields: customFieldUpdates,
+    });
     setEditing(false);
   };
 
@@ -46,7 +68,8 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
         </div>
         <button
           onClick={editing ? handleSave : startEditing}
-          className="flex items-center gap-1 text-xs font-medium text-primary px-2 py-1 rounded-lg bg-primary/10"
+          disabled={!editing && editableFieldCount === 0}
+          className="flex items-center gap-1 text-xs font-medium text-primary px-2 py-1 rounded-lg bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {editing ? <><Save className="w-3 h-3" /> Save</> : <><Pencil className="w-3 h-3" /> Edit</>}
         </button>
@@ -57,7 +80,7 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
         if (groupFields.length === 0) return null;
 
         // Check if group has any non-empty values (skip empty groups in view mode)
-        const hasValues = groupFields.some(f => clientInfo?.[f.fieldKey]);
+        const hasValues = groupFields.some(f => String(getFieldValue(f) || '').trim().length > 0);
         if (!editing && !hasValues) return null;
 
         return (
@@ -65,7 +88,7 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-2 mb-1">{group}</p>
             <div className="space-y-1">
               {groupFields.map(f => {
-                const val = editing ? (draft[f.fieldKey] || '') : String(clientInfo?.[f.fieldKey] || '');
+                const val = editing ? (draft[f.fieldKey] || '') : String(getFieldValue(f) || '');
                 if (!editing && !val) return null;
 
                 // Special highlight for site induction
