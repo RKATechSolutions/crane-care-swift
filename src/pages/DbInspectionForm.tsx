@@ -46,6 +46,7 @@ export default function DbInspectionForm({
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [generatingAI, setGeneratingAI] = useState(false);
+  const [otherNotes, setOtherNotes] = useState<string>('');
 
   // Load questions for this form
   useEffect(() => {
@@ -156,13 +157,14 @@ export default function DbInspectionForm({
           });
         }
 
-        // Load existing AI summary
+        // Load existing AI summary and other notes
         const { data: inspData } = await supabase
           .from('db_inspections')
-          .select('ai_summary')
+          .select('ai_summary, other_notes')
           .eq('id', existingInspectionId)
           .single();
         if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
+        if ((inspData as any)?.other_notes) setOtherNotes((inspData as any).other_notes);
       }
 
       setResponses(initResponses);
@@ -246,15 +248,35 @@ export default function DbInspectionForm({
   }, []);
 
   // Pass All checklist items in current section
+  // Pass All checklist items in current section (including SingleSelect positive values)
   const handlePassAll = useCallback(() => {
     if (!currentSection) return;
     const updates = { ...responses };
     currentSection.questions.forEach(q => {
-      if ((q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') && !updates[q.question_id]?.pass_fail_status) {
+      const existing = updates[q.question_id];
+      if (existing?.pass_fail_status === 'Fail' || existing?.defect_flag) return; // Don't override defects
+      
+      if ((q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') && !existing?.pass_fail_status) {
         updates[q.question_id] = {
           ...updates[q.question_id],
           pass_fail_status: 'Pass',
           answer_value: q.answer_type === 'YesNoNA' ? 'Yes' : 'Pass',
+          defect_flag: false,
+        };
+      } else if (q.answer_type === 'YesNo' && !existing?.answer_value) {
+        updates[q.question_id] = {
+          ...updates[q.question_id],
+          pass_fail_status: 'Pass',
+          answer_value: 'Yes',
+          defect_flag: false,
+        };
+      } else if (q.answer_type === 'SingleSelect' && q.options && q.options.length > 0 && !existing?.answer_value) {
+        // Select first (positive) option
+        const firstOpt = q.options[0];
+        updates[q.question_id] = {
+          ...updates[q.question_id],
+          pass_fail_status: 'Pass',
+          answer_value: firstOpt,
           defect_flag: false,
         };
       }
