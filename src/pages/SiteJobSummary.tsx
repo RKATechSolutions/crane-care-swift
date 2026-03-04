@@ -61,6 +61,18 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [clientContacts, setClientContacts] = useState<any[]>([]);
+  // DB inspections (assets inspected)
+  interface DbInspection {
+    id: string;
+    asset_name: string | null;
+    site_name: string | null;
+    status: string;
+    inspection_date: string;
+    form_id: string;
+    crane_status: string | null;
+    technician_name: string;
+  }
+  const [dbInspections, setDbInspections] = useState<DbInspection[]>([]);
 
   // Database-driven defects
   interface DbDefect {
