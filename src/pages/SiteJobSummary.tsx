@@ -6,20 +6,14 @@ import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Loader2, ExternalLink, Package, ShoppingCart } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Loader2, ExternalLink, Package, ShoppingCart, FileText, Paperclip } from 'lucide-react';
+import { ClientInfoSummarySection } from '@/components/ClientInfoSummarySection';
 import { toast } from 'sonner';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
 import { supabase } from '@/integrations/supabase/client';
 import { generateJobPdf } from '@/utils/generateJobPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import type jsPDF from 'jspdf';
-import { FileText, Paperclip } from 'lucide-react';
-import rkaReviewQr from '@/assets/rka-review-qr.png';
-import { supabase } from '@/integrations/supabase/client';
-import { generateJobPdf } from '@/utils/generateJobPdf';
-import { PdfPreviewModal } from '@/components/PdfPreviewModal';
-import type jsPDF from 'jspdf';
-import { FileText } from 'lucide-react';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
