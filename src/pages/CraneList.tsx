@@ -394,7 +394,6 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
         }}
       />
     );
-    );
   }
 
   // Show Site Inspection V2 form
