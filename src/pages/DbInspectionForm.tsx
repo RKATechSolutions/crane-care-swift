@@ -20,6 +20,7 @@ interface DbInspectionFormProps {
   siteName?: string;
   existingInspectionId?: string;
   onBack: () => void;
+  onSubmitComplete?: () => void;
 }
 
 interface FormQuestion extends QuestionConfig {
@@ -30,7 +31,7 @@ interface FormQuestion extends QuestionConfig {
 }
 
 export default function DbInspectionForm({
-  formId, assetName, assetId, clientId, siteName, existingInspectionId, onBack
+  formId, assetName, assetId, clientId, siteName, existingInspectionId, onBack, onSubmitComplete
 }: DbInspectionFormProps) {
   const { state } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
