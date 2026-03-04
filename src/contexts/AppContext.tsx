@@ -299,6 +299,17 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  // Load admin config from database on mount
+  useEffect(() => {
+    supabase.from('admin_config').select('config').eq('id', 'default').maybeSingle().then(({ data }) => {
+      if (data?.config && typeof data.config === 'object') {
+        const dbConfig = { ...DEFAULT_ADMIN_CONFIG, ...(data.config as any) };
+        dispatch({ type: 'UPDATE_ADMIN_CONFIG', payload: dbConfig });
+      }
+    });
+  }, []);
+
   return (
     <AppContext.Provider value={{ state, dispatch }}>
       {children}
