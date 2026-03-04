@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { RepairFormData } from '@/pages/RepairBreakdownForm';
 import { RepairButtonGroup } from './RepairButtonGroup';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, X, Plus } from 'lucide-react';
+import { Camera, X, Plus, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -92,25 +92,41 @@ export function RepairSectionD({ formData, updateForm }: Props) {
           </div>
         )}
 
-        <label className="flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-dashed border-border text-sm font-semibold text-muted-foreground cursor-pointer hover:bg-muted/50 transition-all">
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            capture="environment"
-            onChange={handlePhotoUpload}
-            className="hidden"
-          />
-          {uploading ? (
-            'Uploading…'
-          ) : (
-            <>
-              <Camera className="w-4 h-4" />
-              <Plus className="w-3 h-3" />
-              Add Photo
-            </>
-          )}
-        </label>
+        <input
+          id="repair-camera-input"
+          type="file"
+          accept="image/*"
+          multiple
+          capture="environment"
+          onChange={handlePhotoUpload}
+          className="hidden"
+        />
+        <input
+          id="repair-gallery-input"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handlePhotoUpload}
+          className="hidden"
+        />
+        <div className="flex gap-2">
+          <button
+            onClick={() => document.getElementById('repair-camera-input')?.click()}
+            disabled={uploading}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border border-dashed border-border text-sm font-semibold text-muted-foreground cursor-pointer hover:bg-muted/50 transition-all"
+          >
+            <Camera className="w-4 h-4" />
+            {uploading ? 'Uploading…' : 'Take Photo'}
+          </button>
+          <button
+            onClick={() => document.getElementById('repair-gallery-input')?.click()}
+            disabled={uploading}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border border-dashed border-border text-sm font-semibold text-muted-foreground cursor-pointer hover:bg-muted/50 transition-all"
+          >
+            <ImagePlus className="w-4 h-4" />
+            {uploading ? 'Uploading…' : 'Upload'}
+          </button>
+        </div>
       </div>
     </div>
   );

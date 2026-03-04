@@ -306,7 +306,6 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
               ref={el => { fileRefs.current[item.id] = el; }}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={e => handlePhoto(item.id, e)}
               className="hidden"
             />

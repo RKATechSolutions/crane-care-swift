@@ -167,7 +167,6 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
           ref={fileRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleCapture}
           className="hidden"
         />
