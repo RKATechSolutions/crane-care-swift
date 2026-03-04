@@ -707,8 +707,13 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
 
             {defectsExpanded && !dbDefectsLoading && (
               <>
-                {/* Database defects */}
-                {hasDbDefects && dbDefects.map((defect) => {
+                {/* Database defects - grouped by quote status */}
+                {hasDbDefects && (() => {
+                  const quoteNowDb = dbDefects.filter(d => d.quoteStatus === 'Quote Now');
+                  const quoteLaterDb = dbDefects.filter(d => d.quoteStatus === 'Quote Later');
+                  const uncategorizedDb = dbDefects.filter(d => !d.quoteStatus);
+                  
+                  const renderDefectCard = (defect: typeof dbDefects[0]) => {
                   const isExpanded = expandedDefects.has(defect.responseId);
                   const severityColor = defect.severity === 'Critical' || defect.urgency === 'Immediate'
                     ? 'bg-rka-red-light'
