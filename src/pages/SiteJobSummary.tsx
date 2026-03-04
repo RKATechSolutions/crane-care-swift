@@ -557,18 +557,21 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
       <div className="flex-1 overflow-y-auto">
         {/* Job Report Header */}
         <div className="px-4 py-4 border-b border-border bg-muted/30 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground italic">
-            Australian Standards Reference: AS 2550 – Safe Use of Cranes | AS 1418 – Cranes, Hoists &amp; Winches | AS 4991 – Lifting Devices
-          </p>
+          {isSectionVisible('standards_reference') && (
+            <p className="text-xs font-semibold text-muted-foreground italic">
+              Australian Standards Reference: AS 2550 – Safe Use of Cranes | AS 1418 – Cranes, Hoists &amp; Winches | AS 4991 – Lifting Devices
+            </p>
+          )}
 
           <div className="grid grid-cols-1 gap-2">
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Business Name</label>
-              <p className="text-sm font-bold mt-0.5">RKA Crane Services</p>
-            </div>
+            {isSectionVisible('business_name') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Business Name</label>
+                <p className="text-sm font-bold mt-0.5">RKA Crane Services</p>
+              </div>
+            )}
 
-            {/* Client Info Section - driven by admin config */}
-            {clientInfo && (
+            {isSectionVisible('client_info') && clientInfo && (
               <ClientInfoSummarySection
                 clientInfo={clientInfo}
                 clientContacts={clientContacts}
@@ -609,31 +612,39 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
               />
             )}
 
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Site Address</label>
-              <p className="text-sm font-medium mt-0.5">{clientInfo?.location_address || site.address}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Type</label>
-              <select
-                value={jobType}
-                onChange={(e) => setJobType(e.target.value)}
-                className="w-full tap-target px-4 border border-border rounded-xl bg-background text-sm font-medium mt-1 appearance-none cursor-pointer"
-              >
-                <option value="Periodic Inspection">Periodic Inspection</option>
-                <option value="Repair">Repair</option>
-                <option value="Breakdown / Fault">Breakdown / Fault</option>
-                <option value="Commissioning">Commissioning</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Name</label>
-              <p className="text-sm font-medium mt-0.5">{state.currentUser?.name || '—'}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date and Time Scheduled</label>
-              <p className="text-sm font-medium mt-0.5">{format(new Date(), 'dd MMM yyyy, HH:mm')}</p>
-            </div>
+            {isSectionVisible('site_address') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Site Address</label>
+                <p className="text-sm font-medium mt-0.5">{clientInfo?.location_address || site.address}</p>
+              </div>
+            )}
+            {isSectionVisible('job_type') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Job Type</label>
+                <select
+                  value={jobType}
+                  onChange={(e) => setJobType(e.target.value)}
+                  className="w-full tap-target px-4 border border-border rounded-xl bg-background text-sm font-medium mt-1 appearance-none cursor-pointer"
+                >
+                  <option value="Periodic Inspection">Periodic Inspection</option>
+                  <option value="Repair">Repair</option>
+                  <option value="Breakdown / Fault">Breakdown / Fault</option>
+                  <option value="Commissioning">Commissioning</option>
+                </select>
+              </div>
+            )}
+            {isSectionVisible('technician_name') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Technician Name</label>
+                <p className="text-sm font-medium mt-0.5">{state.currentUser?.name || '—'}</p>
+              </div>
+            )}
+            {isSectionVisible('date_time_scheduled') && (
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Date and Time Scheduled</label>
+                <p className="text-sm font-medium mt-0.5">{format(new Date(), 'dd MMM yyyy, HH:mm')}</p>
+              </div>
+            )}
           </div>
         </div>
 
