@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import {
   User, Site, Crane, Inspection, InspectionItemResult,
   InspectionTemplate, CraneOperationalStatus, SiteJobSummary, AdminNote,
@@ -282,6 +283,8 @@ function reducer(state: AppState, action: Action): AppState {
     case 'UPDATE_ADMIN_CONFIG': {
       const newConfig = { ...state.adminConfig, ...action.payload };
       try { localStorage.setItem('rka_admin_config', JSON.stringify(newConfig)); } catch {}
+      // Also persist to database
+      supabase.from('admin_config').upsert({ id: 'default', config: newConfig as any, updated_at: new Date().toISOString() }).then();
       return { ...state, adminConfig: newConfig };
     }
     default:
@@ -296,6 +299,17 @@ const AppContext = createContext<{
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+
+  // Load admin config from database on mount
+  useEffect(() => {
+    supabase.from('admin_config').select('config').eq('id', 'default').maybeSingle().then(({ data }) => {
+      if (data?.config && typeof data.config === 'object') {
+        const dbConfig = { ...DEFAULT_ADMIN_CONFIG, ...(data.config as any) };
+        dispatch({ type: 'UPDATE_ADMIN_CONFIG', payload: dbConfig });
+      }
+    });
+  }, []);
+
   return (
     <AppContext.Provider value={{ state, dispatch }}>
       {children}
