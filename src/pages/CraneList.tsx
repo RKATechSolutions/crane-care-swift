@@ -410,6 +410,18 @@ export default function CraneList() {
       />
 
       <div className="px-4 py-2 border-b border-border space-y-2">
+        {/* Crane Culture & Performance Baseline */}
+        <button
+          onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
+          className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+            existingBaseline?.status === 'completed'
+              ? 'bg-muted text-foreground border border-border'
+              : 'bg-primary text-primary-foreground shadow-lg'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          {existingBaseline?.status === 'completed' ? 'View Crane Performance Baseline' : 'Crane Performance Baseline'}
+        </button>
         <button
           onClick={() => {
             dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
