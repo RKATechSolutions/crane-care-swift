@@ -618,25 +618,60 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
           </div>
         </div>
 
-        {/* Completed Inspections Summary */}
+        {/* Assets Inspected */}
         <div className="px-4 py-3 border-b border-border bg-muted/30">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Completed Inspections</p>
-          {completedInspections.map(insp => {
-            const crane = site.cranes.find(c => c.id === insp.craneId);
-            const defectCount = insp.items.filter(i => i.result === 'defect').length;
-            return (
-              <div key={insp.id} className="flex items-center justify-between py-2">
-                <span className="font-medium text-sm">{crane?.name}</span>
-                <div className="flex items-center gap-2">
-                  {defectCount > 0 && (
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-rka-red-light text-rka-red">
-                      {defectCount} defect{defectCount !== 1 ? 's' : ''}
-                    </span>
-                  )}
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Assets Inspected</p>
+          {dbInspections.length > 0 ? (
+            dbInspections.map(insp => {
+              const defectCount = dbDefects.filter(d => d.inspectionId === insp.id).length;
+              return (
+                <div key={insp.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{insp.asset_name || 'Unknown Asset'}</p>
+                    <p className="text-[11px] text-muted-foreground">{insp.form_id} • {format(new Date(insp.inspection_date), 'dd MMM yyyy')}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {insp.crane_status && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${
+                        insp.crane_status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+                        insp.crane_status === 'Unsafe to Operate' ? 'bg-rka-red text-destructive-foreground' :
+                        'bg-rka-orange text-destructive-foreground'
+                      }`}>{insp.crane_status}</span>
+                    )}
+                    {defectCount > 0 && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-rka-red-light text-rka-red">
+                        {defectCount} defect{defectCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {defectCount === 0 && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-rka-green-light text-rka-green">
+                        ✓ Clear
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          ) : completedInspections.length > 0 ? (
+            completedInspections.map(insp => {
+              const crane = site.cranes.find(c => c.id === insp.craneId);
+              const defectCount = insp.items.filter(i => i.result === 'defect').length;
+              return (
+                <div key={insp.id} className="flex items-center justify-between py-2">
+                  <span className="font-medium text-sm">{crane?.name}</span>
+                  <div className="flex items-center gap-2">
+                    {defectCount > 0 && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-rka-red-light text-rka-red">
+                        {defectCount} defect{defectCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-sm text-muted-foreground py-2">No inspections completed yet</p>
+          )}
         </div>
 
         {/* Defect Review for Customer */}
