@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AppHeader } from '@/components/AppHeader';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
 import { format } from 'date-fns';
@@ -46,31 +46,36 @@ interface RegisterItem {
   span_m: number | null;
 }
 
+const EQUIPMENT_TYPES = [
+  'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
+  'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
+  'Lifting Lug', 'Eyebolt', 'Swivel', 'Unknown',
+];
+
+const STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
+
 export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew, onInspect }: LiftingRegisterListProps) {
   const [items, setItems] = useState<RegisterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [editItem, setEditItem] = useState<RegisterItem | null>(null);
+  const [editForm, setEditForm] = useState<Partial<RegisterItem>>({});
+  const [saving, setSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const refreshItems = async () => {
+    let query = supabase.from('lifting_register').select('*').order('created_at', { ascending: false });
+    if (clientId) query = query.eq('client_id', clientId);
+    else query = query.eq('site_name', siteName);
+    const { data } = await query;
+    setItems((data as RegisterItem[]) || []);
+  };
 
   useEffect(() => {
     const fetchItems = async () => {
       setLoading(true);
-      let query = supabase
-        .from('lifting_register')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (clientId) {
-        query = query.eq('client_id', clientId);
-      } else {
-        query = query.eq('site_name', siteName);
-      }
-
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error fetching register:', error);
-        toast.error('Failed to load register');
-      }
-      setItems((data as RegisterItem[]) || []);
+      await refreshItems();
       setLoading(false);
     };
     fetchItems();
@@ -78,68 +83,48 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
 
   const statusIcon = (status: string | null) => {
     if (status === 'In Service') return <CheckCircle className="w-4 h-4 text-green-600" />;
-    if (status === 'Failed') return <XCircle className="w-4 h-4 text-destructive" />;
+    if (status === 'Failed' || status === 'Out of Service') return <XCircle className="w-4 h-4 text-destructive" />;
     return <AlertTriangle className="w-4 h-4 text-amber-500" />;
   };
 
   const statusColor = (status: string | null) => {
     if (status === 'In Service') return 'bg-green-100 text-green-800 border-green-200';
-    if (status === 'Failed') return 'bg-red-100 text-red-800 border-red-200';
+    if (status === 'Failed' || status === 'Out of Service') return 'bg-red-100 text-red-800 border-red-200';
     return 'bg-amber-100 text-amber-800 border-amber-200';
   };
 
+  // ─── Share ──────────────────────────────────────────────
   const handleShare = async () => {
-    if (items.length === 0) {
-      toast.error('No items to share');
-      return;
-    }
-
-    // Build a text summary for sharing
+    if (items.length === 0) { toast.error('No items to share'); return; }
     const lines = [
-      `LIFTING EQUIPMENT REGISTER`,
-      `Site: ${siteName}`,
-      `Date: ${new Date().toLocaleDateString('en-AU')}`,
-      `Total Items: ${items.length}`,
-      ``,
-      `${'—'.repeat(40)}`,
+      `LIFTING EQUIPMENT REGISTER`, `Site: ${siteName}`,
+      `Date: ${new Date().toLocaleDateString('en-AU')}`, `Total Items: ${items.length}`, '', `${'—'.repeat(40)}`,
     ];
-
     items.forEach((item, i) => {
       lines.push(`${i + 1}. ${item.equipment_type}`);
       if (item.serial_number) lines.push(`   Serial: ${item.serial_number}`);
       if (item.asset_tag) lines.push(`   Tag: ${item.asset_tag}`);
       if (item.wll_value) lines.push(`   WLL: ${item.wll_value} ${item.wll_unit || 'kg'}`);
       if (item.manufacturer) lines.push(`   Manufacturer: ${item.manufacturer}`);
-      if (item.model) lines.push(`   Model: ${item.model}`);
-      if (item.grade) lines.push(`   Grade: ${item.grade}`);
-      if (item.length_m) lines.push(`   Length: ${item.length_m}m`);
       lines.push(`   Status: ${item.equipment_status || 'Unknown'}`);
-      if (item.tag_present === 'false') lines.push(`   ⚠️ Tag Missing`);
       lines.push('');
     });
-
     const text = lines.join('\n');
-
     if (navigator.share) {
-      try {
-        await navigator.share({ title: `Lifting Register - ${siteName}`, text });
-        toast.success('Shared successfully');
-      } catch {
-        // User cancelled
-      }
+      try { await navigator.share({ title: `Lifting Register - ${siteName}`, text }); toast.success('Shared'); } catch { /* cancelled */ }
     } else {
       await navigator.clipboard.writeText(text);
       toast.success('Register copied to clipboard');
     }
   };
 
+  // ─── PDF / CSV downloads ────────────────────────────────
   const handleDownloadPdf = async () => {
     if (items.length === 0) { toast.error('No items to export'); return; }
     try {
       const pdf = await generateLiftingRegisterPdf({ siteName, clientName: clientName || siteName, technicianName: 'Technician', items });
       const safeName = (clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_');
-      const dateStr = format(new Date(), 'yyyyMMdd');
-      pdf.save(`${safeName}_LiftingRegister_${dateStr}.pdf`);
+      pdf.save(`${safeName}_LiftingRegister_${format(new Date(), 'yyyyMMdd')}.pdf`);
       toast.success('PDF downloaded');
     } catch (err) { console.error('PDF error:', err); toast.error('Failed to generate PDF'); }
   };
@@ -148,18 +133,10 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     if (items.length === 0) { toast.error('No items to export'); return; }
     const headers = ['Equipment Type', 'Serial Number', 'Asset Tag', 'WLL', 'Unit', 'Manufacturer', 'Model', 'Grade', 'Length (m)', 'Status', 'Tag Present', 'Registered By', 'Date'];
     const rows = items.map(item => [
-      item.equipment_type,
-      item.serial_number || '',
-      item.asset_tag || '',
-      item.wll_value ?? '',
-      item.wll_unit || '',
-      item.manufacturer || '',
-      item.model || '',
-      item.grade || '',
-      item.length_m ?? '',
-      item.equipment_status || '',
-      item.tag_present || '',
-      item.registered_by_name,
+      item.equipment_type, item.serial_number || '', item.asset_tag || '',
+      item.wll_value ?? '', item.wll_unit || '', item.manufacturer || '',
+      item.model || '', item.grade || '', item.length_m ?? '',
+      item.equipment_status || '', item.tag_present || '', item.registered_by_name,
       new Date(item.created_at).toLocaleDateString('en-AU'),
     ]);
     const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -167,13 +144,13 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const safeName = (clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_');
-    a.download = `${safeName}_LiftingRegister_${format(new Date(), 'yyyyMMdd')}.csv`;
+    a.download = `${(clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_')}_LiftingRegister_${format(new Date(), 'yyyyMMdd')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success('CSV downloaded');
   };
 
+  // ─── Import (CSV / Excel) ──────────────────────────────
   const headerMap: Record<string, string> = {
     'equipment type': 'equipment_type', 'type': 'equipment_type',
     'manufacturer': 'manufacturer', 'make': 'manufacturer', 'brand': 'manufacturer',
@@ -196,84 +173,88 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     const colMap = headers.map(h => headerMap[h.toLowerCase().trim()] || null);
     const techName = localStorage.getItem('technicianName') || 'Import';
     const techId = localStorage.getItem('technicianId') || 'import';
-
     return dataRows.filter(vals => vals.some(v => v != null && String(v).trim())).map(vals => {
-      const row: any = {
-        registered_by_name: techName,
-        registered_by_id: techId,
-        site_name: siteName,
-        client_id: clientId || null,
-      };
+      const row: any = { registered_by_name: techName, registered_by_id: techId, site_name: siteName, client_id: clientId || null };
       colMap.forEach((field, idx) => {
         if (!field || vals[idx] == null || String(vals[idx]).trim() === '') return;
         const val = String(vals[idx]).trim();
-        if (['wll_value', 'length_m', 'lift_height_m', 'span_m'].includes(field)) {
-          row[field] = parseFloat(val) || null;
-        } else if (field === 'sling_leg_count') {
-          row[field] = parseInt(val) || null;
-        } else {
-          row[field] = val;
-        }
+        if (['wll_value', 'length_m', 'lift_height_m', 'span_m'].includes(field)) row[field] = parseFloat(val) || null;
+        else if (field === 'sling_leg_count') row[field] = parseInt(val) || null;
+        else row[field] = val;
       });
       if (!row.equipment_type) row.equipment_type = 'Unknown';
       return row;
     });
   };
 
-  const refreshItems = async () => {
-    let query = supabase.from('lifting_register').select('*').order('created_at', { ascending: false });
-    if (clientId) query = query.eq('client_id', clientId);
-    else query = query.eq('site_name', siteName);
-    const { data } = await query;
-    setItems((data as RegisterItem[]) || []);
-  };
-
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setImporting(true);
-
     try {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      
-      // Find the sheet with the most data rows (often the 2nd sheet has the actual data)
+
+      // Find the sheet with the most data rows
       let bestSheet: any[][] = [];
       let bestSheetName = '';
       for (const sheetName of workbook.SheetNames) {
         const sheet = workbook.Sheets[sheetName];
         const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        // Filter out completely empty rows
         const nonEmpty = data.filter(row => row.some(cell => cell != null && String(cell).trim() !== ''));
-        if (nonEmpty.length > bestSheet.length) {
-          bestSheet = nonEmpty;
-          bestSheetName = sheetName;
-        }
+        if (nonEmpty.length > bestSheet.length) { bestSheet = nonEmpty; bestSheetName = sheetName; }
       }
-
       console.log(`Using sheet "${bestSheetName}" with ${bestSheet.length} rows from ${workbook.SheetNames.length} sheets`);
 
       if (bestSheet.length < 2) { toast.error('No sheet found with a header row and data'); setImporting(false); return; }
 
       const headers = bestSheet[0].map((h: any) => String(h || ''));
-      const dataRows = bestSheet.slice(1);
-      const rows = parseRowsToInsert(headers, dataRows);
+      const rows = parseRowsToInsert(headers, bestSheet.slice(1));
 
       if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
 
       const { error } = await supabase.from('lifting_register').insert(rows);
-      if (error) {
-        console.error('Import error:', error);
-        toast.error('Import failed: ' + error.message);
-      } else {
-        toast.success(`Imported ${rows.length} items`);
-        await refreshItems();
-      }
-    } catch (err) {
-      console.error('File parse error:', err);
-      toast.error('Failed to parse file');
-    }
+      if (error) { console.error('Import error:', error); toast.error('Import failed: ' + error.message); }
+      else { toast.success(`Imported ${rows.length} items`); await refreshItems(); }
+    } catch (err) { console.error('File parse error:', err); toast.error('Failed to parse file'); }
     setImporting(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // ─── Edit ───────────────────────────────────────────────
+  const openEdit = (item: RegisterItem) => {
+    setEditItem(item);
+    setEditForm({ ...item });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editItem) return;
+    setSaving(true);
+    const { error } = await supabase.from('lifting_register').update({
+      equipment_type: editForm.equipment_type || editItem.equipment_type,
+      manufacturer: editForm.manufacturer || null,
+      model: editForm.model || null,
+      serial_number: editForm.serial_number || null,
+      asset_tag: editForm.asset_tag || null,
+      wll_value: editForm.wll_value ?? null,
+      wll_unit: editForm.wll_unit || null,
+      length_m: editForm.length_m ?? null,
+      grade: editForm.grade || null,
+      equipment_status: editForm.equipment_status || null,
+      notes: editForm.notes || null,
+    }).eq('id', editItem.id);
+
+    if (error) { toast.error('Failed to save'); console.error(error); }
+    else { toast.success('Item updated'); await refreshItems(); setEditItem(null); }
+    setSaving(false);
+  };
+
+  // ─── Delete ─────────────────────────────────────────────
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('lifting_register').delete().eq('id', id);
+    if (error) { toast.error('Failed to delete'); console.error(error); }
+    else { toast.success('Item deleted'); setItems(prev => prev.filter(i => i.id !== id)); }
+    setDeleteConfirm(null);
   };
 
   // Group by equipment type
@@ -286,61 +267,44 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader
-        title="Lifting Equipment Register"
-        subtitle={`${siteName} • ${items.length} items`}
-        onBack={onBack}
-      />
+      <AppHeader title="Lifting Equipment Register" subtitle={`${siteName} • ${items.length} items`} onBack={onBack} />
 
       <div className="px-4 py-2 border-b border-border space-y-2">
         <div className="flex gap-2">
           <Button onClick={handleShare} variant="outline" className="flex-1 gap-1 text-xs">
-            <Share2 className="w-3.5 h-3.5" />
-            Share
+            <Share2 className="w-3.5 h-3.5" /> Share
           </Button>
           <Button onClick={handleDownloadPdf} variant="outline" className="flex-1 gap-1 text-xs">
-            <FileText className="w-3.5 h-3.5" />
-            PDF
+            <FileText className="w-3.5 h-3.5" /> PDF
           </Button>
           <Button onClick={handleDownloadCsv} variant="outline" className="flex-1 gap-1 text-xs">
-            <Download className="w-3.5 h-3.5" />
-            CSV
+            <Download className="w-3.5 h-3.5" /> CSV
           </Button>
           <Button
             variant="outline"
             className="flex-1 gap-1 text-xs"
             disabled={importing}
-            onClick={() => document.getElementById('csv-import-input')?.click()}
+            onClick={() => fileInputRef.current?.click()}
           >
             {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             {importing ? 'Importing...' : 'Import'}
           </Button>
-          <input
-            id="csv-import-input"
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            className="hidden"
-            onChange={handleImportFile}
-          />
+          <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImportFile} />
         </div>
         <div className="flex gap-2">
           {onInspect && (
             <Button onClick={onInspect} variant="secondary" className="flex-1 gap-2">
-              <CheckCircle className="w-4 h-4" />
-              Inspect All
+              <CheckCircle className="w-4 h-4" /> Inspect All
             </Button>
           )}
-          <Button onClick={onAddNew} className="flex-1 gap-2">
-            + Add Item
-          </Button>
+          <Button onClick={onAddNew} className="flex-1 gap-2">+ Add Item</Button>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
         {loading && (
           <div className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Loading register...
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading register...
           </div>
         )}
 
@@ -348,7 +312,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           <div className="p-8 text-center text-muted-foreground">
             <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="font-medium">No lifting equipment registered</p>
-            <p className="text-sm mt-1">Tap "Add Item" to register lifting equipment</p>
+            <p className="text-sm mt-1">Tap "Add Item" or "Import" to add lifting equipment</p>
           </div>
         )}
 
@@ -356,8 +320,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           <div key={type}>
             <div className="px-4 py-2 bg-muted/50 border-b border-border">
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Package className="w-3.5 h-3.5" />
-                {type} ({typeItems.length})
+                <Package className="w-3.5 h-3.5" /> {type} ({typeItems.length})
               </p>
             </div>
             {typeItems.map(item => (
@@ -374,9 +337,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                       {item.serial_number && <p>SN: {item.serial_number}</p>}
                       {item.asset_tag && <p>Tag: {item.asset_tag}</p>}
                       {item.wll_value && (
-                        <p className="font-medium text-foreground">
-                          WLL: {item.wll_value} {item.wll_unit || 'kg'}
-                        </p>
+                        <p className="font-medium text-foreground">WLL: {item.wll_value} {item.wll_unit || 'kg'}</p>
                       )}
                       {item.manufacturer && <p>{item.manufacturer}{item.model ? ` — ${item.model}` : ''}</p>}
                       {item.grade && <p>Grade: {item.grade}</p>}
@@ -393,7 +354,15 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                       </div>
                     )}
                   </div>
-                  {statusIcon(item.equipment_status)}
+                  <div className="flex flex-col gap-1">
+                    {statusIcon(item.equipment_status)}
+                    <button onClick={() => openEdit(item)} className="p-1 rounded hover:bg-muted" title="Edit">
+                      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                    <button onClick={() => setDeleteConfirm(item.id)} className="p-1 rounded hover:bg-destructive/10" title="Delete">
+                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-2">
                   Registered by {item.registered_by_name} • {new Date(item.created_at).toLocaleDateString('en-AU')}
@@ -403,6 +372,106 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           </div>
         ))}
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editItem} onOpenChange={(open) => { if (!open) setEditItem(null); }}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Equipment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Equipment Type</Label>
+              <Select value={editForm.equipment_type || ''} onValueChange={v => setEditForm(f => ({ ...f, equipment_type: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {EQUIPMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Manufacturer</Label>
+                <Input value={editForm.manufacturer || ''} onChange={e => setEditForm(f => ({ ...f, manufacturer: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Model</Label>
+                <Input value={editForm.model || ''} onChange={e => setEditForm(f => ({ ...f, model: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Serial Number</Label>
+                <Input value={editForm.serial_number || ''} onChange={e => setEditForm(f => ({ ...f, serial_number: e.target.value }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Asset Tag</Label>
+                <Input value={editForm.asset_tag || ''} onChange={e => setEditForm(f => ({ ...f, asset_tag: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-xs">WLL</Label>
+                <Input type="number" value={editForm.wll_value ?? ''} onChange={e => setEditForm(f => ({ ...f, wll_value: e.target.value ? Number(e.target.value) : null }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Unit</Label>
+                <Select value={editForm.wll_unit || 'kg'} onValueChange={v => setEditForm(f => ({ ...f, wll_unit: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg">kg</SelectItem>
+                    <SelectItem value="t">t</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Grade</Label>
+                <Input value={editForm.grade || ''} onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Length (m)</Label>
+                <Input type="number" value={editForm.length_m ?? ''} onChange={e => setEditForm(f => ({ ...f, length_m: e.target.value ? Number(e.target.value) : null }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Status</Label>
+                <Select value={editForm.equipment_status || 'In Service'} onValueChange={v => setEditForm(f => ({ ...f, equipment_status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Notes</Label>
+              <Input value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Item</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Are you sure you want to delete this lifting equipment item? This cannot be undone.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
