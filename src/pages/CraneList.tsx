@@ -819,6 +819,37 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
                     }`}>{r.status}</span>
                   </div>
                 </div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => {
+                      // Open the inspection form in edit mode
+                      const crane: Crane = {
+                        id: `report-${r.id}`,
+                        siteId: site.id,
+                        name: r.asset_name || 'Site Inspection',
+                        type: 'Single Girder Overhead',
+                        serialNumber: 'N/A',
+                        capacity: 'N/A',
+                        manufacturer: 'N/A',
+                        yearInstalled: 0,
+                      };
+                      setActiveDbForm({ formId: r.form_id, crane, assetId: undefined });
+                      // Set existing inspection ID by storing it for the form
+                      setEditingReportId(r.id);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setDeletingReportId(r.id)}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-bold"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                </div>
               </div>
             ))
           )}
