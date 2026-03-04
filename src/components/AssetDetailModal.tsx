@@ -47,7 +47,11 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
   const [showMore, setShowMore] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [mainPhotoUrl, setMainPhotoUrl] = useState(asset.main_photo_url || '');
+  const [galleryPhotos, setGalleryPhotos] = useState<{ id: string; photo_url: string; caption: string | null }[]>([]);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Editable fields
   const [description, setDescription] = useState(asset.description || '');
