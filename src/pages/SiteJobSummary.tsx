@@ -707,7 +707,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
         )}
 
         {/* Defect Review for Customer */}
-        {(totalDefectCount > 0 || dbDefectsLoading) && (
+        {isSectionVisible('defects_found') && (totalDefectCount > 0 || dbDefectsLoading) && (
           <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -1097,7 +1097,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
         )}
 
         {/* Lifting Equipment Defects */}
-        {(liftingDefects.length > 0 || liftingDefectsLoading) && (
+        {isSectionVisible('lifting_equipment_defects') && (liftingDefects.length > 0 || liftingDefectsLoading) && (
           <div className="px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2 mb-3">
               <Package className="w-4 h-4 text-destructive" />
@@ -1213,7 +1213,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
           </div>
         )}
 
-        {completedInspections.some(i => i.craneStatus) && (
+        {isSectionVisible('asset_operational_status') && completedInspections.some(i => i.craneStatus) && (
           <div className="px-4 py-3 border-b border-border">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asset Operational Status</p>
             {completedInspections.map(insp => {
@@ -1237,25 +1237,29 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
 
         <div className="p-4 space-y-5">
           {/* Next Inspection - filled by technician */}
-          <div id="next-inspection-date">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Inspection Date</label>
-            <input
-              type="date"
-              value={nextDate}
-              onChange={(e) => setNextDate(e.target.value)}
-              className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
-            />
-          </div>
+          {isSectionVisible('next_inspection_date') && (
+            <>
+              <div id="next-inspection-date">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Next Inspection Date</label>
+                <input
+                  type="date"
+                  value={nextDate}
+                  onChange={(e) => setNextDate(e.target.value)}
+                  className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
+                />
+              </div>
 
-          <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time</label>
-            <input
-              type="time"
-              value={nextTime}
-              onChange={(e) => setNextTime(e.target.value)}
-              className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
-            />
-          </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Time</label>
+                <input
+                  type="time"
+                  value={nextTime}
+                  onChange={(e) => setNextTime(e.target.value)}
+                  className="w-full tap-target px-4 border border-border rounded-xl bg-background text-base mt-1"
+                />
+              </div>
+            </>
+          )}
 
           {/* ── Customer Section ── */}
           <div className="border-t-2 border-primary/30 pt-4 mt-2">
@@ -1265,23 +1269,25 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
             </div>
 
             {/* Confirm Booking */}
-            <div className="space-y-1 mb-4">
-              <div className="flex items-center gap-1">
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Confirm Booking</label>
-                {!bookingConfirmed && <span className="text-xs font-bold text-rka-red">Required</span>}
+            {isSectionVisible('confirm_booking') && (
+              <div className="space-y-1 mb-4">
+                <div className="flex items-center gap-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Confirm Booking</label>
+                  {!bookingConfirmed && <span className="text-xs font-bold text-rka-red">Required</span>}
+                </div>
+                <button
+                  onClick={() => setBookingConfirmed(!bookingConfirmed)}
+                  className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                    bookingConfirmed
+                      ? 'bg-rka-green text-primary-foreground'
+                      : 'bg-muted text-foreground ring-2 ring-primary/40'
+                  }`}
+                >
+                  {bookingConfirmed && <Check className="w-5 h-5" />}
+                  {bookingConfirmed ? 'Calendar Invite Sent and Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
+                </button>
               </div>
-              <button
-                onClick={() => setBookingConfirmed(!bookingConfirmed)}
-                className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                  bookingConfirmed
-                    ? 'bg-rka-green text-primary-foreground'
-                    : 'bg-muted text-foreground ring-2 ring-primary/40'
-                }`}
-              >
-                {bookingConfirmed && <Check className="w-5 h-5" />}
-                {bookingConfirmed ? 'Calendar Invite Sent and Booking Confirmed ✓' : 'Confirm Booking & Send Calendar Invite'}
-              </button>
-            </div>
+            )}
 
             {/* Customer Name */}
             <div className="mb-4">
