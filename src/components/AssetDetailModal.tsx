@@ -119,6 +119,31 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-4 space-y-3">
+          {/* Main Asset Photo */}
+          <div>
+            <label className={labelClass}>Main Asset Photo</label>
+            <input type="file" accept="image/*" capture="environment" ref={photoInputRef} className="hidden" onChange={handlePhotoUpload} />
+            {mainPhotoUrl ? (
+              <div className="relative mt-1">
+                <img src={mainPhotoUrl} alt="Asset" className="w-full h-32 object-cover rounded-lg border border-border" />
+                <button
+                  onClick={() => photoInputRef.current?.click()}
+                  className="absolute bottom-2 right-2 bg-background/80 backdrop-blur rounded-lg px-2 py-1 text-xs font-medium flex items-center gap-1 border border-border"
+                >
+                  <Camera className="w-3 h-3" /> Replace
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="mt-1 w-full h-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors"
+              >
+                <Camera className="w-5 h-5" />
+                <span className="text-xs">{uploadingPhoto ? 'Uploading…' : 'Add Asset Photo'}</span>
+              </button>
+            )}
+          </div>
           <div>
             <label className={labelClass}>Description / Name</label>
             <input type="text" value={description} onChange={e => setDescription(e.target.value)} className={inputClass} />
