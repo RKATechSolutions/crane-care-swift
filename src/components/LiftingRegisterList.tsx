@@ -232,13 +232,27 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     try {
       const arrayBuffer = await file.arrayBuffer();
       const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      
+      // Find the sheet with the most data rows (often the 2nd sheet has the actual data)
+      let bestSheet: any[][] = [];
+      let bestSheetName = '';
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        // Filter out completely empty rows
+        const nonEmpty = data.filter(row => row.some(cell => cell != null && String(cell).trim() !== ''));
+        if (nonEmpty.length > bestSheet.length) {
+          bestSheet = nonEmpty;
+          bestSheetName = sheetName;
+        }
+      }
 
-      if (jsonData.length < 2) { toast.error('File must have a header row and at least one data row'); setImporting(false); return; }
+      console.log(`Using sheet "${bestSheetName}" with ${bestSheet.length} rows from ${workbook.SheetNames.length} sheets`);
 
-      const headers = jsonData[0].map((h: any) => String(h || ''));
-      const dataRows = jsonData.slice(1);
+      if (bestSheet.length < 2) { toast.error('No sheet found with a header row and data'); setImporting(false); return; }
+
+      const headers = bestSheet[0].map((h: any) => String(h || ''));
+      const dataRows = bestSheet.slice(1);
       const rows = parseRowsToInsert(headers, dataRows);
 
       if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
