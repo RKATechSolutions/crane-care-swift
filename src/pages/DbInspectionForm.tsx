@@ -331,6 +331,7 @@ export default function DbInspectionForm({
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
         otherNotes: otherNotes || undefined,
+        assetPhotoUrl,
       });
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
