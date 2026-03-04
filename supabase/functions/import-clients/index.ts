@@ -1,12 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Map CSV header names to DB column names
+// Map CSV/XLS header names to DB column names
 const HEADER_MAP: Record<string, string> = {
   'client name': 'client_name',
   'status': 'status',
@@ -29,7 +30,7 @@ const HEADER_MAP: Record<string, string> = {
   'site induction details': 'site_induction_details',
   'travel time one way from riverstone': 'travel_time_from_base',
   'cfloc planned service dates': 'planned_service_dates',
-  // Legacy column mappings for older CSV formats
+  // Legacy column mappings
   'location address': 'location_address',
   'primary contact email': 'primary_contact_email',
   'primary contact mobile': 'primary_contact_mobile',
@@ -38,7 +39,6 @@ const HEADER_MAP: Record<string, string> = {
   'primary contact position': 'primary_contact_position',
 };
 
-// Columns that are valid for upsert into the clients table
 const VALID_CLIENT_COLUMNS = new Set([
   'client_name', 'status', 'abn', 'primary_contact_name',
   'automatic_service_package', 'business_type', 'casual_service_rates',
@@ -63,64 +63,93 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { csvUrl } = await req.json();
+    const body = await req.json();
+    const fileUrl = body.csvUrl || body.fileUrl;
     
-    const csvResponse = await fetch(csvUrl);
-    const csvData = await csvResponse.text();
-    
-    console.log("CSV length:", csvData.length);
-    
-    const lines = csvData.split(/\r?\n/).filter((l: string) => l.trim());
-    console.log("Total lines:", lines.length);
+    const fileResponse = await fetch(fileUrl);
+    const contentType = fileResponse.headers.get("content-type") || "";
+    const isExcel = fileUrl.match(/\.xls[x]?$/i) || 
+                    contentType.includes("spreadsheet") || 
+                    contentType.includes("excel") ||
+                    contentType.includes("octet-stream");
 
-    if (lines.length < 2) {
-      throw new Error("CSV has no data rows");
-    }
-    
-    // Parse header row to build column index mapping
-    const headerValues = parseCSVLine(lines[0]);
-    const columnMap: { index: number; dbColumn: string }[] = [];
-    
-    for (let i = 0; i < headerValues.length; i++) {
-      const headerNorm = headerValues[i].trim().toLowerCase().replace(/['"]/g, '');
-      const dbCol = HEADER_MAP[headerNorm];
-      if (dbCol && VALID_CLIENT_COLUMNS.has(dbCol)) {
-        columnMap.push({ index: i, dbColumn: dbCol });
+    let rows: Record<string, string>[];
+
+    if (isExcel) {
+      console.log("Parsing as Excel file");
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as string[][];
+      
+      if (jsonData.length < 2) throw new Error("File has no data rows");
+      
+      const headers = (jsonData[0] as string[]).map(h => String(h).trim().toLowerCase().replace(/['"]/g, ''));
+      const columnMap: { index: number; dbColumn: string }[] = [];
+      
+      for (let i = 0; i < headers.length; i++) {
+        const dbCol = HEADER_MAP[headers[i]];
+        if (dbCol && VALID_CLIENT_COLUMNS.has(dbCol)) {
+          columnMap.push({ index: i, dbColumn: dbCol });
+        }
+      }
+      
+      console.log(`Mapped ${columnMap.length} columns:`, columnMap.map(c => c.dbColumn));
+      
+      rows = [];
+      for (let i = 1; i < jsonData.length; i++) {
+        const values = jsonData[i] as string[];
+        const row: Record<string, any> = {};
+        for (const col of columnMap) {
+          const val = values[col.index] != null ? String(values[col.index]).trim() : null;
+          row[col.dbColumn] = val && val.length > 0 ? val : null;
+        }
+        if (row.client_name) rows.push(row);
+      }
+    } else {
+      console.log("Parsing as CSV file");
+      const csvData = await fileResponse.text();
+      const lines = csvData.split(/\r?\n/).filter((l: string) => l.trim());
+      if (lines.length < 2) throw new Error("CSV has no data rows");
+      
+      const headerValues = parseCSVLine(lines[0]);
+      const columnMap: { index: number; dbColumn: string }[] = [];
+      
+      for (let i = 0; i < headerValues.length; i++) {
+        const headerNorm = headerValues[i].trim().toLowerCase().replace(/['"]/g, '');
+        const dbCol = HEADER_MAP[headerNorm];
+        if (dbCol && VALID_CLIENT_COLUMNS.has(dbCol)) {
+          columnMap.push({ index: i, dbColumn: dbCol });
+        }
+      }
+      
+      console.log(`Mapped ${columnMap.length} columns:`, columnMap.map(c => c.dbColumn));
+      
+      rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCSVLine(lines[i]);
+        if (values.length < 2) continue;
+        const row: Record<string, any> = {};
+        for (const col of columnMap) {
+          const val = values[col.index]?.trim() || null;
+          row[col.dbColumn] = val && val.length > 0 ? val : null;
+        }
+        if (row.client_name) rows.push(row);
       }
     }
 
-    console.log(`Mapped ${columnMap.length} columns:`, columnMap.map(c => c.dbColumn));
+    console.log(`Parsed ${rows.length} client rows`);
 
-    // Parse data rows
-    const clientRows: Record<string, any>[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i]);
-      if (values.length < 2) continue;
-
-      const row: Record<string, any> = {};
-      for (const col of columnMap) {
-        const val = values[col.index]?.trim() || null;
-        // Don't store empty strings
-        row[col.dbColumn] = val && val.length > 0 ? val : null;
-      }
-
-      if (!row.client_name) continue;
-
-      // Default status to Active if not provided
+    // Default status & deduplicate
+    for (const row of rows) {
       if (!row.status) row.status = 'Active';
-
-      clientRows.push(row);
     }
 
-    console.log(`Parsed ${clientRows.length} client rows`);
-
-    // Deduplicate by client_name (keep last occurrence which has the most data)
     const dedupedMap = new Map<string, Record<string, any>>();
-    for (const row of clientRows) {
+    for (const row of rows) {
       const existing = dedupedMap.get(row.client_name);
       if (existing) {
-        // Merge: keep non-null values from both, preferring new values
         for (const [key, val] of Object.entries(row)) {
           if (val !== null) existing[key] = val;
         }
@@ -131,7 +160,6 @@ serve(async (req) => {
     const dedupedRows = Array.from(dedupedMap.values());
     console.log(`Deduped to ${dedupedRows.length} unique clients`);
 
-    // Upsert in batches of 50
     let upserted = 0;
     for (let i = 0; i < dedupedRows.length; i += 50) {
       const batch = dedupedRows.slice(i, i + 50);
@@ -149,8 +177,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         clients: upserted,
-        columns_mapped: columnMap.map(c => c.dbColumn),
-        message: `Imported ${upserted} clients with ${columnMap.length} fields`,
+        message: `Imported ${upserted} clients`,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
