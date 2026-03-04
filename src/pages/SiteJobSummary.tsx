@@ -6,7 +6,7 @@ import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { addDays, format } from 'date-fns';
-import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Loader2, ExternalLink, Package, ShoppingCart, FileText, Paperclip } from 'lucide-react';
+import { Star, Check, AlertTriangle, Send, ChevronDown, ChevronUp, ZoomIn, X, CheckCircle, Loader2, ExternalLink, Package, ShoppingCart, FileText } from 'lucide-react';
 import { ClientInfoSummarySection } from '@/components/ClientInfoSummarySection';
 import { toast } from 'sonner';
 import rkaReviewQr from '@/assets/rka-review-qr.png';
