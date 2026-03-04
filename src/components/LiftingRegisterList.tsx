@@ -256,11 +256,6 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       toast.error('Failed to parse file');
     }
     setImporting(false);
-    e.target.value = '';
-    };
-    reader.readAsText(file);
-    // Reset input so same file can be re-selected
-    e.target.value = '';
   };
 
   // Group by equipment type
