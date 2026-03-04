@@ -284,10 +284,11 @@ export default function DbInspectionForm({
     setResponses(updates);
   }, [currentSection, responses]);
 
-  const hasChecklistItems = currentSection?.questions.some(q => q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') || false;
+  const passableTypes = ['PassFailNA', 'YesNoNA', 'YesNo', 'SingleSelect'];
+  const hasChecklistItems = currentSection?.questions.some(q => passableTypes.includes(q.answer_type)) || false;
   const allChecklistPassed = currentSection?.questions
-    .filter(q => q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA')
-    .every(q => responses[q.question_id]?.pass_fail_status === 'Pass') || false;
+    .filter(q => passableTypes.includes(q.answer_type))
+    .every(q => responses[q.question_id]?.pass_fail_status === 'Pass' || (responses[q.question_id]?.answer_value && !responses[q.question_id]?.defect_flag)) || false;
 
   const handlePreviewPdf = async () => {
     setGeneratingPreview(true);
