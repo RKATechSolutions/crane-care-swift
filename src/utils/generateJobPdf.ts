@@ -6,6 +6,33 @@ import {
 } from '@/types/inspection';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
 
+interface DbInspectionPdf {
+  id: string;
+  asset_name: string | null;
+  site_name: string | null;
+  status: string;
+  inspection_date: string;
+  form_id: string;
+  crane_status: string | null;
+  technician_name: string;
+}
+
+interface DbDefectPdf {
+  responseId: string;
+  inspectionId: string;
+  questionText: string;
+  assetName: string;
+  severity: string | null;
+  urgency: string | null;
+  defectTypes: string[];
+  comment: string | null;
+  photoUrls: string[];
+  advancedDefectDetail: string[];
+  quoteStatus?: 'Quote Now' | 'Quote Later';
+  customerComment?: string;
+  quoteInstructions?: string;
+}
+
 interface JobPdfData {
   site: Site;
   clientInfo?: {
@@ -33,6 +60,8 @@ interface JobPdfData {
     notes: string | null;
     quoteStatus?: string;
   }[];
+  dbInspections?: DbInspectionPdf[];
+  dbDefects?: DbDefectPdf[];
 }
 
 // RKA brand colours (from Brand Guidelines)
