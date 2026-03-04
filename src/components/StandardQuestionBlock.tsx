@@ -49,10 +49,10 @@ const ALL_DEFECT_CATEGORIES = [
 ];
 
 const URGENCY_LEVELS = [
-  { value: 'Immediate', label: 'Immediate – Remove From Service', color: 'bg-rka-red text-destructive-foreground' },
-  { value: 'Urgent', label: 'Urgent – Repair Before Next Use', color: 'bg-rka-orange text-destructive-foreground' },
+  { value: 'Monitor', label: 'Monitor', color: 'bg-green-600 text-white' },
   { value: 'Scheduled', label: 'Scheduled – Repair Before Next Service', color: 'bg-yellow-500 text-foreground' },
-  { value: 'Monitor', label: 'Monitor', color: 'bg-muted-foreground/20 text-foreground' },
+  { value: 'Urgent', label: 'Urgent – Repair Before Next Use', color: 'bg-rka-orange text-destructive-foreground' },
+  { value: 'Immediate', label: 'Immediate – Remove From Service', color: 'bg-rka-red text-destructive-foreground' },
 ];
 
 export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
