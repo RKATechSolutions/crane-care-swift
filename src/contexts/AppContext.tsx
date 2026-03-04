@@ -47,6 +47,17 @@ type Action =
   | { type: 'UPDATE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
   | { type: 'UPDATE_ADMIN_CONFIG'; payload: Partial<AdminFormConfig> };
 
+function loadSavedAdminConfig(): AdminFormConfig {
+  try {
+    const saved = localStorage.getItem('rka_admin_config');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...DEFAULT_ADMIN_CONFIG, ...parsed };
+    }
+  } catch {}
+  return DEFAULT_ADMIN_CONFIG;
+}
+
 const initialState: AppState = {
   currentUser: null,
   sites: mockSites,
@@ -58,7 +69,7 @@ const initialState: AppState = {
   siteJobSummaries: [],
   adminNotes: [],
   sentReports: [],
-  adminConfig: DEFAULT_ADMIN_CONFIG,
+  adminConfig: loadSavedAdminConfig(),
 };
 
 function computeCraneStatus(items: InspectionItemResult[]): CraneOperationalStatus | undefined {
@@ -268,8 +279,11 @@ function reducer(state: AppState, action: Action): AppState {
       });
       return { ...state, templates: templates3 };
     }
-    case 'UPDATE_ADMIN_CONFIG':
-      return { ...state, adminConfig: { ...state.adminConfig, ...action.payload } };
+    case 'UPDATE_ADMIN_CONFIG': {
+      const newConfig = { ...state.adminConfig, ...action.payload };
+      try { localStorage.setItem('rka_admin_config', JSON.stringify(newConfig)); } catch {}
+      return { ...state, adminConfig: newConfig };
+    }
     default:
       return state;
   }
