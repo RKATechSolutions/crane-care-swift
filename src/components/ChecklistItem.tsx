@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Check, AlertTriangle, MessageCircle, Camera, X, ZoomIn, RotateCcw } from 'lucide-react';
+import { Check, AlertTriangle, MessageCircle, Camera, X, ZoomIn, RotateCcw, ImagePlus } from 'lucide-react';
 import { InspectionItemResult, DefectType, DefectSeverity, RectificationTimeframe, TemplateItem } from '@/types/inspection';
 
 interface ChecklistItemProps {
