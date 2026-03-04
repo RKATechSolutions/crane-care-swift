@@ -1,13 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Map CSV/XLS header names to DB column names
+// Map CSV header names to DB column names for clients table
 const HEADER_MAP: Record<string, string> = {
   'client name': 'client_name',
   'status': 'status',
@@ -30,13 +29,13 @@ const HEADER_MAP: Record<string, string> = {
   'site induction details': 'site_induction_details',
   'travel time one way from riverstone': 'travel_time_from_base',
   'cfloc planned service dates': 'planned_service_dates',
-  // Legacy column mappings
   'location address': 'location_address',
   'primary contact email': 'primary_contact_email',
   'primary contact mobile': 'primary_contact_mobile',
   'primary contact given name': 'primary_contact_given_name',
   'primary contact surname': 'primary_contact_surname',
   'primary contact position': 'primary_contact_position',
+  'company address 1': 'location_address',
 };
 
 const VALID_CLIENT_COLUMNS = new Set([
@@ -53,6 +52,18 @@ const VALID_CLIENT_COLUMNS = new Set([
   'primary_contact_position',
 ]);
 
+// Other contacts column header mapping
+const CONTACT_HEADER_MAP: Record<string, string> = {
+  'other contacts': 'contact_name',
+  'other contacts email': 'contact_email',
+  'other contacts given name': 'contact_given_name',
+  'other contacts mobile': 'contact_mobile',
+  'other contacts phone': 'contact_phone',
+  'other contacts position': 'contact_position',
+  'other contacts status': 'status',
+  'other contacts surname': 'contact_surname',
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -65,119 +76,206 @@ serve(async (req) => {
 
     const body = await req.json();
     const fileUrl = body.csvUrl || body.fileUrl;
-    
+
     const fileResponse = await fetch(fileUrl);
-    const contentType = fileResponse.headers.get("content-type") || "";
-    const isExcel = fileUrl.match(/\.xls[x]?$/i) || 
-                    contentType.includes("spreadsheet") || 
-                    contentType.includes("excel") ||
-                    contentType.includes("octet-stream");
+    const csvData = await fileResponse.text();
 
-    let rows: Record<string, string>[];
+    console.log("CSV length:", csvData.length);
 
-    if (isExcel) {
-      console.log("Parsing as Excel file");
-      const arrayBuffer = await fileResponse.arrayBuffer();
-      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as string[][];
-      
-      if (jsonData.length < 2) throw new Error("File has no data rows");
-      
-      const headers = (jsonData[0] as string[]).map(h => String(h).trim().toLowerCase().replace(/['"]/g, ''));
-      const columnMap: { index: number; dbColumn: string }[] = [];
-      
-      for (let i = 0; i < headers.length; i++) {
-        const dbCol = HEADER_MAP[headers[i]];
-        if (dbCol && VALID_CLIENT_COLUMNS.has(dbCol)) {
-          columnMap.push({ index: i, dbColumn: dbCol });
+    const lines = csvData.split(/\r?\n/).filter((l: string) => l.trim());
+    console.log("Total lines:", lines.length);
+
+    if (lines.length < 2) throw new Error("CSV has no data rows");
+
+    // Parse headers
+    const headerValues = parseCSVLine(lines[0]);
+    const clientColumnMap: { index: number; dbColumn: string }[] = [];
+    const contactColumnMap: { index: number; dbColumn: string }[] = [];
+    let companyAddress2Index = -1;
+
+    for (let i = 0; i < headerValues.length; i++) {
+      const headerNorm = headerValues[i].trim().toLowerCase().replace(/['"]/g, '');
+
+      // Track Company Address 2 separately (append to location_address)
+      if (headerNorm === 'company address 2') {
+        companyAddress2Index = i;
+        continue;
+      }
+
+      const clientDbCol = HEADER_MAP[headerNorm];
+      if (clientDbCol && VALID_CLIENT_COLUMNS.has(clientDbCol)) {
+        clientColumnMap.push({ index: i, dbColumn: clientDbCol });
+      }
+
+      const contactDbCol = CONTACT_HEADER_MAP[headerNorm];
+      if (contactDbCol) {
+        contactColumnMap.push({ index: i, dbColumn: contactDbCol });
+      }
+    }
+
+    console.log(`Mapped ${clientColumnMap.length} client columns, ${contactColumnMap.length} contact columns`);
+
+    // Parse all rows into per-client data + contacts
+    interface ParsedRow {
+      clientData: Record<string, any>;
+      contactData: Record<string, any> | null;
+    }
+
+    const parsedRows: ParsedRow[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseCSVLine(lines[i]);
+      if (values.length < 2) continue;
+
+      // Client fields
+      const clientRow: Record<string, any> = {};
+      for (const col of clientColumnMap) {
+        const val = values[col.index]?.trim() || null;
+        if (val && val.length > 0) {
+          // If column already set (e.g. location_address from company address 1), don't overwrite with empty
+          if (!clientRow[col.dbColumn]) {
+            clientRow[col.dbColumn] = val;
+          }
         }
       }
-      
-      console.log(`Mapped ${columnMap.length} columns:`, columnMap.map(c => c.dbColumn));
-      
-      rows = [];
-      for (let i = 1; i < jsonData.length; i++) {
-        const values = jsonData[i] as string[];
-        const row: Record<string, any> = {};
-        for (const col of columnMap) {
-          const val = values[col.index] != null ? String(values[col.index]).trim() : null;
-          row[col.dbColumn] = val && val.length > 0 ? val : null;
-        }
-        if (row.client_name) rows.push(row);
-      }
-    } else {
-      console.log("Parsing as CSV file");
-      const csvData = await fileResponse.text();
-      const lines = csvData.split(/\r?\n/).filter((l: string) => l.trim());
-      if (lines.length < 2) throw new Error("CSV has no data rows");
-      
-      const headerValues = parseCSVLine(lines[0]);
-      const columnMap: { index: number; dbColumn: string }[] = [];
-      
-      for (let i = 0; i < headerValues.length; i++) {
-        const headerNorm = headerValues[i].trim().toLowerCase().replace(/['"]/g, '');
-        const dbCol = HEADER_MAP[headerNorm];
-        if (dbCol && VALID_CLIENT_COLUMNS.has(dbCol)) {
-          columnMap.push({ index: i, dbColumn: dbCol });
+
+      // Append Company Address 2 to location_address if present
+      if (companyAddress2Index >= 0) {
+        const addr2 = values[companyAddress2Index]?.trim();
+        if (addr2) {
+          clientRow.location_address = clientRow.location_address
+            ? `${addr2}, ${clientRow.location_address}`
+            : addr2;
         }
       }
-      
-      console.log(`Mapped ${columnMap.length} columns:`, columnMap.map(c => c.dbColumn));
-      
-      rows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const values = parseCSVLine(lines[i]);
-        if (values.length < 2) continue;
-        const row: Record<string, any> = {};
-        for (const col of columnMap) {
+
+      if (!clientRow.client_name) continue;
+      if (!clientRow.status) clientRow.status = 'Active';
+
+      // Contact fields
+      let contactData: Record<string, any> | null = null;
+      if (contactColumnMap.length > 0) {
+        const contact: Record<string, any> = {};
+        for (const col of contactColumnMap) {
           const val = values[col.index]?.trim() || null;
-          row[col.dbColumn] = val && val.length > 0 ? val : null;
+          contact[col.dbColumn] = val && val.length > 0 ? val : null;
         }
-        if (row.client_name) rows.push(row);
+        // Only create contact if it has a name or email
+        if (contact.contact_name || contact.contact_email) {
+          contactData = contact;
+        }
       }
+
+      parsedRows.push({ clientData: clientRow, contactData });
     }
 
-    console.log(`Parsed ${rows.length} client rows`);
+    console.log(`Parsed ${parsedRows.length} rows`);
 
-    // Default status & deduplicate
-    for (const row of rows) {
-      if (!row.status) row.status = 'Active';
-    }
+    // Deduplicate clients (merge by client_name, keep non-null values)
+    const dedupedClients = new Map<string, Record<string, any>>();
+    // Collect contacts per client
+    const clientContacts = new Map<string, Map<string, Record<string, any>>>();
 
-    const dedupedMap = new Map<string, Record<string, any>>();
-    for (const row of rows) {
-      const existing = dedupedMap.get(row.client_name);
+    for (const { clientData, contactData } of parsedRows) {
+      const name = clientData.client_name;
+      const existing = dedupedClients.get(name);
       if (existing) {
-        for (const [key, val] of Object.entries(row)) {
-          if (val !== null) existing[key] = val;
+        for (const [key, val] of Object.entries(clientData)) {
+          if (val !== null && val !== undefined) existing[key] = val;
         }
       } else {
-        dedupedMap.set(row.client_name, { ...row });
+        dedupedClients.set(name, { ...clientData });
+      }
+
+      // Deduplicate contacts by name+email combo
+      if (contactData) {
+        if (!clientContacts.has(name)) clientContacts.set(name, new Map());
+        const contactKey = `${contactData.contact_name || ''}|${contactData.contact_email || ''}`;
+        if (!clientContacts.get(name)!.has(contactKey)) {
+          clientContacts.get(name)!.set(contactKey, contactData);
+        }
       }
     }
-    const dedupedRows = Array.from(dedupedMap.values());
-    console.log(`Deduped to ${dedupedRows.length} unique clients`);
 
+    const clientRows = Array.from(dedupedClients.values());
+    console.log(`Deduped to ${clientRows.length} unique clients`);
+
+    // Upsert clients in batches of 50
     let upserted = 0;
-    for (let i = 0; i < dedupedRows.length; i += 50) {
-      const batch = dedupedRows.slice(i, i + 50);
+    for (let i = 0; i < clientRows.length; i += 50) {
+      const batch = clientRows.slice(i, i + 50);
       const { error } = await supabase
         .from("clients")
         .upsert(batch, { onConflict: "client_name" });
       if (error) {
-        console.error(`Batch ${i} error:`, error);
+        console.error(`Client batch ${i} error:`, error);
         throw error;
       }
       upserted += batch.length;
+    }
+    console.log(`Upserted ${upserted} clients`);
+
+    // Now import contacts - fetch client IDs first
+    let contactsImported = 0;
+    const clientNames = Array.from(clientContacts.keys());
+
+    if (clientNames.length > 0) {
+      // Fetch all client IDs
+      const { data: clientIdData } = await supabase
+        .from("clients")
+        .select("id, client_name")
+        .in("client_name", clientNames);
+
+      const clientIdMap = new Map<string, string>();
+      if (clientIdData) {
+        for (const c of clientIdData) {
+          clientIdMap.set(c.client_name, c.id);
+        }
+      }
+
+      // Build contact rows
+      const allContacts: Record<string, any>[] = [];
+      for (const [clientName, contacts] of clientContacts.entries()) {
+        const clientId = clientIdMap.get(clientName);
+        if (!clientId) continue;
+        for (const contact of contacts.values()) {
+          // Skip if contact_name is just dots or empty
+          const cleanName = (contact.contact_name || '').replace(/[.\s]/g, '');
+          if (!cleanName && !contact.contact_email) continue;
+
+          allContacts.push({
+            client_id: clientId,
+            ...contact,
+          });
+        }
+      }
+
+      console.log(`Importing ${allContacts.length} contacts`);
+
+      // Delete existing contacts and re-insert (full refresh)
+      const uniqueClientIds = [...new Set(allContacts.map(c => c.client_id))];
+      for (const cid of uniqueClientIds) {
+        await supabase.from("client_contacts").delete().eq("client_id", cid);
+      }
+
+      // Insert in batches of 50
+      for (let i = 0; i < allContacts.length; i += 50) {
+        const batch = allContacts.slice(i, i + 50);
+        const { error } = await supabase.from("client_contacts").upsert(batch);
+        if (error) {
+          console.error(`Contact batch ${i} error:`, error);
+        } else {
+          contactsImported += batch.length;
+        }
+      }
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         clients: upserted,
-        message: `Imported ${upserted} clients`,
+        contacts: contactsImported,
+        message: `Imported ${upserted} clients and ${contactsImported} contacts`,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
