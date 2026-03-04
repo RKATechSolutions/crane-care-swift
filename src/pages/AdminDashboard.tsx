@@ -97,6 +97,7 @@ export default function AdminDashboard() {
         >
           <Package className="w-4 h-4 inline mr-1" />
           Assets
+        </button>
         <button
           onClick={() => setTab('suggestions')}
           className={`flex-1 py-3 text-xs font-semibold text-center transition-colors whitespace-nowrap px-2 ${
