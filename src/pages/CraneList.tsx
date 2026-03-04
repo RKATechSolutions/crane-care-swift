@@ -33,6 +33,7 @@ interface DbAsset {
   serial_number: string | null;
   length_lift: string | null;
   crane_manufacturer: string | null;
+  main_photo_url: string | null;
 }
 
 export default function CraneList() {
@@ -114,7 +115,7 @@ export default function CraneList() {
     }
     const fetchAssets = async () => {
       setLoading(true);
-      const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer';
+      const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer, main_photo_url';
 
       // 1. Try client_id if this is a DB client site
       if (site.id.startsWith('db-')) {
@@ -264,7 +265,7 @@ export default function CraneList() {
   };
 
   const refreshAssets = async () => {
-    const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer';
+    const selectFields = 'id, class_name, asset_id1, asset_id2, status, account_name, location_name, area_name, description, asset_type, capacity, manufacturer, model_number, serial_number, length_lift, crane_manufacturer, main_photo_url';
     const cId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
     if (cId) {
       const { data } = await supabase.from('assets').select(selectFields).eq('client_id', cId).order('class_name');
