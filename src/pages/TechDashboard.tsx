@@ -48,13 +48,6 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       color: 'bg-indigo-500/10 text-indigo-600',
     },
     {
-      id: 'schedule',
-      icon: <Calendar className="w-8 h-8" />,
-      title: 'Schedule & Leave',
-      desc: 'View jobs, calendar & request leave',
-      color: 'bg-blue-500/10 text-blue-600',
-    },
-    {
       id: 'clients',
       icon: <Users className="w-8 h-8" />,
       title: 'Clients',
@@ -88,13 +81,6 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       title: 'Receipts',
       desc: 'Send receipts straight to Xero',
       color: 'bg-teal-500/10 text-teal-600',
-    },
-    {
-      id: 'assets',
-      icon: <Package className="w-8 h-8" />,
-      title: 'Assets',
-      desc: 'Search & manage equipment',
-      color: 'bg-amber-500/10 text-amber-600',
     },
   ];
 
