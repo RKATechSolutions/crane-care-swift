@@ -395,6 +395,7 @@ export default function AdminCustomisation() {
                               <option value="number">Number</option>
                               <option value="date">Date</option>
                               <option value="select">Dropdown</option>
+                              <option value="checkbox">Checkbox (Yes/No)</option>
                             </select>
                           </div>
                           <div>
@@ -469,6 +470,7 @@ export default function AdminCustomisation() {
               <option value="number">Number</option>
               <option value="date">Date</option>
               <option value="select">Dropdown</option>
+              <option value="checkbox">Checkbox (Yes/No)</option>
             </select>
             <select
               value={newClientGroup}
