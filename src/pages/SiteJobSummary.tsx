@@ -714,140 +714,171 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
                   const uncategorizedDb = dbDefects.filter(d => !d.quoteStatus);
                   
                   const renderDefectCard = (defect: typeof dbDefects[0]) => {
-                  const isExpanded = expandedDefects.has(defect.responseId);
-                  const severityColor = defect.severity === 'Critical' || defect.urgency === 'Immediate'
-                    ? 'bg-rka-red-light'
-                    : defect.severity === 'Major' || defect.urgency === 'Urgent'
-                    ? 'bg-rka-orange-light'
-                    : 'bg-rka-yellow/20';
-                  const severityTextColor = defect.severity === 'Critical' || defect.urgency === 'Immediate'
-                    ? 'text-rka-red'
-                    : defect.severity === 'Major' || defect.urgency === 'Urgent'
-                    ? 'text-rka-orange'
-                    : 'text-rka-yellow';
+                    const isExpanded = expandedDefects.has(defect.responseId);
+                    const severityColor = defect.severity === 'Critical' || defect.urgency === 'Immediate'
+                      ? 'bg-rka-red-light'
+                      : defect.severity === 'Major' || defect.urgency === 'Urgent'
+                      ? 'bg-rka-orange-light'
+                      : 'bg-rka-yellow/20';
+                    const severityTextColor = defect.severity === 'Critical' || defect.urgency === 'Immediate'
+                      ? 'text-rka-red'
+                      : defect.severity === 'Major' || defect.urgency === 'Urgent'
+                      ? 'text-rka-orange'
+                      : 'text-rka-yellow';
 
-                  return (
-                    <div key={defect.responseId} className="mb-3 border border-border rounded-xl overflow-hidden bg-background">
-                      <button
-                        onClick={() => toggleDefect(defect.responseId)}
-                        className="w-full px-4 py-3 flex items-start gap-3 text-left"
-                      >
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${severityColor}`}>
-                          <AlertTriangle className={`w-4 h-4 ${severityTextColor}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-sm">{defect.questionText}</p>
-                          <p className="text-xs text-muted-foreground">{defect.assetName}</p>
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {defect.urgency && (
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                defect.urgency === 'Immediate' ? 'bg-rka-red text-destructive-foreground' :
-                                defect.urgency === 'Urgent' ? 'bg-rka-orange text-destructive-foreground' :
-                                'bg-muted text-foreground'
-                              }`}>{defect.urgency}</span>
-                            )}
-                            {defect.severity && (
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                defect.severity === 'Critical' ? 'bg-rka-red text-destructive-foreground' :
-                                defect.severity === 'Major' ? 'bg-rka-orange text-destructive-foreground' :
-                                'bg-rka-yellow text-foreground'
-                              }`}>{defect.severity}</span>
-                            )}
-                            {defect.defectTypes.map((dt, i) => (
-                              <span key={i} className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{dt}</span>
-                            ))}
+                    return (
+                      <div key={defect.responseId} className="mb-3 border border-border rounded-xl overflow-hidden bg-background">
+                        <button
+                          onClick={() => toggleDefect(defect.responseId)}
+                          className="w-full px-4 py-3 flex items-start gap-3 text-left"
+                        >
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${severityColor}`}>
+                            <AlertTriangle className={`w-4 h-4 ${severityTextColor}`} />
                           </div>
-                          {defect.comment && (
-                            <p className="text-xs text-muted-foreground mt-1.5 italic">"{defect.comment}"</p>
-                          )}
-                        </div>
-                        {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" /> : <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />}
-                      </button>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm">{defect.questionText}</p>
+                            <p className="text-xs text-muted-foreground">{defect.assetName}</p>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {defect.quoteStatus && (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                  defect.quoteStatus === 'Quote Now' ? 'bg-rka-green text-primary-foreground' : 'bg-foreground text-background'
+                                }`}>{defect.quoteStatus === 'Quote Now' ? '✓ Fix Now' : '⏳ Quote Later'}</span>
+                              )}
+                              {defect.urgency && (
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                  defect.urgency === 'Immediate' ? 'bg-rka-red text-destructive-foreground' :
+                                  defect.urgency === 'Urgent' ? 'bg-rka-orange text-destructive-foreground' :
+                                  'bg-muted text-foreground'
+                                }`}>{defect.urgency}</span>
+                              )}
+                              {defect.severity && (
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                  defect.severity === 'Critical' ? 'bg-rka-red text-destructive-foreground' :
+                                  defect.severity === 'Major' ? 'bg-rka-orange text-destructive-foreground' :
+                                  'bg-rka-yellow text-foreground'
+                                }`}>{defect.severity}</span>
+                              )}
+                              {defect.defectTypes.map((dt, i) => (
+                                <span key={i} className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{dt}</span>
+                              ))}
+                            </div>
+                            {defect.comment && (
+                              <p className="text-xs text-muted-foreground mt-1.5 italic">"{defect.comment}"</p>
+                            )}
+                          </div>
+                          {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" /> : <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-1" />}
+                        </button>
 
-                      {/* Photos */}
-                      {defect.photoUrls.length > 0 && (
-                        <div className="px-4 pb-2">
-                          <div className="flex gap-2 flex-wrap">
-                            {defect.photoUrls.map((p, i) => (
-                              <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-border shadow-sm cursor-pointer" onClick={() => setPreviewPhoto(p)}>
-                                <img src={p} alt={`Defect photo ${i + 1}`} className="w-full h-full object-cover" />
-                                <div className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
-                                  <ZoomIn className="w-3 h-3" />
+                        {defect.photoUrls.length > 0 && (
+                          <div className="px-4 pb-2">
+                            <div className="flex gap-2 flex-wrap">
+                              {defect.photoUrls.map((p, i) => (
+                                <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-border shadow-sm cursor-pointer" onClick={() => setPreviewPhoto(p)}>
+                                  <img src={p} alt={`Defect photo ${i + 1}`} className="w-full h-full object-cover" />
+                                  <div className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
+                                    <ZoomIn className="w-3 h-3" />
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Expanded details */}
-                      {isExpanded && defect.advancedDefectDetail.length > 0 && (
-                        <div className="px-4 pb-3 space-y-2 border-t border-border pt-3">
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Defect Details</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {defect.advancedDefectDetail.map((d, i) => (
-                              <span key={i} className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{d}</span>
-                            ))}
+                        {isExpanded && defect.advancedDefectDetail.length > 0 && (
+                          <div className="px-4 pb-3 space-y-2 border-t border-border pt-3">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Defect Details</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {defect.advancedDefectDetail.map((d, i) => (
+                                <span key={i} className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{d}</span>
+                              ))}
+                            </div>
                           </div>
+                        )}
+
+                        <div className="flex gap-2 px-4 pb-2">
+                          <button
+                            onClick={() => updateDbDefect(defect.responseId, { quoteStatus: 'Quote Now' })}
+                            className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
+                              defect.quoteStatus === 'Quote Now'
+                                ? 'bg-rka-green text-primary-foreground'
+                                : 'bg-muted text-foreground active:bg-foreground/10'
+                            }`}
+                          >
+                            {defect.quoteStatus === 'Quote Now' && <Check className="w-4 h-4 inline mr-1" />}
+                            Fix Now
+                          </button>
+                          <button
+                            onClick={() => updateDbDefect(defect.responseId, { quoteStatus: 'Quote Later' })}
+                            className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
+                              defect.quoteStatus === 'Quote Later'
+                                ? 'bg-foreground text-background'
+                                : 'bg-muted text-foreground active:bg-foreground/10'
+                            }`}
+                          >
+                            {defect.quoteStatus === 'Quote Later' && <Check className="w-4 h-4 inline mr-1" />}
+                            Quote Later
+                          </button>
                         </div>
-                      )}
 
-                      {/* Fix Now / Quote Later */}
-                      <div className="flex gap-2 px-4 pb-2">
-                        <button
-                          onClick={() => updateDbDefect(defect.responseId, { quoteStatus: 'Quote Now' })}
-                          className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
-                            defect.quoteStatus === 'Quote Now'
-                              ? 'bg-rka-green text-primary-foreground'
-                              : 'bg-muted text-foreground active:bg-foreground/10'
-                          }`}
-                        >
-                          {defect.quoteStatus === 'Quote Now' && <Check className="w-4 h-4 inline mr-1" />}
-                          Fix Now
-                        </button>
-                        <button
-                          onClick={() => updateDbDefect(defect.responseId, { quoteStatus: 'Quote Later' })}
-                          className={`flex-1 tap-target rounded-lg text-sm font-bold transition-all ${
-                            defect.quoteStatus === 'Quote Later'
-                              ? 'bg-foreground text-background'
-                              : 'bg-muted text-foreground active:bg-foreground/10'
-                          }`}
-                        >
-                          {defect.quoteStatus === 'Quote Later' && <Check className="w-4 h-4 inline mr-1" />}
-                          Quote Later
-                        </button>
-                      </div>
-
-                      {/* Per-defect customer comment */}
-                      <div className="px-4 pb-2">
-                        <textarea
-                          value={defect.customerComment || ''}
-                          onChange={(e) => updateDbDefect(defect.responseId, { customerComment: e.target.value })}
-                          placeholder="Customer comment on this defect (optional)..."
-                          className="w-full p-2.5 border border-border rounded-lg bg-background text-sm resize-none"
-                          rows={2}
-                        />
-                      </div>
-
-                      {/* Internal quote instructions */}
-                      <div className="px-4 pb-3">
-                        <div className="p-2.5 rounded-lg bg-rka-orange-light border border-rka-orange/20">
-                          <label className="text-[10px] font-bold text-rka-orange uppercase tracking-wide flex items-center gap-1 mb-1">
-                            <AlertTriangle className="w-3 h-3" /> Internal — Quote Instructions (Admin Only)
-                          </label>
+                        <div className="px-4 pb-2">
                           <textarea
-                            value={defect.quoteInstructions || ''}
-                            onChange={(e) => updateDbDefect(defect.responseId, { quoteInstructions: e.target.value })}
-                            placeholder="Parts needed, access notes, pricing guidance, scope of work details..."
-                            className="w-full p-2 border border-rka-orange/20 rounded-lg bg-background text-sm resize-none"
+                            value={defect.customerComment || ''}
+                            onChange={(e) => updateDbDefect(defect.responseId, { customerComment: e.target.value })}
+                            placeholder="Customer comment on this defect (optional)..."
+                            className="w-full p-2.5 border border-border rounded-lg bg-background text-sm resize-none"
                             rows={2}
                           />
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
 
+                        <div className="px-4 pb-3">
+                          <div className="p-2.5 rounded-lg bg-rka-orange-light border border-rka-orange/20">
+                            <label className="text-[10px] font-bold text-rka-orange uppercase tracking-wide flex items-center gap-1 mb-1">
+                              <AlertTriangle className="w-3 h-3" /> Internal — Quote Instructions (Admin Only)
+                            </label>
+                            <textarea
+                              value={defect.quoteInstructions || ''}
+                              onChange={(e) => updateDbDefect(defect.responseId, { quoteInstructions: e.target.value })}
+                              placeholder="Parts needed, access notes, pricing guidance, scope of work details..."
+                              className="w-full p-2 border border-rka-orange/20 rounded-lg bg-background text-sm resize-none"
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  };
+
+                  return (
+                    <>
+                      {uncategorizedDb.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Needs Customer Decision ({uncategorizedDb.length})
+                          </p>
+                          {uncategorizedDb.map(renderDefectCard)}
+                        </div>
+                      )}
+                      {quoteNowDb.length > 0 && (
+                        <div className="mb-4">
+                          <div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-rka-green-light">
+                            <Check className="w-4 h-4 text-rka-green" />
+                            <p className="text-xs font-bold text-rka-green-dark uppercase tracking-wide">Fix Now — Quote Required ({quoteNowDb.length})</p>
+                          </div>
+                          {quoteNowDb.map(renderDefectCard)}
+                        </div>
+                      )}
+                      {quoteLaterDb.length > 0 && (
+                        <div className="mb-4">
+                          <div className="flex items-center gap-2 mb-2 p-2 rounded-lg bg-muted">
+                            <FileText className="w-4 h-4 text-muted-foreground" />
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Quote Later ({quoteLaterDb.length})</p>
+                          </div>
+                          {quoteLaterDb.map(renderDefectCard)}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 {/* Legacy context defects (fallback when no DB defects) */}
                 {!hasDbDefects && allDefects.map(({ inspection: insp, item, crane, itemLabel }) => {
                   const isExpanded = expandedDefects.has(item.templateItemId);
