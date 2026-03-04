@@ -11,6 +11,7 @@ interface PhotoRequiredItemProps {
 export function PhotoRequiredItem({ item, result, onUpdate }: PhotoRequiredItemProps) {
   const [photos, setPhotos] = useState<string[]>(result.photos || []);
   const fileRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
