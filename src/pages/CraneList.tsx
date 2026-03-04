@@ -72,7 +72,14 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
   const [clientReports, setClientReports] = useState<any[]>([]);
   const site = state.selectedSite;
 
-  // Fetch DB form templates
+  // Fetch active job name
+  useEffect(() => {
+    if (!activeJobId) { setActiveJobName(null); return; }
+    supabase.from('tasks').select('title').eq('id', activeJobId).single().then(({ data }) => {
+      if (data) setActiveJobName(data.title);
+    });
+  }, [activeJobId]);
+
   useEffect(() => {
     const fetchForms = async () => {
       const { data } = await supabase.from('form_templates').select('form_id, form_name, description').eq('active', true);
