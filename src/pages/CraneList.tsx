@@ -50,6 +50,8 @@ export default function CraneList() {
   const [showLiftingRegister, setShowLiftingRegister] = useState(false);
   const [showLiftingRegisterList, setShowLiftingRegisterList] = useState(false);
   const [showLiftingInspection, setShowLiftingInspection] = useState(false);
+  const [showBaseline, setShowBaseline] = useState<{ existingId?: string } | null>(null);
+  const [existingBaseline, setExistingBaseline] = useState<{ id: string; status: string } | null>(null);
   const site = state.selectedSite;
 
   // Fetch DB form templates
