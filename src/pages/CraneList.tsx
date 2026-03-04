@@ -4,6 +4,7 @@ import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
 import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
 import CraneBaselineForm from '@/pages/CraneBaselineForm';
 import DbInspectionForm from '@/pages/DbInspectionForm';
@@ -36,6 +37,7 @@ interface DbAsset {
 
 export default function CraneList() {
   const { state, dispatch } = useApp();
+  const { toast } = useToast();
   const [noteOpen, setNoteOpen] = useState(false);
   const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
   const [loading, setLoading] = useState(true);
