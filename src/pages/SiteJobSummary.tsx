@@ -485,6 +485,8 @@ export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
         summary: buildSummaryPayload(),
         customerDefectComments,
         liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
+        dbInspections: dbInspections.length > 0 ? dbInspections : undefined,
+        dbDefects: dbDefects.length > 0 ? dbDefects : undefined,
       });
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
