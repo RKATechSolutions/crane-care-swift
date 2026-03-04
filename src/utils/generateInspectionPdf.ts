@@ -48,7 +48,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function generateInspectionPdf(data: InspectionPdfData): Promise<jsPDF> {
-  const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections, aiSummary, otherNotes } = data;
+  const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections, aiSummary } = data;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -59,7 +59,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   const addHeader = () => {
     if (logoImg) {
-      const logoH = 12;
+      const logoH = 10;
       const logoW = logoH * (logoImg.width / logoImg.height);
       doc.addImage(logoImg, 'PNG', 14, 4, logoW, logoH);
     }
@@ -75,7 +75,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   // ========== PAGE 1: COVER ==========
   addHeader();
-  let y = 24;
+  let y = 20;
 
   doc.setFontSize(22);
   doc.setTextColor(...DARK);
@@ -151,7 +151,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const legendItems = [
     { label: 'Pass', color: RKA_GREEN, pct: passPercent },
     { label: 'Defect', color: RKA_ORANGE, pct: defectPercent },
-    { label: 'Fail', color: RKA_RED, pct: failPercent },
+    { label: 'Defect Noted', color: RKA_RED, pct: failPercent },
     { label: 'N/A', color: [200, 200, 200] as [number, number, number], pct: naPercent },
   ];
   let lx = barX;
@@ -164,7 +164,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   }
   y += 10;
 
-  // AI Summary on cover (no month plan)
+  // AI Summary on cover
   if (aiSummary) {
     y += 2;
     doc.setFillColor(...RKA_GREEN);
@@ -172,17 +172,43 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...WHITE);
-    doc.text('AI Executive Summary', pageW / 2, y + 5.5, { align: 'center' });
+    doc.text('Summary', pageW / 2, y + 5.5, { align: 'center' });
     y += 12;
 
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...DARK);
-    const summaryLines = doc.splitTextToSize(aiSummary.replace(/[#*_`]/g, ''), pageW - 40);
-    for (const line of summaryLines) {
-      if (y > pageH - 20) { doc.addPage(); addHeader(); addFooter(); y = 22; }
-      doc.text(line, 20, y);
-      y += 4;
+
+    // Parse markdown-style headings for better formatting
+    const summaryClean = aiSummary.replace(/[*_`]/g, '');
+    const summaryParts = summaryClean.split('\n');
+    for (const part of summaryParts) {
+      const trimmed = part.trim();
+      if (!trimmed) { y += 2; continue; }
+
+      // Check for heading patterns (## or ### or bold-like markers)
+      const headingMatch = trimmed.match(/^#{1,3}\s+(.+)/);
+      if (headingMatch) {
+        if (y > pageH - 20) { doc.addPage(); addHeader(); addFooter(); y = 22; }
+        y += 2;
+        doc.setFillColor(...RKA_GREEN_DARK);
+        doc.rect(20, y - 3, pageW - 40, 6, 'F');
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...WHITE);
+        doc.text(headingMatch[1], pageW / 2, y + 1, { align: 'center' });
+        doc.setTextColor(...DARK);
+        doc.setFont('helvetica', 'normal');
+        y += 6;
+        continue;
+      }
+
+      const lines = doc.splitTextToSize(trimmed, pageW - 44);
+      for (const line of lines) {
+        if (y > pageH - 20) { doc.addPage(); addHeader(); addFooter(); y = 22; }
+        doc.text(line, 22, y);
+        y += 4;
+      }
     }
   }
 
@@ -196,9 +222,9 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   if (allDefects.length > 0) {
     doc.addPage();
     addHeader();
-    let dy = 22;
+    let dy = 18;
 
-    // Green section header
+    // Red section header
     doc.setFillColor(...RKA_RED);
     doc.rect(15, dy, pageW - 30, 8, 'F');
     doc.setFontSize(11);
@@ -207,73 +233,93 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     doc.text(`Defect Register — ${allDefects.length} Item${allDefects.length !== 1 ? 's' : ''} Requiring Action`, pageW / 2, dy + 5.5, { align: 'center' });
     dy += 12;
 
-    const defectData = allDefects.map((d, i) => [
-      String(i + 1),
-      d.question_text,
-      d.urgency || '—',
-      (d.defect_types || []).join(', ') || '—',
-      d.comment || '',
-    ]);
+    // Each defect as a card with photo beside it
+    for (let i = 0; i < allDefects.length; i++) {
+      const d = allDefects[i];
+      const hasPhotos = d.photo_urls.length > 0;
+      const cardH = hasPhotos ? Math.max(36, 20) : 20;
 
-    autoTable(doc, {
-      startY: dy,
-      head: [['#', 'Item', 'Urgency', 'Category', 'Recommended Action']],
-      body: defectData,
-      margin: { left: 15, right: 15, bottom: 18 },
-      headStyles: { fillColor: RKA_RED, textColor: WHITE, fontSize: 8, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 7.5, textColor: DARK },
-      columnStyles: {
-        0: { cellWidth: 8 },
-        1: { cellWidth: 45 },
-        2: { cellWidth: 22, halign: 'center' },
-        3: { cellWidth: 35 },
-        4: { cellWidth: 'auto' },
-      },
-      didParseCell: (hookData) => {
-        if (hookData.section === 'body' && hookData.column.index === 2) {
-          const val = String(hookData.cell.raw);
-          if (val === 'Immediate') hookData.cell.styles.textColor = RKA_RED;
-          else if (val === 'Urgent') hookData.cell.styles.textColor = RKA_ORANGE;
-        }
-      },
-      didDrawPage: () => { addHeader(); addFooter(); },
-    });
+      if (dy > pageH - cardH - 18) { doc.addPage(); addHeader(); addFooter(); dy = 18; }
 
-    dy = (doc as any).lastAutoTable?.finalY + 6 || 22;
+      // Alternating background
+      if (i % 2 === 0) {
+        doc.setFillColor(...LIGHT_GRAY);
+        doc.rect(15, dy - 2, pageW - 30, cardH + 4, 'F');
+      }
 
-    // Defect photos
-    const defectsWithPhotos = allDefects.filter(d => d.photo_urls.length > 0);
-    if (defectsWithPhotos.length > 0) {
-      if (dy > pageH - 60) { doc.addPage(); addHeader(); addFooter(); dy = 22; }
-      doc.setFillColor(...RKA_ORANGE);
-      doc.rect(15, dy, pageW - 30, 7, 'F');
-      doc.setFontSize(9);
+      // Urgency color strip
+      const urgColor = d.urgency === 'Immediate' ? RKA_RED : d.urgency === 'Urgent' ? RKA_ORANGE : [180, 180, 180] as [number, number, number];
+      doc.setFillColor(...(urgColor as [number, number, number]));
+      doc.rect(15, dy - 2, 3, cardH + 4, 'F');
+
+      const textAreaW = hasPhotos ? pageW - 80 : pageW - 36;
+
+      // Defect number + question
+      doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...WHITE);
-      doc.text('Defect Photos', pageW / 2, dy + 5, { align: 'center' });
-      dy += 10;
+      doc.setTextColor(...DARK);
+      const qLines = doc.splitTextToSize(`${i + 1}. ${d.question_text}`, textAreaW);
+      let ty = dy;
+      for (const ql of qLines) {
+        doc.text(ql, 20, ty);
+        ty += 3.5;
+      }
 
-      for (const defect of defectsWithPhotos) {
-        doc.setFontSize(7.5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...DARK);
-        doc.text(defect.question_text, 15, dy);
-        dy += 4;
+      // Urgency + categories
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      if (d.urgency) {
+        if (d.urgency === 'Immediate' || d.urgency === 'Urgent') {
+          doc.setTextColor(...(d.urgency === 'Immediate' ? RKA_RED : RKA_ORANGE));
+        } else {
+          doc.setTextColor(...DARK);
+        }
+        doc.text(`Urgency: ${d.urgency}`, 20, ty);
+        ty += 3.5;
+      }
+      doc.setTextColor(...DARK);
+      if (d.defect_types && d.defect_types.length > 0) {
+        doc.text(`Category: ${d.defect_types.join(', ')}`, 20, ty);
+        ty += 3.5;
+      }
 
-        for (const photoUrl of defect.photo_urls) {
-          if (dy > pageH - 50) { doc.addPage(); addHeader(); addFooter(); dy = 22; }
+      // Comment
+      if (d.comment) {
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(80, 80, 80);
+        const commentLines = doc.splitTextToSize(`Comment: ${d.comment}`, textAreaW);
+        for (const cl of commentLines) {
+          doc.text(cl, 20, ty);
+          ty += 3.5;
+        }
+      }
+
+      // Photo beside the defect (right side)
+      if (hasPhotos) {
+        const photoX = pageW - 55;
+        let photoY = dy - 1;
+        for (const photoUrl of d.photo_urls.slice(0, 2)) {
           try {
             const photoImg = await loadImage(photoUrl);
-            const maxW = 60;
-            const maxH = 40;
+            const maxW = 38;
+            const maxH = 28;
             const ratio = Math.min(maxW / photoImg.width, maxH / photoImg.height);
             const w = photoImg.width * ratio;
             const h = photoImg.height * ratio;
-            doc.addImage(photoImg, 'JPEG', 15, dy, w, h);
-            dy += h + 4;
-          } catch { /* skip broken photos */ }
+            doc.addImage(photoImg, 'JPEG', photoX, photoY, w, h);
+            photoY += h + 2;
+          } catch { /* skip */ }
         }
-        dy += 2;
+        // Adjust card height if photos are taller
+        const photoBottom = photoY - dy + 2;
+        if (photoBottom > cardH) {
+          dy += photoBottom + 4;
+        } else {
+          dy += cardH + 4;
+        }
+      } else {
+        const textBottom = ty - dy + 2;
+        dy += Math.max(textBottom, cardH) + 4;
       }
     }
 
@@ -283,14 +329,14 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   // ========== PASSED ITEMS — 2-column compact layout ==========
   doc.addPage();
   addHeader();
-  let sy = 22;
+  let sy = 18;
   const bottomMargin = 18;
 
   for (const section of sections) {
     const passedItems = section.questions.filter(q => !q.defect_flag);
     if (passedItems.length === 0) continue;
 
-    if (sy > pageH - bottomMargin - 20) { doc.addPage(); addHeader(); addFooter(); sy = 22; }
+    if (sy > pageH - bottomMargin - 20) { doc.addPage(); addHeader(); addFooter(); sy = 18; }
 
     // Green section header bar
     doc.setFillColor(...RKA_GREEN);
@@ -301,21 +347,21 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     doc.text(section.name, pageW / 2, sy + 5, { align: 'center' });
     sy += 10;
 
-    // 2-column table for passed items (Item + Result only, plus Comment if exists)
-    const colW = (pageW - 34) / 2;
+    // Split items: ones with comments get full width, rest get 2-col
     const itemsWithComments = passedItems.filter(q => q.comment);
     const itemsNoComments = passedItems.filter(q => !q.comment);
 
-    // Items without comments in 2-column layout
+    // 2-column layout for items without comments
     if (itemsNoComments.length > 0) {
+      const colW = (pageW - 34) / 2;
       const half = Math.ceil(itemsNoComments.length / 2);
       const col1 = itemsNoComments.slice(0, half);
       const col2 = itemsNoComments.slice(half);
       const maxRows = Math.max(col1.length, col2.length);
 
-      doc.setFontSize(7);
+      doc.setFontSize(6.5);
       for (let r = 0; r < maxRows; r++) {
-        if (sy > pageH - bottomMargin - 6) { doc.addPage(); addHeader(); addFooter(); sy = 22; }
+        if (sy > pageH - bottomMargin - 6) { doc.addPage(); addHeader(); addFooter(); sy = 18; }
 
         // Alternate row background
         if (r % 2 === 0) {
@@ -328,7 +374,9 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
           const status = col1[r].pass_fail_status || col1[r].answer_value || '—';
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...DARK);
-          const truncated = col1[r].question_text.length > 45 ? col1[r].question_text.substring(0, 42) + '…' : col1[r].question_text;
+          // Allow more chars — truncate at 55 instead of 45
+          const maxChars = 55;
+          const truncated = col1[r].question_text.length > maxChars ? col1[r].question_text.substring(0, maxChars - 3) + '…' : col1[r].question_text;
           doc.text(truncated, 16, sy);
           if (status === 'Pass' || status === 'Yes') doc.setTextColor(...RKA_GREEN);
           doc.setFont('helvetica', 'bold');
@@ -340,7 +388,8 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
           const status = col2[r].pass_fail_status || col2[r].answer_value || '—';
           doc.setFont('helvetica', 'normal');
           doc.setTextColor(...DARK);
-          const truncated = col2[r].question_text.length > 45 ? col2[r].question_text.substring(0, 42) + '…' : col2[r].question_text;
+          const maxChars = 55;
+          const truncated = col2[r].question_text.length > maxChars ? col2[r].question_text.substring(0, maxChars - 3) + '…' : col2[r].question_text;
           doc.text(truncated, 17 + colW, sy);
           if (status === 'Pass' || status === 'Yes') doc.setTextColor(...RKA_GREEN);
           doc.setFont('helvetica', 'bold');
@@ -354,7 +403,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     // Items with comments in full-width rows
     if (itemsWithComments.length > 0) {
       for (const q of itemsWithComments) {
-        if (sy > pageH - bottomMargin - 10) { doc.addPage(); addHeader(); addFooter(); sy = 22; }
+        if (sy > pageH - bottomMargin - 10) { doc.addPage(); addHeader(); addFooter(); sy = 18; }
         const status = q.pass_fail_status || q.answer_value || '—';
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
@@ -378,34 +427,14 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     sy += 4;
   }
 
-  // Other notes
-  if (otherNotes) {
-    if (sy > pageH - bottomMargin - 15) { doc.addPage(); addHeader(); addFooter(); sy = 22; }
-    doc.setFillColor(...RKA_GREEN);
-    doc.rect(15, sy, pageW - 30, 7, 'F');
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...WHITE);
-    doc.text('Additional Notes', pageW / 2, sy + 5, { align: 'center' });
-    sy += 10;
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...DARK);
-    const noteLines = doc.splitTextToSize(otherNotes, pageW - 40);
-    for (const nl of noteLines) {
-      if (sy > pageH - bottomMargin) { doc.addPage(); addHeader(); addFooter(); sy = 22; }
-      doc.text(nl, 20, sy);
-      sy += 4;
-    }
-  }
+  // NOTE: otherNotes and internal_note intentionally excluded from customer report
 
   addFooter();
 
-  // Fix page numbers - update all pages with correct total
+  // Fix page numbers
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    // Overwrite footer area
     doc.setFillColor(255, 255, 255);
     doc.rect(pageW - 30, pageH - 9, 30, 6, 'F');
     doc.setFontSize(7);
