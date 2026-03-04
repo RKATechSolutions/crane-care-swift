@@ -99,7 +99,7 @@ const initialFormData: RepairFormData = {
 type SectionKey = 'a' | 'b' | 'c' | 'd' | 'e';
 
 export default function RepairBreakdownForm({
-  assetName, assetId, clientId, siteName, onBack
+  assetName, assetId, clientId, siteName, taskId, onBack
 }: RepairBreakdownFormProps) {
   const { state, dispatch } = useApp();
   const [formData, setFormData] = useState<RepairFormData>(initialFormData);
@@ -142,7 +142,7 @@ export default function RepairBreakdownForm({
     setSaving(true);
     try {
       const alertReasons = getAlertReasons();
-      const { error } = await supabase.from('repair_jobs').insert({
+      const insertPayload: any = {
         asset_id: assetId || null,
         asset_name: assetName,
         client_id: clientId || null,
