@@ -178,8 +178,10 @@ export default function RepairBreakdownForm({
         internal_photos: formData.internal_photos,
         admin_alert_triggered: alertReasons.length > 0,
         admin_alert_reasons: alertReasons,
-      } as any);
+      };
+      if (taskId) insertPayload.task_id = taskId;
 
+      const { error } = await supabase.from('repair_jobs').insert(insertPayload);
       if (error) throw error;
       toast.success(status === 'Submitted' ? 'Repair job submitted!' : 'Draft saved');
       if (status === 'Submitted') onBack();

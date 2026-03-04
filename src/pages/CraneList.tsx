@@ -39,7 +39,12 @@ interface DbAsset {
 
 type ClientTab = 'details' | 'assets' | 'quotes' | 'reports' | 'jobs';
 
-export default function CraneList() {
+interface CraneListProps {
+  activeJobId?: string | null;
+  onSetActiveJob?: (id: string | null) => void;
+}
+
+export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProps = {}) {
   const { state, dispatch } = useApp();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<ClientTab>('assets');

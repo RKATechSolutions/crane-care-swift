@@ -19,6 +19,7 @@ const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
 interface SiteJobSummaryProps {
   onCreateQuote?: (defects: any[]) => void;
+  activeJobId?: string | null;
 }
 
 export default function SiteJobSummary({ onCreateQuote }: SiteJobSummaryProps) {
