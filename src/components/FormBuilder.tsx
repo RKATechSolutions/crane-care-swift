@@ -111,6 +111,12 @@ export default function FormBuilder() {
   const [addDbHelpText, setAddDbHelpText] = useState('');
   const [addingDbQuestion, setAddingDbQuestion] = useState(false);
 
+  // Local template form state (must be before any early returns)
+  const [formLabel, setFormLabel] = useState('');
+  const [formType, setFormType] = useState<TemplateItemType>('checklist');
+  const [formOptions, setFormOptions] = useState('');
+  const [formConditionalOn, setFormConditionalOn] = useState('');
+
   useEffect(() => {
     fetchDbForms();
   }, []);
