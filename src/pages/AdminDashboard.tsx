@@ -146,6 +146,7 @@ export default function AdminDashboard() {
         {tab === 'schedule' && <AdminSchedule />}
         {tab === 'leave' && <AdminLeaveApproval />}
         {tab === 'timesheets' && <AdminTimesheetReview />}
+        {tab === 'assets' && <AdminAssets />}
 
         {tab === 'suggestions' && (
           <div className="p-4 space-y-3">
