@@ -90,10 +90,24 @@ export default function AdminCustomisation() {
     updateConfig({ clientInfoFields: updated });
   };
 
-  const renameClientField = (fieldKey: string) => {
+  const startEditingClientField = (f: ClientInfoField) => {
+    setEditingFieldKey(f.fieldKey);
+    setEditLabel(f.label);
+    setEditFieldType(f.fieldType || 'text');
+    setEditFieldGroup(f.group);
+    setEditFieldOptions(f.options?.join(', ') || '');
+  };
+
+  const saveClientFieldEdit = (fieldKey: string) => {
     if (!editLabel.trim()) return;
     const updated = config.clientInfoFields.map(f =>
-      f.fieldKey === fieldKey ? { ...f, label: editLabel.trim() } : f
+      f.fieldKey === fieldKey ? {
+        ...f,
+        label: editLabel.trim(),
+        fieldType: editFieldType,
+        group: editFieldGroup,
+        options: editFieldType === 'select' ? editFieldOptions.split(',').map(o => o.trim()).filter(Boolean) : f.options,
+      } : f
     );
     updateConfig({ clientInfoFields: updated });
     setEditingFieldKey(null);
