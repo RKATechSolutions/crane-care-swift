@@ -115,6 +115,32 @@ export default function CraneList() {
     fetchBaseline();
   }, [site?.id, site?.name]);
 
+  // Fetch quotes, jobs, reports for this client
+  useEffect(() => {
+    if (!site) return;
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+    const siteName = site.name;
+
+    const fetchQuotes = async () => {
+      const { data } = await supabase.from('quotes').select('id, quote_number, client_name, status, total, created_at, asset_name').ilike('client_name', `%${siteName.split(' - ')[0]}%`).order('created_at', { ascending: false });
+      if (data) setClientQuotes(data);
+    };
+    const fetchJobs = async () => {
+      const { data } = await supabase.from('tasks').select('id, title, status, job_type, scheduled_date, created_at, client_name').ilike('client_name', `%${siteName.split(' - ')[0]}%`).order('created_at', { ascending: false });
+      if (data) setClientJobs(data);
+    };
+    const fetchReports = async () => {
+      let query = supabase.from('db_inspections').select('id, asset_name, inspection_date, status, technician_name, crane_status, form_id');
+      if (clientId) query = query.eq('client_id', clientId);
+      else query = query.eq('site_name', siteName);
+      const { data } = await query.order('created_at', { ascending: false });
+      if (data) setClientReports(data);
+    };
+    fetchQuotes();
+    fetchJobs();
+    fetchReports();
+  }, [site?.id, site?.name]);
+
   useEffect(() => {
     if (!site) {
       setLoading(false);
