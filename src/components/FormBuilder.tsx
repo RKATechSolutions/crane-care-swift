@@ -805,11 +805,7 @@ export default function FormBuilder() {
     );
   }
 
-  // ====== Local templates: Form state ======
-  const [formLabel, setFormLabel] = useState('');
-  const [formType, setFormType] = useState<TemplateItemType>('checklist');
-  const [formOptions, setFormOptions] = useState('');
-  const [formConditionalOn, setFormConditionalOn] = useState('');
+  // ====== Local templates ======
 
   const selectedTemplate = state.templates.find(t => t.id === selectedTemplateId);
   const selectedSection = selectedTemplate?.sections.find(s => s.id === selectedSectionId);
