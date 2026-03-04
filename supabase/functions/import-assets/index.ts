@@ -327,26 +327,47 @@ serve(async (req) => {
       });
 
       if (mode === 'update') {
-        const { error } = await supabase.from("assets").upsert(batch, {
-          onConflict: 'external_id',
-          ignoreDuplicates: false,
-        });
-        if (error) {
-          console.error("Upsert error:", error);
-          // Fallback to individual inserts
-          for (const item of batch) {
-            if (item.external_id) {
-              const { error: updateErr } = await supabase
-                .from("assets")
-                .update(item)
-                .eq("external_id", item.external_id);
-              if (updateErr) {
-                const { error: insertErr } = await supabase.from("assets").insert(item);
-                if (insertErr) console.error("Single insert error:", insertErr);
-              }
-            } else {
-              await supabase.from("assets").insert(item);
+        // Try to match and update each asset individually for reliability
+        for (const item of batch) {
+          let matched = false;
+          
+          // Strategy 1: Match by external_id
+          if (item.external_id) {
+            const { data: existing } = await supabase
+              .from("assets")
+              .select("id")
+              .eq("external_id", item.external_id)
+              .maybeSingle();
+            
+            if (existing) {
+              const { id: _id, ...updateData } = item;
+              await supabase.from("assets").update(updateData).eq("id", existing.id);
+              matched = true;
             }
+          }
+          
+          // Strategy 2: Match by account_name + description + class_name
+          if (!matched && item.account_name && item.description) {
+            const { data: existing } = await supabase
+              .from("assets")
+              .select("id")
+              .eq("account_name", item.account_name)
+              .eq("description", item.description)
+              .eq("class_name", item.class_name)
+              .maybeSingle();
+            
+            if (existing) {
+              const { id: _id, ...updateData } = item;
+              // Also set external_id so future imports match faster
+              await supabase.from("assets").update(updateData).eq("id", existing.id);
+              matched = true;
+            }
+          }
+          
+          // Strategy 3: Insert as new
+          if (!matched) {
+            const { error: insertErr } = await supabase.from("assets").insert(item);
+            if (insertErr) console.error("Insert error:", insertErr.message);
           }
         }
       } else {
