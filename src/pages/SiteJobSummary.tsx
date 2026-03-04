@@ -182,7 +182,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
       setDbDefectsLoading(false);
     };
     loadDbDefects();
-  }, [site.name]);
+  }, [site.name, activeJobId]);
 
   // Load failed/non-service lifting register items for this site
   useEffect(() => {
