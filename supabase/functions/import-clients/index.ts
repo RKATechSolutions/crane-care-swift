@@ -6,6 +6,53 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Map CSV header names to DB column names
+const HEADER_MAP: Record<string, string> = {
+  'client name': 'client_name',
+  'status': 'status',
+  'abn': 'abn',
+  'primary contact': 'primary_contact_name',
+  'automatic service package': 'automatic_service_package',
+  'business type': 'business_type',
+  'casual service rates': 'casual_service_rates',
+  'comments or notes': 'comments_or_notes',
+  'google drive link': 'google_drive_link',
+  'inspectall account link': 'inspectall_account_link',
+  'inspectall code': 'inspectall_code',
+  'lead or referral source': 'lead_or_referral_source',
+  'payment days or dates you pay invoices': 'payment_days',
+  'preferred days and times to complete work': 'preferred_days_and_times',
+  'priority service package': 'priority_service_package',
+  'required to complete work': 'required_to_complete_work',
+  'send schedule reminders': 'send_schedule_reminders',
+  'services interested in': 'services_interested_in',
+  'site induction details': 'site_induction_details',
+  'travel time one way from riverstone': 'travel_time_from_base',
+  'cfloc planned service dates': 'planned_service_dates',
+  // Legacy column mappings for older CSV formats
+  'location address': 'location_address',
+  'primary contact email': 'primary_contact_email',
+  'primary contact mobile': 'primary_contact_mobile',
+  'primary contact given name': 'primary_contact_given_name',
+  'primary contact surname': 'primary_contact_surname',
+  'primary contact position': 'primary_contact_position',
+};
+
+// Columns that are valid for upsert into the clients table
+const VALID_CLIENT_COLUMNS = new Set([
+  'client_name', 'status', 'abn', 'primary_contact_name',
+  'automatic_service_package', 'business_type', 'casual_service_rates',
+  'comments_or_notes', 'google_drive_link', 'inspectall_account_link',
+  'inspectall_code', 'lead_or_referral_source', 'payment_days',
+  'preferred_days_and_times', 'priority_service_package',
+  'required_to_complete_work', 'send_schedule_reminders',
+  'services_interested_in', 'site_induction_details',
+  'travel_time_from_base', 'planned_service_dates',
+  'location_address', 'primary_contact_email', 'primary_contact_mobile',
+  'primary_contact_given_name', 'primary_contact_surname',
+  'primary_contact_position',
+]);
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,121 +65,81 @@ serve(async (req) => {
 
     const { csvUrl } = await req.json();
     
-    // Fetch CSV from URL
     const csvResponse = await fetch(csvUrl);
     const csvData = await csvResponse.text();
     
-    console.log("CSV length:", csvData.length, "First 200 chars:", csvData.substring(0, 200));
+    console.log("CSV length:", csvData.length);
     
-    // Parse CSV - handle both \n and \r\n
     const lines = csvData.split(/\r?\n/).filter((l: string) => l.trim());
     console.log("Total lines:", lines.length);
+
+    if (lines.length < 2) {
+      throw new Error("CSV has no data rows");
+    }
     
-    // Deduplicate clients and collect contacts
-    const clientMap = new Map<string, any>();
-    const contacts: any[] = [];
+    // Parse header row to build column index mapping
+    const headerValues = parseCSVLine(lines[0]);
+    const columnMap: { index: number; dbColumn: string }[] = [];
+    
+    for (let i = 0; i < headerValues.length; i++) {
+      const headerNorm = headerValues[i].trim().toLowerCase().replace(/['"]/g, '');
+      const dbCol = HEADER_MAP[headerNorm];
+      if (dbCol && VALID_CLIENT_COLUMNS.has(dbCol)) {
+        columnMap.push({ index: i, dbColumn: dbCol });
+      }
+    }
+
+    console.log(`Mapped ${columnMap.length} columns:`, columnMap.map(c => c.dbColumn));
+
+    // Parse data rows
+    const clientRows: Record<string, any>[] = [];
 
     for (let i = 1; i < lines.length; i++) {
       const values = parseCSVLine(lines[i]);
       if (values.length < 2) continue;
-      
-      const clientName = values[0]?.trim();
-      if (!clientName) continue;
 
-      if (!clientMap.has(clientName)) {
-        clientMap.set(clientName, {
-          client_name: clientName,
-          primary_contact_name: values[1]?.trim() || null,
-          location_address: values[2]?.trim() || null,
-          primary_contact_email: values[3]?.trim() || null,
-          primary_contact_mobile: values[4]?.trim() || null,
-          primary_contact_given_name: values[5]?.trim() || null,
-          primary_contact_surname: values[6]?.trim() || null,
-          send_schedule_reminders: values[7]?.trim() || null,
-          site_induction_details: values[8]?.trim() || null,
-          created_date: values[9]?.trim() || null,
-          primary_contact_position: values[17]?.trim() || null,
-        });
+      const row: Record<string, any> = {};
+      for (const col of columnMap) {
+        const val = values[col.index]?.trim() || null;
+        // Don't store empty strings
+        row[col.dbColumn] = val && val.length > 0 ? val : null;
       }
 
-      // Other contact
-      const otherName = values[10]?.trim();
-      const otherEmail = values[11]?.trim();
-      if (otherName && otherName !== ". ." && otherName !== ".") {
-        contacts.push({
-          client_name: clientName,
-          contact_name: otherName,
-          contact_email: otherEmail || null,
-          contact_given_name: values[12]?.trim() || null,
-          contact_mobile: values[13]?.trim() || null,
-          contact_phone: values[14]?.trim() || null,
-          contact_position: values[15]?.trim() || null,
-          contact_surname: values[16]?.trim() || null,
-          status: values[18]?.trim()?.replace(/,\s*$/, '') || 'Active',
-        });
-      }
+      if (!row.client_name) continue;
+
+      // Default status to Active if not provided
+      if (!row.status) row.status = 'Active';
+
+      clientRows.push(row);
     }
 
-    // Insert clients
-    const clientRows = Array.from(clientMap.values());
-    const { error: clientError } = await supabase
-      .from("clients")
-      .upsert(clientRows, { onConflict: "client_name" });
+    console.log(`Parsed ${clientRows.length} client rows`);
 
-    if (clientError) throw clientError;
-
-    // Get client IDs
-    const { data: allClients, error: fetchError } = await supabase
-      .from("clients")
-      .select("id, client_name");
-    if (fetchError) throw fetchError;
-
-    const clientIdMap = new Map(allClients!.map((c: any) => [c.client_name, c.id]));
-
-    // Deduplicate contacts by client + name + email
-    const seen = new Set<string>();
-    const uniqueContacts = contacts.filter(c => {
-      const key = `${c.client_name}|${c.contact_name}|${c.contact_email}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    // Insert contacts
-    const contactRows = uniqueContacts
-      .map(c => ({
-        client_id: clientIdMap.get(c.client_name),
-        contact_name: c.contact_name,
-        contact_email: c.contact_email,
-        contact_given_name: c.contact_given_name,
-        contact_mobile: c.contact_mobile,
-        contact_phone: c.contact_phone,
-        contact_position: c.contact_position,
-        contact_surname: c.contact_surname,
-        status: c.status,
-      }))
-      .filter(c => c.client_id);
-
-    // Insert in batches of 100
-    let insertedContacts = 0;
-    for (let i = 0; i < contactRows.length; i += 100) {
-      const batch = contactRows.slice(i, i + 100);
-      const { error: contactError } = await supabase
-        .from("client_contacts")
-        .insert(batch);
-      if (contactError) throw contactError;
-      insertedContacts += batch.length;
+    // Upsert in batches of 50
+    let upserted = 0;
+    for (let i = 0; i < clientRows.length; i += 50) {
+      const batch = clientRows.slice(i, i + 50);
+      const { error } = await supabase
+        .from("clients")
+        .upsert(batch, { onConflict: "client_name" });
+      if (error) {
+        console.error(`Batch ${i} error:`, error);
+        throw error;
+      }
+      upserted += batch.length;
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        clients: clientRows.length,
-        contacts: insertedContacts,
+        clients: upserted,
+        columns_mapped: columnMap.map(c => c.dbColumn),
+        message: `Imported ${upserted} clients with ${columnMap.length} fields`,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    console.error("Import error:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
