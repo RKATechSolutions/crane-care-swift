@@ -209,40 +209,58 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   // Assets Inspected
   y = addSectionTitle(doc, y, 'Assets Inspected');
   
-  const assetRows = inspections.map(insp => {
-    const crane = site.cranes.find(c => c.id === insp.craneId);
-    const defectCount = insp.items.filter(i => i.result === 'defect').length;
-    const passCount = insp.items.filter(i => i.result === 'pass').length;
-    return [
-      crane?.name || 'Unknown',
-      crane?.type || '',
-      crane?.serialNumber || '',
-      crane?.capacity || '',
-      `${passCount}/${insp.items.length}`,
-      defectCount > 0 ? `${defectCount}` : '0',
-      insp.craneStatus || '—',
-    ];
-  });
+  // Use DB inspections if available, otherwise legacy
+  const useDbInspections = dbInspections && dbInspections.length > 0;
+  const useDbDefectsData = dbDefects && dbDefects.length > 0;
+  
+  let assetRows: string[][];
+  if (useDbInspections) {
+    assetRows = dbInspections!.map(insp => {
+      const defectCount = dbDefects ? dbDefects.filter(d => d.inspectionId === insp.id).length : 0;
+      return [
+        insp.asset_name || 'Unknown',
+        insp.form_id || '',
+        format(new Date(insp.inspection_date), 'dd MMM yyyy'),
+        defectCount > 0 ? `${defectCount}` : '0',
+        insp.crane_status || '—',
+      ];
+    });
+  } else {
+    assetRows = inspections.map(insp => {
+      const crane = site.cranes.find(c => c.id === insp.craneId);
+      const defectCount = insp.items.filter(i => i.result === 'defect').length;
+      return [
+        crane?.name || 'Unknown',
+        crane?.type || '',
+        format(new Date(insp.completedAt || new Date()), 'dd MMM yyyy'),
+        defectCount > 0 ? `${defectCount}` : '0',
+        insp.craneStatus || '—',
+      ];
+    });
+  }
+  
+  const assetHeaders = useDbInspections
+    ? [['Asset Name', 'Form', 'Date', 'Defects', 'Status']]
+    : [['Asset Name', 'Type', 'Date', 'Defects', 'Status']];
   
   autoTable(doc, {
     startY: y,
-    head: [['Asset Name', 'Type', 'Serial No.', 'Capacity', 'Passed', 'Defects', 'Status']],
+    head: assetHeaders,
     body: assetRows,
     margin: { left: 14, right: 14 },
     styles: { fontSize: 7.5, cellPadding: 2 },
     headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
     columnStyles: {
-      4: { halign: 'center' },
-      5: { halign: 'center' },
+      3: { halign: 'center' },
     },
     didParseCell(data) {
-      if (data.section === 'body' && data.column.index === 6) {
+      if (data.section === 'body' && data.column.index === 4) {
         const val = data.cell.raw as string;
         if (val === 'Safe to Operate') data.cell.styles.textColor = RKA_GREEN;
         else if (val === 'Unsafe to Operate') data.cell.styles.textColor = RKA_RED;
         else if (val.includes('Limitations')) data.cell.styles.textColor = RKA_ORANGE;
       }
-      if (data.section === 'body' && data.column.index === 5) {
+      if (data.section === 'body' && data.column.index === 3) {
         const val = parseInt(data.cell.raw as string);
         if (val > 0) {
           data.cell.styles.textColor = RKA_RED;
