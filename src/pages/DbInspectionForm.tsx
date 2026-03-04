@@ -665,7 +665,7 @@ export default function DbInspectionForm({
           className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
         >
           <Save className="w-4 h-4" />
-          {saving ? 'Saving…' : 'Save & Return'}
+          {saving ? 'Saving…' : 'Save Form and Return to Assets'}
         </button>
         <button
           onClick={() => {
@@ -673,14 +673,14 @@ export default function DbInspectionForm({
               setShowStatusPicker(true);
             } else {
               saveInspection('Submitted');
-              onBack();
+              (onSubmitComplete || onBack)();
             }
           }}
           disabled={saving || totalAnswered === 0}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
         >
           <CheckCircle className="w-5 h-5" />
-          Submit Inspection ({totalAnswered}/{totalQuestions})
+          Submit Form & Complete Job Site Summary ({totalAnswered}/{totalQuestions})
         </button>
       </div>
 
@@ -702,7 +702,7 @@ export default function DbInspectionForm({
                   }
                   setShowStatusPicker(false);
                   await saveInspection('Submitted');
-                  onBack();
+                  (onSubmitComplete || onBack)();
                 }}
                 className={`w-full tap-target rounded-xl font-bold text-base ${
                   status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
