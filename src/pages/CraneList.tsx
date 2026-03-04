@@ -547,6 +547,13 @@ export default function CraneList() {
                 <div key={asset.id} className="border-b border-border">
                   <div className="px-4 py-4">
                     <div onClick={() => setEditingAsset(asset)} role="button" tabIndex={0} className="flex items-start gap-3 cursor-pointer active:bg-muted/50 rounded-lg -mx-1 px-1 py-1 transition-colors">
+                      {asset.main_photo_url ? (
+                        <img src={asset.main_photo_url} alt={crane.name} className="w-14 h-14 rounded-lg object-cover border border-border flex-shrink-0" />
+                      ) : (
+                        <div className="w-14 h-14 rounded-lg bg-muted border border-border flex items-center justify-center flex-shrink-0">
+                          <Package className="w-6 h-6 text-muted-foreground/50" />
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-base">{crane.name}</p>
