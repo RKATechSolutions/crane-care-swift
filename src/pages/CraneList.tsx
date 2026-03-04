@@ -399,6 +399,10 @@ export default function CraneList() {
         clientId={clientId}
         siteName={site.name}
         onBack={() => setShowSiteInspectionV2(false)}
+        onSubmitComplete={() => {
+          setShowSiteInspectionV2(false);
+          dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
+        }}
       />
     );
   }
