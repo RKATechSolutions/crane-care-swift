@@ -2,7 +2,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2 } from 'lucide-react';
+import { PlayCircle, Info, Package, Plus, Pencil, ClipboardCheck, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2, Users, FileBarChart, Briefcase, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
