@@ -140,7 +140,12 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
                       )
                     ) : (
                       <div className="text-sm min-h-[20px]">
-                        {isLink(val) ? (
+                        {f.fieldType === 'checkbox' ? (
+                          <div className="flex items-center gap-2">
+                            <Checkbox checked={val === 'Yes'} disabled />
+                            <span className="font-medium">{val === 'Yes' ? 'Yes' : 'No'}</span>
+                          </div>
+                        ) : isLink(val) ? (
                           <a href={val} target="_blank" rel="noopener noreferrer" className="text-primary flex items-center gap-1 truncate">
                             {val.replace(/https?:\/\//, '').slice(0, 40)}
                             <ExternalLink className="w-3 h-3 flex-shrink-0" />
