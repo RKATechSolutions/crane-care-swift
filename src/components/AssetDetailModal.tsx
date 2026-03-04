@@ -21,6 +21,7 @@ interface AssetDetailModalProps {
     serial_number: string | null;
     length_lift: string | null;
     crane_manufacturer: string | null;
+    main_photo_url?: string | null;
   };
   onClose: () => void;
   onSaved: () => void;
