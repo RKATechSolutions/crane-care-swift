@@ -117,14 +117,19 @@ Generate a strategic executive summary for a busy site/operations manager. Keep 
 
 3. Financial Impact Summary — 2-3 sentences on the cost of current crane management approach.
 
-4. 12-Month Improvement Roadmap — Bullet points only, max 3 items per phase:
+4. Prioritised Recommendations — Numbered list, ranked by impact. For each recommendation:
+   - State the issue clearly
+   - Provide a specific RKA solution (e.g., "RKA can implement a scheduled preventative maintenance program", "RKA's digital monitoring package can track real-time crane health", "RKA can conduct operator competency assessments and refresher training", "RKA's engineering team can perform a Design Work Period assessment per AS 2550")
+   - Estimate the benefit (cost savings, downtime reduction, compliance improvement)
+
+5. 12-Month Improvement Roadmap — Bullet points only, max 3 items per phase:
    - NOW (0–3 months) — most critical
    - NEXT (3–6 months)
    - LATER (6–12 months)
 
-5. Culture Score Assessment — Rate the overall crane culture maturity as: Reactive / Developing / Proactive / Leading. Explain in one sentence.
+6. Culture Score Assessment — Rate the overall crane culture maturity as: Reactive / Developing / Proactive / Leading. Explain in one sentence.
 
-Use direct, professional tone. No fluff, no sales language. Keep entire output under 500 words total.`;
+Use direct, professional tone. No fluff, no sales language. Keep entire output under 700 words total.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");

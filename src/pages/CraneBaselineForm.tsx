@@ -3,7 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronRight, ChevronLeft, CheckCircle, Loader2, Save, FileText, Sparkles } from 'lucide-react';
+import { ChevronRight, ChevronLeft, CheckCircle, Loader2, Save, FileText, Sparkles, Send } from 'lucide-react';
 import { generateBaselinePdf } from '@/utils/generateBaselinePdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import type jsPDF from 'jspdf';
@@ -11,6 +11,8 @@ import type jsPDF from 'jspdf';
 interface CraneBaselineFormProps {
   existingId?: string;
   onBack: () => void;
+  mode?: 'technician' | 'customer';
+  customerSiteName?: string;
 }
 
 const SECTIONS = [
@@ -41,10 +43,12 @@ const CUSTOMER_FIELDS = new Set([
 
 type FormData = Record<string, string | number | null>;
 
-export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineFormProps) {
+export default function CraneBaselineForm({ existingId, onBack, mode = 'technician', customerSiteName }: CraneBaselineFormProps) {
   const { state } = useApp();
   const { toast } = useToast();
-  const site = state.selectedSite!;
+  const isCustomer = mode === 'customer';
+  // In customer mode we don't have site context from AppContext
+  const site = isCustomer ? { id: '', name: customerSiteName || '' } : state.selectedSite!;
 
   const [sectionIdx, setSectionIdx] = useState(0);
   const [formData, setFormData] = useState<FormData>({});
@@ -55,13 +59,15 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
   const [generatingAi, setGeneratingAi] = useState(false);
+  const [submittedByCustomer, setSubmittedByCustomer] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   // Load existing
   useEffect(() => {
     if (!existingId) {
-      setFormData(prev => ({ ...prev, company_name: site.name }));
+      if (!isCustomer) setFormData(prev => ({ ...prev, company_name: site.name }));
       return;
     }
     const load = async () => {
@@ -83,15 +89,18 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
 
   // Autosave with debounce
   const doAutosave = useCallback(async (data: FormData, currentRecordId: string) => {
-    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
     const payload: any = {
-      site_name: site.name,
-      client_id: clientId,
-      technician_id: state.currentUser?.id,
-      technician_name: state.currentUser?.name,
+      site_name: data.company_name || site.name || 'Unknown',
       status: 'in_progress',
       ...data,
     };
+
+    if (!isCustomer) {
+      const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+      payload.client_id = clientId;
+      payload.technician_id = state.currentUser?.id;
+      payload.technician_name = state.currentUser?.name;
+    }
     delete payload.status_label;
 
     try {
@@ -105,12 +114,11 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
     } catch {
       // Silent fail for autosave
     }
-  }, [site, state.currentUser]);
+  }, [site, state.currentUser, isCustomer]);
 
   const set = (key: string, value: string | number | null) => {
     setFormData(prev => {
       const next = { ...prev, [key]: value };
-      // Trigger autosave after 2s debounce
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
       autosaveTimer.current = setTimeout(() => {
         doAutosave(next, recordId);
@@ -119,7 +127,6 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
     });
   };
 
-  // Cleanup timer
   useEffect(() => {
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
@@ -169,16 +176,18 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
   const complete = async () => {
     setStatus('completed');
     setSaving(true);
-    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+    const clientId = !isCustomer && site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
     const payload: any = {
-      site_name: site.name,
-      client_id: clientId,
-      technician_id: state.currentUser?.id,
-      technician_name: state.currentUser?.name,
+      site_name: str('company_name') || site.name,
       status: 'completed',
       completed_at: new Date().toISOString(),
       ...formData,
     };
+    if (!isCustomer) {
+      payload.client_id = clientId;
+      payload.technician_id = state.currentUser?.id;
+      payload.technician_name = state.currentUser?.name;
+    }
 
     try {
       if (recordId) {
@@ -194,11 +203,29 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
     setSaving(false);
   };
 
-  const generateAiSummary = async () => {
-    if (!recordId) {
-      // Save first to get a record ID
-      await save();
+  const notifyTeam = async () => {
+    // Save first
+    await save();
+    setSendingNotification(true);
+    try {
+      const { error } = await supabase.functions.invoke('notify-baseline-complete', {
+        body: {
+          companyName: str('company_name'),
+          siteName: str('site_location') || str('company_name'),
+          baselineId: recordId,
+        },
+      });
+      if (error) throw error;
+      setSubmittedByCustomer(true);
+      toast({ title: 'Submitted!', description: 'RKA has been notified. Our team will review your details before your visit.' });
+    } catch (e: any) {
+      toast({ title: 'Saved', description: 'Your progress has been saved. Please let RKA know you\'ve completed the form.', variant: 'destructive' });
     }
+    setSendingNotification(false);
+  };
+
+  const generateAiSummary = async () => {
+    if (!recordId) await save();
     if (!recordId) {
       toast({ title: 'Error', description: 'Please save the form first.', variant: 'destructive' });
       return;
@@ -237,10 +264,8 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
     setGeneratingPdf(false);
   };
 
-  // Helper to determine if a field is a technician field (bold styling)
   const isTechField = (key: string) => !CUSTOMER_FIELDS.has(key);
 
-  // Render helpers with bold styling for technician answers
   const renderNumberField = (label: string, key: string, placeholder = '0', suffix?: string) => (
     <div className="space-y-1">
       <label className="text-sm font-medium text-foreground">{label}</label>
@@ -486,35 +511,39 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
               {renderCalcField('Training Coverage Rate', calc.trainingCoverage, '', '%', 'Percentage of operators with current refresher training.')}
             </div>
 
-            {/* AI Summary Section */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-foreground">🤖 AI Strategic Summary</h3>
-                <button
-                  onClick={generateAiSummary}
-                  disabled={generatingAi}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground disabled:opacity-50"
-                >
-                  {generatingAi ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                  {aiSummary ? 'Regenerate' : 'Generate'}
-                </button>
+            {/* AI Summary — Tech only */}
+            {!isCustomer && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-foreground">🤖 AI Strategic Summary & Recommendations</h3>
+                  <button
+                    onClick={generateAiSummary}
+                    disabled={generatingAi}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground disabled:opacity-50"
+                  >
+                    {generatingAi ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    {aiSummary ? 'Regenerate' : 'Generate'}
+                  </button>
+                </div>
+                {generatingAi && (
+                  <div className="bg-muted/50 border border-border rounded-xl p-4 text-center">
+                    <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
+                    <p className="text-xs text-muted-foreground">Analysing baseline data and generating strategic summary...</p>
+                  </div>
+                )}
+                {aiSummary && !generatingAi && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+                    <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{aiSummary}</div>
+                  </div>
+                )}
               </div>
-              {generatingAi && (
-                <div className="bg-muted/50 border border-border rounded-xl p-4 text-center">
-                  <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
-                  <p className="text-xs text-muted-foreground">Analysing baseline data and generating strategic summary...</p>
-                </div>
-              )}
-              {aiSummary && !generatingAi && (
-                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-                  <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{aiSummary}</div>
-                </div>
-              )}
-            </div>
+            )}
 
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
               <p className="text-sm text-foreground leading-relaxed">
-                This assessment establishes your current crane performance baseline. During our onsite visit, we will review these findings and identify opportunities to reduce risk, downtime, and lifecycle cost.
+                {isCustomer
+                  ? 'Thank you for completing this pre-visit assessment. RKA will review your details and discuss findings during the onsite visit.'
+                  : 'This assessment establishes your current crane performance baseline. During our onsite visit, we will review these findings and identify opportunities to reduce risk, downtime, and lifecycle cost.'}
               </p>
             </div>
 
@@ -527,26 +556,49 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
               </p>
             </div>
 
-            <div className="flex gap-2">
+            {/* Customer mode: Save & Notify */}
+            {isCustomer && !submittedByCustomer && (
               <button
-                onClick={handleExportPdf}
-                disabled={generatingPdf}
-                className="flex-1 h-12 bg-foreground text-background rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                onClick={notifyTeam}
+                disabled={sendingNotification}
+                className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
               >
-                {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                Export PDF
+                {sendingNotification ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Save & Notify RKA Team
               </button>
-              {status !== 'completed' && (
+            )}
+
+            {isCustomer && submittedByCustomer && (
+              <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 text-center">
+                <CheckCircle className="w-6 h-6 text-primary mx-auto mb-2" />
+                <p className="text-sm font-bold text-foreground">Submitted Successfully</p>
+                <p className="text-xs text-muted-foreground mt-1">RKA has been notified. We'll review your details before your visit.</p>
+              </div>
+            )}
+
+            {/* Tech mode: PDF + Complete */}
+            {!isCustomer && (
+              <div className="flex gap-2">
                 <button
-                  onClick={complete}
-                  disabled={saving}
-                  className="flex-1 h-12 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                  onClick={handleExportPdf}
+                  disabled={generatingPdf}
+                  className="flex-1 h-12 bg-foreground text-background rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                 >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                  Complete
+                  {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                  Export PDF
                 </button>
-              )}
-            </div>
+                {status !== 'completed' && (
+                  <button
+                    onClick={complete}
+                    disabled={saving}
+                    className="flex-1 h-12 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                  >
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                    Complete
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         );
 
@@ -557,11 +609,18 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader
-        title="Crane Culture Baseline"
-        subtitle={site.name}
-        onBack={onBack}
-      />
+      {isCustomer ? (
+        <div className="bg-primary px-4 py-3">
+          <h1 className="text-base font-bold text-primary-foreground">RKA Crane Culture & Performance Baseline</h1>
+          <p className="text-xs text-primary-foreground/70">{customerSiteName || 'Pre-Visit Assessment'}</p>
+        </div>
+      ) : (
+        <AppHeader
+          title="Crane Culture Baseline"
+          subtitle={site.name}
+          onBack={onBack}
+        />
+      )}
 
       {/* Section tabs */}
       <div className="px-2 py-2 border-b border-border overflow-x-auto">
@@ -629,17 +688,19 @@ export default function CraneBaselineForm({ existingId, onBack }: CraneBaselineF
         </button>
       </div>
 
-      <PdfPreviewModal
-        open={!!previewPdfDoc}
-        pdfDoc={previewPdfDoc}
-        title="Crane Baseline Report"
-        onClose={() => setPreviewPdfDoc(null)}
-        onDownload={() => {
-          if (previewPdfDoc) {
-            previewPdfDoc.save(`${str('company_name') || site.name}_Crane_Baseline_${new Date().toISOString().slice(0, 10)}.pdf`);
-          }
-        }}
-      />
+      {!isCustomer && (
+        <PdfPreviewModal
+          open={!!previewPdfDoc}
+          pdfDoc={previewPdfDoc}
+          title="Crane Baseline Report"
+          onClose={() => setPreviewPdfDoc(null)}
+          onDownload={() => {
+            if (previewPdfDoc) {
+              previewPdfDoc.save(`${str('company_name') || site.name}_Crane_Baseline_${new Date().toISOString().slice(0, 10)}.pdf`);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
