@@ -31,7 +31,15 @@ const Index = () => {
 
   // Job detail view
   if (selectedJobId) {
-    return <JobDetailPage jobId={selectedJobId} onBack={() => { setSelectedJobId(null); setDashboardView('tasks'); }} />;
+    return <JobDetailPage jobId={selectedJobId} onBack={() => { setSelectedJobId(null); setDashboardView('tasks'); }} onStartInspection={(job) => {
+      // Set active job context, find & select the client site, navigate to asset list
+      setActiveJobId(job.id);
+      if (job.client_name) {
+        dispatch({ type: 'SELECT_SITE', payload: { id: `job-${job.id}`, name: job.client_name, address: '', contactName: '', contactPhone: '', cranes: [] } });
+      }
+      setSelectedJobId(null);
+      setDashboardView('assets');
+    }} />;
   }
 
   // Quote builder

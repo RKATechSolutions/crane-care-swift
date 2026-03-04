@@ -8,13 +8,14 @@ import { toast } from 'sonner';
 import {
   DollarSign, Clock, FileText, StickyNote, Paperclip,
   Plus, Trash2, TrendingUp,
-  Send, Calendar, User, Wrench, Package
+  Send, Calendar, User, Wrench, Package, ClipboardCheck
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 
 interface JobDetailPageProps {
   jobId: string;
   onBack: () => void;
+  onStartInspection?: (job: { id: string; client_name: string | null; job_type: string | null }) => void;
 }
 
 interface Task {
@@ -70,7 +71,7 @@ const JOB_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   general: { label: 'General', color: 'bg-muted text-muted-foreground' },
 };
 
-export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
+export default function JobDetailPage({ jobId, onBack, onStartInspection }: JobDetailPageProps) {
   const { state } = useApp();
   const currentUser = state.currentUser;
   const [job, setJob] = useState<Task | null>(null);
@@ -293,9 +294,21 @@ export default function JobDetailPage({ jobId, onBack }: JobDetailPageProps) {
             </Badge>
           </div>
           {job.client_name && (
-            <div className="flex items-center gap-1.5 text-sm text-foreground">
-              <User className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="font-medium">{job.client_name}</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-sm text-foreground">
+                <User className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="font-medium">{job.client_name}</span>
+              </div>
+              {job.status !== 'completed' && onStartInspection && (
+                <Button
+                  size="sm"
+                  className="gap-1.5 text-xs h-8"
+                  onClick={() => onStartInspection({ id: job.id, client_name: job.client_name, job_type: job.job_type })}
+                >
+                  <ClipboardCheck className="w-3.5 h-3.5" />
+                  Start Inspection
+                </Button>
+              )}
             </div>
           )}
           <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
