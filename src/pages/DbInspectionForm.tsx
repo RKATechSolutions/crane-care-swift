@@ -47,6 +47,7 @@ export default function DbInspectionForm({
   const [aiSummary, setAiSummary] = useState<string>('');
   const [generatingAI, setGeneratingAI] = useState(false);
   const [otherNotes, setOtherNotes] = useState<string>('');
+  const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | undefined>(undefined);
 
   // Load questions for this form
   useEffect(() => {
