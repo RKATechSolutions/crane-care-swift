@@ -515,6 +515,31 @@ export default function CraneList({ activeJobId, onSetActiveJob }: CraneListProp
       {/* Tab: Assets */}
       {activeTab === 'assets' && (
         <>
+          {/* Active Job Banner */}
+          {activeJobId && activeJobName && (
+            <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2">
+              <Briefcase className="w-4 h-4 text-primary flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-primary truncate">Active Job: {activeJobName}</p>
+                <p className="text-[10px] text-primary/70">All forms will be linked to this job</p>
+              </div>
+            </div>
+          )}
+          {!activeJobId && (
+            <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-amber-700">No active job</p>
+                <p className="text-[10px] text-amber-600/80">Select a job from the Jobs tab to link forms</p>
+              </div>
+              <button
+                onClick={() => setShowJobPrompt(true)}
+                className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-md flex-shrink-0"
+              >
+                Link Job
+              </button>
+            </div>
+          )}
           {/* Quick Action Tiles */}
           <div className="px-4 pt-3 pb-2 grid grid-cols-4 gap-2">
             <button
