@@ -498,110 +498,78 @@ export default function CraneList() {
       {/* Tab: Assets */}
       {activeTab === 'assets' && (
         <>
-          <div className="px-4 py-2 border-b border-border space-y-2">
-            {/* Crane Culture & Performance Baseline */}
-            <div className="space-y-1.5">
-              <button
-                onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
-                className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                  existingBaseline?.status === 'completed'
-                    ? 'bg-muted text-foreground border border-border'
-                    : 'bg-primary text-primary-foreground shadow-lg'
-                }`}
-              >
-                <BarChart3 className="w-4 h-4" />
-                {existingBaseline?.status === 'completed' ? 'View Crane Performance Baseline' : 'Crane Performance Baseline'}
-              </button>
-              {existingBaseline?.id && (
-                <button
-                  onClick={() => {
-                    const url = `${window.location.origin}/baseline?id=${existingBaseline.id}`;
+          {/* 4 Square Tiles */}
+          <div className="px-4 pt-3 pb-2 grid grid-cols-4 gap-2">
+            <button
+              onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
+              className="aspect-square rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1.5 p-2 text-center shadow-md active:scale-95 transition-transform"
+            >
+              <BarChart3 className="w-6 h-6" />
+              <span className="text-[10px] font-bold leading-tight">Initial Site Inspection</span>
+            </button>
+            <button
+              onClick={() => setShowLiftingRegisterList(true)}
+              className="aspect-square rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1.5 p-2 text-center shadow-md active:scale-95 transition-transform"
+            >
+              <ClipboardList className="w-6 h-6" />
+              <span className="text-[10px] font-bold leading-tight">Lifting Register</span>
+            </button>
+            <button
+              onClick={async () => {
+                if (existingBaseline?.id) {
+                  const url = `${window.location.origin}/baseline?id=${existingBaseline.id}`;
+                  navigator.clipboard.writeText(url);
+                  toast({ title: 'Link Copied', description: 'Customer pre-visit link copied to clipboard.' });
+                } else {
+                  const cId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+                  const payload: any = { site_name: site.name, company_name: site.name, status: 'in_progress' };
+                  if (cId) payload.client_id = cId;
+                  const { data } = await supabase.from('crane_baselines').insert(payload).select('id').single();
+                  if (data) {
+                    setExistingBaseline({ id: data.id, status: 'in_progress' });
+                    const url = `${window.location.origin}/baseline?id=${data.id}`;
                     navigator.clipboard.writeText(url);
-                    toast({ title: 'Link Copied', description: 'Customer baseline link copied to clipboard. Send it to the customer.' });
-                  }}
-                  className="w-full h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 bg-accent text-accent-foreground border border-border"
-                >
-                  <Link2 className="w-3.5 h-3.5" />
-                  Copy Customer Pre-Visit Link
-                </button>
-              )}
-              {!existingBaseline && (
-                <button
-                  onClick={async () => {
-                    const cId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
-                    const payload: any = { site_name: site.name, company_name: site.name, status: 'in_progress' };
-                    if (cId) payload.client_id = cId;
-                    const { data } = await supabase.from('crane_baselines').insert(payload).select('id').single();
-                    if (data) {
-                      setExistingBaseline({ id: data.id, status: 'in_progress' });
-                      const url = `${window.location.origin}/baseline?id=${data.id}`;
-                      navigator.clipboard.writeText(url);
-                      toast({ title: 'Link Created & Copied', description: 'Customer baseline link copied to clipboard.' });
-                    }
-                  }}
-                  className="w-full h-9 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 bg-accent text-accent-foreground border border-border"
-                >
-                  <Link2 className="w-3.5 h-3.5" />
-                  Create & Send Customer Pre-Visit Link
-                </button>
-              )}
-            </div>
+                    toast({ title: 'Link Created & Copied', description: 'Customer pre-visit link copied to clipboard.' });
+                  }
+                }
+              }}
+              className="aspect-square rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1.5 p-2 text-center shadow-md active:scale-95 transition-transform"
+            >
+              <Link2 className="w-6 h-6" />
+              <span className="text-[10px] font-bold leading-tight">Copy Customer Pre-Visit Link</span>
+            </button>
             <button
               onClick={() => {
                 dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
               }}
-              className="w-full tap-target bg-foreground text-background rounded-xl font-bold text-base"
+              className="aspect-square rounded-xl bg-primary text-primary-foreground flex flex-col items-center justify-center gap-1.5 p-2 text-center shadow-md active:scale-95 transition-transform"
             >
-              Complete Site Job Summary
+              <FileText className="w-6 h-6" />
+              <span className="text-[10px] font-bold leading-tight">Complete Job Site Summary</span>
             </button>
+          </div>
 
-            {/* Initial Site Inspection */}
-            <button
-              onClick={() => {
-                setShowAssessment({
-                  type: 'Initial Site Baseline',
-                  existingId: initialAssessment?.id,
-                });
-              }}
-              className={`w-full h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                initialAssessment?.status === 'completed'
-                  ? 'bg-muted text-foreground border border-border'
-                  : 'bg-primary text-primary-foreground shadow-lg'
-              }`}
-            >
-              <ClipboardCheck className="w-4 h-4" />
-              {initialAssessment?.status === 'completed' ? 'View Initial Site Inspection' : 'Initial Site Inspection'}
+          <div className="px-4 py-2 border-b border-border space-y-2">
+            {/* Hidden: Initial Site Inspection V1 & V2 - kept for admin re-enable */}
+            {/* 
+            <button onClick={() => setShowAssessment({ type: 'Initial Site Baseline', existingId: initialAssessment?.id })} className="...">
+              Initial Site Inspection
             </button>
+            <button onClick={() => setShowSiteInspectionV2(true)} className="...">
+              Initial Site Inspection V2
+            </button>
+            */}
 
-            {/* Annual Site Review */}
+            {/* Annual Site Review - only if initial completed */}
             {initialAssessment?.status === 'completed' && (
               <button
-                onClick={() => {
-                  setShowAssessment({ type: '12-Month Review' });
-                }}
+                onClick={() => setShowAssessment({ type: '12-Month Review' })}
                 className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all"
               >
                 <RefreshCw className="w-4 h-4" />
                 Annual Site Review
               </button>
             )}
-
-            {/* Initial Site Inspection V2 */}
-            <button
-              onClick={() => setShowSiteInspectionV2(true)}
-              className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-border"
-            >
-              <ClipboardCheck className="w-4 h-4" />
-              Initial Site Inspection V2
-            </button>
-
-            <button
-              onClick={() => setShowLiftingRegisterList(true)}
-              className="w-full h-11 bg-accent text-accent-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
-            >
-              <ClipboardList className="w-4 h-4" />
-              Lifting Equipment Register
-            </button>
 
             <button
               onClick={() => setShowAddAsset(!showAddAsset)}
