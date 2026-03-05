@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
@@ -13,21 +13,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Camera, Check, Pencil, AlertTriangle, Loader2, ScanLine, X, ImagePlus, Sparkles } from 'lucide-react';
 
-interface LiftingRegisterFormProps {
-  onBack: () => void;
-  clientId?: string;
-  siteName?: string;
-}
-
-const EQUIPMENT_TYPES = [
+const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
   'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
   'Lifting Lug', 'Eyebolt', 'Swivel',
 ];
-
-const SLING_TYPES = ['Chain Sling', 'Wire Rope Sling', 'Web Sling'];
-const HOIST_TYPES = ['Lever Hoist', 'Chain Block'];
-const BEAM_TYPES = ['Beam Clamp', 'Spreader Beam'];
+const DEFAULT_SLING_TYPES = ['Chain Sling', 'Wire Rope Sling', 'Web Sling'];
+const DEFAULT_HOIST_TYPES = ['Lever Hoist', 'Chain Block'];
+const DEFAULT_BEAM_TYPES = ['Beam Clamp', 'Spreader Beam'];
+const DEFAULT_SLING_CONFIGS = ['Single Leg', 'Two Leg', 'Three Leg', 'Four Leg', 'Endless'];
+const DEFAULT_EQUIPMENT_STATUSES = ['In Service', 'Failed', 'Removed From Service', 'Pending Inspection'];
+const DEFAULT_WLL_UNITS = ['kg', 't'];
 
 interface AIField {
   value: string | number | null;
