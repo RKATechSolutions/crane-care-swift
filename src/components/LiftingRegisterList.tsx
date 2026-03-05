@@ -232,26 +232,41 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       console.log('Raw first row:', JSON.stringify(bestSheet[0]));
       if (bestSheet.length < 2) { toast.error('No sheet found with header and data'); setImporting(false); return; }
       
-      // Find the actual header row - sometimes there are blank/title rows before headers
-      let headerRowIdx = 0;
-      for (let i = 0; i < Math.min(5, bestSheet.length - 1); i++) {
+      // Find the actual header row - scan up to 20 rows for the real headers
+      // The XLSX may have title/metadata rows before the actual data headers
+      let headerRowIdx = -1;
+      for (let i = 0; i < Math.min(20, bestSheet.length - 1); i++) {
         const row = bestSheet[i].map((h: any) => String(h || '').toLowerCase().trim());
-        // Check if this row looks like headers (has recognizable column names)
-        const matchCount = row.filter((h: string) => {
-          const cleaned = h.replace(/[.#]/g, '').trim();
-          return headerMap[h] || headerMap[cleaned] || 
-            Object.keys(headerMap).some(k => h.includes(k) || k.includes(h));
-        }).length;
-        if (matchCount >= 2) { headerRowIdx = i; break; }
-        // Also check for common header patterns
-        if (row.some((h: string) => h.includes('serial') || h.includes('unit') || h.includes('comment'))) {
-          headerRowIdx = i; break;
-        }
+        // Look for rows containing known header keywords
+        const hasSerial = row.some((h: string) => h.includes('serial'));
+        const hasUnit = row.some((h: string) => h.includes('unit'));
+        const hasComment = row.some((h: string) => h.includes('comment') || h.includes('notes') || h.includes('remark'));
+        const hasType = row.some((h: string) => h.includes('type') || h.includes('equipment'));
+        const hasTag = row.some((h: string) => h.includes('tag') || h.includes('asset'));
+        const hasWll = row.some((h: string) => h.includes('wll') || h.includes('swl') || h.includes('capacity'));
+        
+        const matchScore = [hasSerial, hasUnit, hasComment, hasType, hasTag, hasWll].filter(Boolean).length;
+        if (matchScore >= 2) { headerRowIdx = i; break; }
       }
+      
+      // Fallback: use first row
+      if (headerRowIdx === -1) headerRowIdx = 0;
       
       console.log(`Header row index: ${headerRowIdx}, headers:`, bestSheet[headerRowIdx]);
       const headers = bestSheet[headerRowIdx].map((h: any) => String(h || ''));
-      const rows = parseRowsToInsert(headers, bestSheet.slice(headerRowIdx + 1));
+      const dataRows = bestSheet.slice(headerRowIdx + 1);
+      
+      // Filter out rows that look like metadata/sub-headers (e.g. contain "FolderID", address info, etc.)
+      const filteredDataRows = dataRows.filter(row => {
+        const firstCell = String(row[0] || '').toLowerCase().trim();
+        // Skip rows that are clearly metadata
+        if (firstCell.includes('folderid') || firstCell.includes('formid')) return false;
+        if (firstCell.includes('address') || firstCell.includes('prestons')) return false;
+        if (firstCell.includes('general') || firstCell === 'comment') return false;
+        return true;
+      });
+      
+      const rows = parseRowsToInsert(headers, filteredDataRows);
       console.log('Parsed rows sample:', JSON.stringify(rows.slice(0, 3)));
       if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
       const { error } = await supabase.from('lifting_register').insert(rows);
