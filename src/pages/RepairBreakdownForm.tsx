@@ -210,6 +210,7 @@ export default function RepairBreakdownForm({
         assetName,
         siteName,
         technicianName: state.currentUser?.name || 'Unknown',
+        assetPhotoUrl,
       });
       setPreviewPdf(pdf);
       setShowPreview(true);
