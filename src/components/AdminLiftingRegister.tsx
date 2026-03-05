@@ -5,10 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, X, Save, Loader2, Link2 } from 'lucide-react';
+import { Plus, X, Save, Loader2, Link2, Trash2 } from 'lucide-react';
+
+interface CategoryGroup {
+  name: string;
+  description: string;
+  types: string[];
+  fields: string[]; // which extra fields this group shows
+}
 
 interface LiftingRegisterConfig {
   equipment_types: string[];
+  category_groups: CategoryGroup[];
+  // Legacy keys kept for backward compat
   sling_types: string[];
   hoist_types: string[];
   beam_types: string[];
@@ -18,21 +27,28 @@ interface LiftingRegisterConfig {
   tag_present_options: { value: string; label: string }[];
 }
 
+const FIELD_OPTIONS = [
+  { value: 'sling_configuration', label: 'Sling Configuration' },
+  { value: 'sling_leg_count', label: 'Leg Count' },
+  { value: 'length_m', label: 'Length (m)' },
+  { value: 'lift_height_m', label: 'Lift Height (m)' },
+  { value: 'span_m', label: 'Span (m)' },
+  { value: 'grade', label: 'Grade' },
+];
+
+const DEFAULT_GROUPS: CategoryGroup[] = [
+  { name: 'Sling Types', description: 'Sling-specific fields (config, legs, length)', types: ['Chain Sling', 'Wire Rope Sling', 'Web Sling'], fields: ['sling_configuration', 'sling_leg_count', 'length_m'] },
+  { name: 'Hoist Types', description: 'Hoist-specific fields (lift height)', types: ['Lever Hoist', 'Chain Block'], fields: ['lift_height_m'] },
+  { name: 'Beam Types', description: 'Beam-specific fields (span)', types: ['Beam Clamp', 'Spreader Beam'], fields: ['span_m'] },
+];
+
 const DEFAULT_CONFIG: LiftingRegisterConfig = {
   equipment_types: [
-    'Chain Sling',
-    'Wire Rope Sling',
-    'Web Sling',
-    'Shackle',
-    'Hook',
-    'Lever Hoist',
-    'Chain Block',
-    'Beam Clamp',
-    'Spreader Beam',
-    'Lifting Lug',
-    'Eyebolt',
-    'Swivel',
+    'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
+    'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
+    'Lifting Lug', 'Eyebolt', 'Swivel',
   ],
+  category_groups: DEFAULT_GROUPS,
   sling_types: ['Chain Sling', 'Wire Rope Sling', 'Web Sling'],
   hoist_types: ['Lever Hoist', 'Chain Block'],
   beam_types: ['Beam Clamp', 'Spreader Beam'],
@@ -48,7 +64,6 @@ const DEFAULT_CONFIG: LiftingRegisterConfig = {
 };
 
 type ListKey = 'equipment_types' | 'sling_configurations' | 'equipment_statuses' | 'wll_units';
-type CategoryKey = 'sling_types' | 'hoist_types' | 'beam_types';
 
 interface ListEditorProps {
   title: string;
@@ -61,15 +76,7 @@ interface ListEditorProps {
   onRemove: (index: number) => void;
 }
 
-function ListEditor({
-  title,
-  description,
-  items,
-  inputValue,
-  onInputChange,
-  onAdd,
-  onRemove,
-}: ListEditorProps) {
+function ListEditor({ title, description, items, inputValue, onInputChange, onAdd, onRemove }: ListEditorProps) {
   return (
     <Card className="p-4 space-y-3">
       <div>
@@ -92,12 +99,7 @@ function ListEditor({
           onChange={e => onInputChange(e.target.value)}
           placeholder="Add new..."
           className="text-sm"
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              onAdd();
-            }
-          }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); onAdd(); } }}
         />
         <Button type="button" size="sm" variant="outline" onClick={onAdd}>
           <Plus className="w-4 h-4" />
@@ -107,38 +109,92 @@ function ListEditor({
   );
 }
 
-interface CategoryMapperProps {
-  title: string;
-  description: string;
+interface CategoryGroupEditorProps {
+  group: CategoryGroup;
+  index: number;
   equipmentTypes: string[];
-  activeTypes: string[];
-  onToggle: (type: string) => void;
+  onUpdate: (index: number, group: CategoryGroup) => void;
+  onDelete: (index: number) => void;
 }
 
-function CategoryMapper({ title, description, equipmentTypes, activeTypes, onToggle }: CategoryMapperProps) {
+function CategoryGroupEditor({ group, index, equipmentTypes, onUpdate, onDelete }: CategoryGroupEditorProps) {
+  const toggleType = (type: string) => {
+    const types = group.types.includes(type)
+      ? group.types.filter(t => t !== type)
+      : [...group.types, type];
+    onUpdate(index, { ...group, types });
+  };
+
+  const toggleField = (field: string) => {
+    const fields = group.fields.includes(field)
+      ? group.fields.filter(f => f !== field)
+      : [...group.fields, field];
+    onUpdate(index, { ...group, fields });
+  };
+
   return (
     <Card className="p-4 space-y-3">
-      <div>
-        <h3 className="font-bold text-sm flex items-center gap-1.5">
-          <Link2 className="w-4 h-4 text-muted-foreground" />
-          {title}
-        </h3>
-        <p className="text-xs text-muted-foreground">{description}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center gap-1.5">
+            <Link2 className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <Input
+              value={group.name}
+              onChange={e => onUpdate(index, { ...group, name: e.target.value })}
+              className="text-sm font-bold h-8 px-2"
+              placeholder="Group name..."
+            />
+          </div>
+          <Input
+            value={group.description}
+            onChange={e => onUpdate(index, { ...group, description: e.target.value })}
+            className="text-xs h-7 px-2 text-muted-foreground"
+            placeholder="Description..."
+          />
+        </div>
+        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8 w-8 p-0" onClick={() => onDelete(index)}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {equipmentTypes.map(type => {
-          const active = activeTypes.includes(type);
-          return (
-            <Badge
-              key={type}
-              variant={active ? 'default' : 'outline'}
-              className={`text-xs cursor-pointer transition-colors ${active ? '' : 'opacity-50'}`}
-              onClick={() => onToggle(type)}
-            >
-              {type}
-            </Badge>
-          );
-        })}
+
+      {/* Equipment type toggles */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-1.5">Equipment Types in this group:</p>
+        <div className="flex flex-wrap gap-1.5">
+          {equipmentTypes.map(type => {
+            const active = group.types.includes(type);
+            return (
+              <Badge
+                key={type}
+                variant={active ? 'default' : 'outline'}
+                className={`text-xs cursor-pointer transition-colors ${active ? '' : 'opacity-50'}`}
+                onClick={() => toggleType(type)}
+              >
+                {type}
+              </Badge>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Field toggles */}
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-1.5">Extra fields shown for this group:</p>
+        <div className="flex flex-wrap gap-1.5">
+          {FIELD_OPTIONS.map(opt => {
+            const active = group.fields.includes(opt.value);
+            return (
+              <Badge
+                key={opt.value}
+                variant={active ? 'default' : 'outline'}
+                className={`text-xs cursor-pointer transition-colors ${active ? 'bg-primary/80' : 'opacity-50'}`}
+                onClick={() => toggleField(opt.value)}
+              >
+                {opt.label}
+              </Badge>
+            );
+          })}
+        </div>
       </div>
     </Card>
   );
@@ -155,18 +211,25 @@ export default function AdminLiftingRegister() {
     wll_units: '',
   });
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
+  useEffect(() => { loadConfig(); }, []);
 
   const loadConfig = async () => {
     try {
       const { data } = await supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle();
       if (data?.config) {
-        setConfig({ ...DEFAULT_CONFIG, ...(data.config as object) });
+        const saved = data.config as any;
+        // Migrate legacy config to category_groups if needed
+        if (!saved.category_groups && (saved.sling_types || saved.hoist_types || saved.beam_types)) {
+          saved.category_groups = [
+            { name: 'Sling Types', description: 'Sling-specific fields', types: saved.sling_types || [], fields: ['sling_configuration', 'sling_leg_count', 'length_m'] },
+            { name: 'Hoist Types', description: 'Hoist-specific fields', types: saved.hoist_types || [], fields: ['lift_height_m'] },
+            { name: 'Beam Types', description: 'Beam-specific fields', types: saved.beam_types || [], fields: ['span_m'] },
+          ];
+        }
+        setConfig({ ...DEFAULT_CONFIG, ...saved });
       }
     } catch {
-      // Use defaults if row doesn't exist yet
+      // Use defaults
     } finally {
       setLoading(false);
     }
@@ -175,10 +238,22 @@ export default function AdminLiftingRegister() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Sync legacy keys from category_groups for backward compat
+      const groups = config.category_groups || [];
+      const slingGroup = groups.find(g => g.name.toLowerCase().includes('sling'));
+      const hoistGroup = groups.find(g => g.name.toLowerCase().includes('hoist'));
+      const beamGroup = groups.find(g => g.name.toLowerCase().includes('beam'));
+
+      const saveConfig = {
+        ...config,
+        sling_types: slingGroup?.types || [],
+        hoist_types: hoistGroup?.types || [],
+        beam_types: beamGroup?.types || [],
+      };
+
       const { error } = await supabase
         .from('admin_config')
-        .upsert([{ id: 'lifting_register', config: config as any, updated_at: new Date().toISOString() }]);
-
+        .upsert([{ id: 'lifting_register', config: saveConfig as any, updated_at: new Date().toISOString() }]);
       if (error) throw error;
       toast.success('Lifting register config saved');
     } catch (err: any) {
@@ -191,11 +266,7 @@ export default function AdminLiftingRegister() {
   const addItem = (key: ListKey) => {
     const val = newItems[key].trim();
     if (!val) return;
-    if (config[key].includes(val)) {
-      toast.error('Already exists');
-      return;
-    }
-
+    if (config[key].includes(val)) { toast.error('Already exists'); return; }
     setConfig(prev => ({ ...prev, [key]: [...prev[key], val] }));
     setNewItems(prev => ({ ...prev, [key]: '' }));
   };
@@ -204,14 +275,25 @@ export default function AdminLiftingRegister() {
     setConfig(prev => ({ ...prev, [key]: prev[key].filter((_, i) => i !== idx) }));
   };
 
-  const toggleCategory = (catKey: CategoryKey, type: string) => {
-    setConfig(prev => {
-      const arr = prev[catKey];
-      if (arr.includes(type)) {
-        return { ...prev, [catKey]: arr.filter(t => t !== type) };
-      }
-      return { ...prev, [catKey]: [...arr, type] };
-    });
+  const updateGroup = (idx: number, group: CategoryGroup) => {
+    setConfig(prev => ({
+      ...prev,
+      category_groups: prev.category_groups.map((g, i) => i === idx ? group : g),
+    }));
+  };
+
+  const deleteGroup = (idx: number) => {
+    setConfig(prev => ({
+      ...prev,
+      category_groups: prev.category_groups.filter((_, i) => i !== idx),
+    }));
+  };
+
+  const addGroup = () => {
+    setConfig(prev => ({
+      ...prev,
+      category_groups: [...prev.category_groups, { name: 'New Group', description: 'Which equipment types belong here', types: [], fields: [] }],
+    }));
   };
 
   if (loading) {
@@ -240,29 +322,29 @@ export default function AdminLiftingRegister() {
         onRemove={idx => removeItem('equipment_types', idx)}
       />
 
-      <CategoryMapper
-        title="Sling Types"
-        description="Which equipment types show sling-specific fields (config, legs, length)"
-        equipmentTypes={config.equipment_types}
-        activeTypes={config.sling_types}
-        onToggle={type => toggleCategory('sling_types', type)}
-      />
+      {/* Category Groups */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-sm">Category Groups</h3>
+            <p className="text-xs text-muted-foreground">Map equipment types to groups that control which extra fields appear</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={addGroup}>
+            <Plus className="w-4 h-4 mr-1" /> Add Group
+          </Button>
+        </div>
 
-      <CategoryMapper
-        title="Hoist Types"
-        description="Which equipment types show hoist-specific fields (lift height)"
-        equipmentTypes={config.equipment_types}
-        activeTypes={config.hoist_types}
-        onToggle={type => toggleCategory('hoist_types', type)}
-      />
-
-      <CategoryMapper
-        title="Beam Types"
-        description="Which equipment types show beam-specific fields (span)"
-        equipmentTypes={config.equipment_types}
-        activeTypes={config.beam_types}
-        onToggle={type => toggleCategory('beam_types', type)}
-      />
+        {config.category_groups.map((group, idx) => (
+          <CategoryGroupEditor
+            key={idx}
+            group={group}
+            index={idx}
+            equipmentTypes={config.equipment_types}
+            onUpdate={updateGroup}
+            onDelete={deleteGroup}
+          />
+        ))}
+      </div>
 
       <ListEditor
         title="Sling Configurations"

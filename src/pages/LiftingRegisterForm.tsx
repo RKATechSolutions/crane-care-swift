@@ -92,9 +92,10 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
   const [SLING_CONFIGS, setSlingConfigs] = useState(DEFAULT_SLING_CONFIGS);
   const [EQUIP_STATUSES, setEquipStatuses] = useState(DEFAULT_EQUIPMENT_STATUSES);
   const [WLL_UNITS, setWllUnits] = useState(DEFAULT_WLL_UNITS);
+  const [categoryGroups, setCategoryGroups] = useState<{ name: string; types: string[]; fields: string[] }[]>([]);
 
   useEffect(() => {
-    supabase.from('admin_config').select('config').eq('id', 'lifting_register').single().then(({ data }) => {
+    supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle().then(({ data }) => {
       if (data?.config) {
         const c = data.config as any;
         if (c.equipment_types?.length) setEquipmentTypes(c.equipment_types);
@@ -104,6 +105,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
         if (c.sling_configurations?.length) setSlingConfigs(c.sling_configurations);
         if (c.equipment_statuses?.length) setEquipStatuses(c.equipment_statuses);
         if (c.wll_units?.length) setWllUnits(c.wll_units);
+        if (c.category_groups?.length) setCategoryGroups(c.category_groups);
       }
     });
   }, []);
@@ -236,10 +238,23 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
     return typeSet && !!hasId;
   }, [reviewMode, form]);
 
-  // Conditional field visibility
-  const isSling = SLING_TYPES.includes(form.equipment_type);
-  const isHoist = HOIST_TYPES.includes(form.equipment_type);
-  const isBeam = BEAM_TYPES.includes(form.equipment_type);
+  // Conditional field visibility - use category_groups if available, fallback to legacy
+  const activeFields = new Set<string>();
+  if (categoryGroups.length > 0) {
+    categoryGroups.forEach(g => {
+      if (g.types.includes(form.equipment_type)) {
+        g.fields.forEach(f => activeFields.add(f));
+      }
+    });
+  } else {
+    // Legacy fallback
+    if (SLING_TYPES.includes(form.equipment_type)) { activeFields.add('sling_configuration'); activeFields.add('sling_leg_count'); activeFields.add('length_m'); }
+    if (HOIST_TYPES.includes(form.equipment_type)) { activeFields.add('lift_height_m'); }
+    if (BEAM_TYPES.includes(form.equipment_type)) { activeFields.add('span_m'); }
+  }
+  const isSling = activeFields.has('sling_configuration');
+  const isHoist = activeFields.has('lift_height_m');
+  const isBeam = activeFields.has('span_m');
 
   // Save
   const handleSave = useCallback(async () => {
@@ -566,7 +581,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
           </div>
         </Card>
 
-        {/* Conditional: Sling fields */}
+        {/* Dynamic group-specific fields */}
         {isSling && (
           <Card className="p-4 space-y-3">
             <h3 className="font-bold text-sm">Sling Details</h3>
@@ -587,15 +602,16 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
                 <Input type="number" value={form.sling_leg_count} onChange={e => updateField('sling_leg_count', e.target.value)} />
               </div>
             </div>
-            <div>
-              <Label className="text-xs">Length (m)</Label>
-              <Input type="number" step="0.1" value={form.length_m} onChange={e => updateField('length_m', e.target.value)} />
-            </div>
+            {activeFields.has('length_m') && (
+              <div>
+                <Label className="text-xs">Length (m)</Label>
+                <Input type="number" step="0.1" value={form.length_m} onChange={e => updateField('length_m', e.target.value)} />
+              </div>
+            )}
           </Card>
         )}
 
-        {/* Conditional: Hoist fields */}
-        {isHoist && (
+        {isHoist && !isSling && (
           <Card className="p-4 space-y-3">
             <h3 className="font-bold text-sm">Hoist Details</h3>
             <div>
@@ -605,14 +621,35 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
           </Card>
         )}
 
-        {/* Conditional: Beam fields */}
-        {isBeam && (
+        {isBeam && !isSling && !isHoist && (
           <Card className="p-4 space-y-3">
             <h3 className="font-bold text-sm">Beam / Spreader Details</h3>
             <div>
               <Label className="text-xs">Span (m)</Label>
               <Input type="number" step="0.1" value={form.span_m} onChange={e => updateField('span_m', e.target.value)} />
             </div>
+          </Card>
+        )}
+
+        {/* Show any active fields not covered by the sections above */}
+        {!isSling && !isHoist && !isBeam && activeFields.size > 0 && (
+          <Card className="p-4 space-y-3">
+            <h3 className="font-bold text-sm">Additional Details</h3>
+            {activeFields.has('length_m') && (
+              <div><Label className="text-xs">Length (m)</Label><Input type="number" step="0.1" value={form.length_m} onChange={e => updateField('length_m', e.target.value)} /></div>
+            )}
+            {activeFields.has('grade') && (
+              <div><Label className="text-xs">Grade</Label><Input value={form.grade} onChange={e => updateField('grade', e.target.value)} /></div>
+            )}
+            {activeFields.has('sling_leg_count') && (
+              <div><Label className="text-xs">Number of Legs</Label><Input type="number" value={form.sling_leg_count} onChange={e => updateField('sling_leg_count', e.target.value)} /></div>
+            )}
+            {activeFields.has('lift_height_m') && (
+              <div><Label className="text-xs">Lift Height (m)</Label><Input type="number" step="0.1" value={form.lift_height_m} onChange={e => updateField('lift_height_m', e.target.value)} /></div>
+            )}
+            {activeFields.has('span_m') && (
+              <div><Label className="text-xs">Span (m)</Label><Input type="number" step="0.1" value={form.span_m} onChange={e => updateField('span_m', e.target.value)} /></div>
+            )}
           </Card>
         )}
 
