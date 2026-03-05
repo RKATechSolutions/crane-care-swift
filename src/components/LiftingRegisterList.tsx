@@ -219,19 +219,40 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     setImporting(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      const workbook = XLSX.read(arrayBuffer, { type: 'array', raw: true });
       let bestSheet: any[][] = [];
       let bestSheetName = '';
       for (const sheetName of workbook.SheetNames) {
         const sheet = workbook.Sheets[sheetName];
-        const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
         const nonEmpty = data.filter(row => row.some(cell => cell != null && String(cell).trim() !== ''));
         if (nonEmpty.length > bestSheet.length) { bestSheet = nonEmpty; bestSheetName = sheetName; }
       }
       console.log(`Using sheet "${bestSheetName}" with ${bestSheet.length} rows`);
+      console.log('Raw first row:', JSON.stringify(bestSheet[0]));
       if (bestSheet.length < 2) { toast.error('No sheet found with header and data'); setImporting(false); return; }
-      const headers = bestSheet[0].map((h: any) => String(h || ''));
-      const rows = parseRowsToInsert(headers, bestSheet.slice(1));
+      
+      // Find the actual header row - sometimes there are blank/title rows before headers
+      let headerRowIdx = 0;
+      for (let i = 0; i < Math.min(5, bestSheet.length - 1); i++) {
+        const row = bestSheet[i].map((h: any) => String(h || '').toLowerCase().trim());
+        // Check if this row looks like headers (has recognizable column names)
+        const matchCount = row.filter((h: string) => {
+          const cleaned = h.replace(/[.#]/g, '').trim();
+          return headerMap[h] || headerMap[cleaned] || 
+            Object.keys(headerMap).some(k => h.includes(k) || k.includes(h));
+        }).length;
+        if (matchCount >= 2) { headerRowIdx = i; break; }
+        // Also check for common header patterns
+        if (row.some((h: string) => h.includes('serial') || h.includes('unit') || h.includes('comment'))) {
+          headerRowIdx = i; break;
+        }
+      }
+      
+      console.log(`Header row index: ${headerRowIdx}, headers:`, bestSheet[headerRowIdx]);
+      const headers = bestSheet[headerRowIdx].map((h: any) => String(h || ''));
+      const rows = parseRowsToInsert(headers, bestSheet.slice(headerRowIdx + 1));
+      console.log('Parsed rows sample:', JSON.stringify(rows.slice(0, 3)));
       if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
       const { error } = await supabase.from('lifting_register').insert(rows);
       if (error) { console.error('Import error:', error); toast.error('Import failed: ' + error.message); }
