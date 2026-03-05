@@ -75,6 +75,9 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const photoInputRef = useRef<HTMLInputElement>(null);
   const photoTargetIdRef = useRef<string | null>(null);
   const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [equipmentTypes, setEquipmentTypes] = useState(DEFAULT_EQUIPMENT_TYPES);
+  const [statusOptions, setStatusOptions] = useState(DEFAULT_STATUS_OPTIONS);
+  const [wllUnits, setWllUnits] = useState(DEFAULT_WLL_UNITS);
   const [editSelectedGroup, setEditSelectedGroup] = useState<string | null>(null);
 
   const naturalSort = (a: RegisterItem, b: RegisterItem) => {
