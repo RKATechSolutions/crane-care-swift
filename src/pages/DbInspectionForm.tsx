@@ -306,6 +306,16 @@ export default function DbInspectionForm({
   const handlePreviewPdf = async () => {
     setGeneratingPreview(true);
     try {
+      // Re-fetch latest asset photo URL before generating
+      let latestPhotoUrl = assetPhotoUrl;
+      if (assetId) {
+        const { data: freshAsset } = await supabase.from('assets').select('main_photo_url').eq('id', assetId).single();
+        if (freshAsset?.main_photo_url) {
+          latestPhotoUrl = freshAsset.main_photo_url;
+          setAssetPhotoUrl(freshAsset.main_photo_url);
+        }
+      }
+
       const pdfSections = sections.map(s => ({
         name: s.name,
         questions: s.questions.map(q => ({
@@ -333,7 +343,7 @@ export default function DbInspectionForm({
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
         otherNotes: otherNotes || undefined,
-        assetPhotoUrl,
+        assetPhotoUrl: latestPhotoUrl,
       });
       setPreviewPdfDoc(pdf);
     } catch (err: any) {
