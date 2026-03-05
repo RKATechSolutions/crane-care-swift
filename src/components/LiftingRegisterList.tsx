@@ -53,6 +53,12 @@ const EQUIPMENT_TYPES = [
   'Lifting Lug', 'Eyebolt', 'Swivel', 'Unknown',
 ];
 
+interface CategoryGroup {
+  name: string;
+  types: string[];
+  fields: string[];
+}
+
 const STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
 
 export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew, onInspect }: LiftingRegisterListProps) {
