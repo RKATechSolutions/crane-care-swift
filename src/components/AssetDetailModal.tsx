@@ -59,6 +59,37 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
   const photoInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  // Category groups from admin config
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [allEquipmentTypes, setAllEquipmentTypes] = useState<string[]>(FALLBACK_CATEGORY_OPTIONS);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle().then(({ data }) => {
+      if (data?.config) {
+        const c = data.config as any;
+        if (c.category_groups?.length) setCategoryGroups(c.category_groups);
+        if (c.equipment_types?.length) setAllEquipmentTypes(c.equipment_types);
+      }
+    });
+  }, []);
+
+  // Determine which group the current className belongs to
+  useEffect(() => {
+    if (className && categoryGroups.length > 0 && !selectedGroup) {
+      const found = categoryGroups.find(g => g.types.includes(className));
+      if (found) setSelectedGroup(found.name);
+    }
+  }, [className, categoryGroups]);
+
+  // Get types for selected group, or all types if no groups configured
+  const typesForSelectedGroup = useMemo(() => {
+    if (categoryGroups.length === 0) return allEquipmentTypes;
+    if (!selectedGroup) return [];
+    const group = categoryGroups.find(g => g.name === selectedGroup);
+    return group?.types || [];
+  }, [categoryGroups, selectedGroup, allEquipmentTypes]);
+
   // Editable fields
   const [description, setDescription] = useState(asset.description || '');
   const [className, setClassName] = useState(asset.class_name || '');
