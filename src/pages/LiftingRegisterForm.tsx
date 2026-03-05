@@ -73,10 +73,41 @@ type FormData = {
   site_name: string;
 };
 
+interface LiftingRegisterFormProps {
+  onBack: () => void;
+  clientId?: string;
+  siteName?: string;
+}
+
 const HIGH_RISK_FIELDS = ['equipment_type', 'wll_value', 'asset_tag', 'serial_number'];
 
 export default function LiftingRegisterForm({ onBack, clientId, siteName }: LiftingRegisterFormProps) {
   const { state } = useApp();
+
+  // Dynamic config from admin
+  const [EQUIPMENT_TYPES, setEquipmentTypes] = useState(DEFAULT_EQUIPMENT_TYPES);
+  const [SLING_TYPES, setSlingTypes] = useState(DEFAULT_SLING_TYPES);
+  const [HOIST_TYPES, setHoistTypes] = useState(DEFAULT_HOIST_TYPES);
+  const [BEAM_TYPES, setBeamTypes] = useState(DEFAULT_BEAM_TYPES);
+  const [SLING_CONFIGS, setSlingConfigs] = useState(DEFAULT_SLING_CONFIGS);
+  const [EQUIP_STATUSES, setEquipStatuses] = useState(DEFAULT_EQUIPMENT_STATUSES);
+  const [WLL_UNITS, setWllUnits] = useState(DEFAULT_WLL_UNITS);
+
+  useEffect(() => {
+    supabase.from('admin_config').select('config').eq('id', 'lifting_register').single().then(({ data }) => {
+      if (data?.config) {
+        const c = data.config as any;
+        if (c.equipment_types?.length) setEquipmentTypes(c.equipment_types);
+        if (c.sling_types?.length) setSlingTypes(c.sling_types);
+        if (c.hoist_types?.length) setHoistTypes(c.hoist_types);
+        if (c.beam_types?.length) setBeamTypes(c.beam_types);
+        if (c.sling_configurations?.length) setSlingConfigs(c.sling_configurations);
+        if (c.equipment_statuses?.length) setEquipStatuses(c.equipment_statuses);
+        if (c.wll_units?.length) setWllUnits(c.wll_units);
+      }
+    });
+  }, []);
+
   const [form, setForm] = useState<FormData>({
     equipment_type: '', manufacturer: '', model: '', serial_number: '',
     asset_tag: '', wll_value: '', wll_unit: 'kg', length_m: '', grade: '',
