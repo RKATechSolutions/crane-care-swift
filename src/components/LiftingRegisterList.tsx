@@ -578,6 +578,38 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
               </div>
             </div>
             <div><Label className="text-xs">Notes / Comments</Label><Input value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
+            {/* Photo in edit dialog */}
+            <div>
+              <Label className="text-xs">Photo</Label>
+              {editForm.overall_photo_url ? (
+                <div className="relative mt-1 w-full h-32 rounded-lg overflow-hidden border border-border">
+                  <img src={editForm.overall_photo_url} alt="Equipment" className="w-full h-full object-cover" />
+                  <div className="absolute bottom-1 right-1 flex gap-1">
+                    <button
+                      onClick={() => editItem && triggerPhotoUpload(editItem.id)}
+                      className="bg-background/80 backdrop-blur rounded-md px-2 py-1 text-xs font-medium flex items-center gap-1 border border-border"
+                    >
+                      <Camera className="w-3 h-3" /> Replace
+                    </button>
+                    <button
+                      onClick={() => editItem && handleDeletePhoto(editItem.id)}
+                      className="bg-destructive text-destructive-foreground rounded-md px-2 py-1 text-xs font-medium flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" /> Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => editItem && triggerPhotoUpload(editItem.id)}
+                  disabled={uploadingPhotoId === editItem?.id}
+                  className="mt-1 w-full h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:bg-muted/50 transition-colors"
+                >
+                  <Camera className="w-5 h-5" />
+                  <span className="text-xs">{uploadingPhotoId === editItem?.id ? 'Uploading…' : 'Add Photo'}</span>
+                </button>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
