@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2, Camera } from 'lucide-react';
+import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2, Camera, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
 import { format } from 'date-fns';
@@ -458,12 +458,21 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                     {/* Photo thumbnail */}
                     <div className="flex-shrink-0">
                       {item.overall_photo_url ? (
-                        <button onClick={() => triggerPhotoUpload(item.id)} className="relative group">
+                        <div className="relative group">
                           <img src={item.overall_photo_url} alt={item.equipment_type} className="w-14 h-14 rounded-md object-cover border border-border" />
-                          <div className="absolute inset-0 bg-black/40 rounded-md opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          <button
+                            onClick={() => triggerPhotoUpload(item.id)}
+                            className="absolute inset-0 bg-black/40 rounded-md opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                          >
                             <Camera className="w-4 h-4 text-white" />
-                          </div>
-                        </button>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeletePhoto(item.id); }}
+                            className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => triggerPhotoUpload(item.id)}
