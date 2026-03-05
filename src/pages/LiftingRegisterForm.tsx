@@ -130,6 +130,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
   const [reviewMode, setReviewMode] = useState(false);
   const [fieldStatuses, setFieldStatuses] = useState<Record<string, FieldStatus>>({});
   const [saving, setSaving] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   const updateField = useCallback((key: keyof FormData, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -498,17 +499,65 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
             <Input id="field-site_name" value={form.site_name} onChange={e => updateField('site_name', e.target.value)} placeholder="Enter site name" />
           </div>
 
-          <div>
-            <Label className="text-xs">Equipment Type *</Label>
-            <Select value={form.equipment_type} onValueChange={v => updateField('equipment_type', v)}>
-              <SelectTrigger id="field-equipment_type"><SelectValue placeholder="Select type" /></SelectTrigger>
-              <SelectContent>
-                {EQUIPMENT_TYPES.map(t => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
+          {/* Group → Type tap selector */}
+          {categoryGroups.length > 0 ? (
+            <div className="space-y-2">
+              <Label className="text-xs">Equipment Group *</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {categoryGroups.map(g => (
+                  <button
+                    key={g.name}
+                    type="button"
+                    onClick={() => setSelectedGroup(selectedGroup === g.name ? null : g.name)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      selectedGroup === g.name
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {g.name}
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+              {selectedGroup && (() => {
+                const group = categoryGroups.find(g => g.name === selectedGroup);
+                const types = group?.types || [];
+                return types.length > 0 ? (
+                  <div>
+                    <Label className="text-xs">Equipment Type *</Label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {types.map(t => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => updateField('equipment_type', form.equipment_type === t ? '' : t)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                            form.equipment_type === t
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background text-foreground border-border hover:border-primary/50'
+                          }`}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          ) : (
+            <div>
+              <Label className="text-xs">Equipment Type *</Label>
+              <Select value={form.equipment_type} onValueChange={v => updateField('equipment_type', v)}>
+                <SelectTrigger id="field-equipment_type"><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectContent>
+                  {EQUIPMENT_TYPES.map(t => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

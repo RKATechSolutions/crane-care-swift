@@ -53,6 +53,12 @@ const EQUIPMENT_TYPES = [
   'Lifting Lug', 'Eyebolt', 'Swivel', 'Unknown',
 ];
 
+interface CategoryGroup {
+  name: string;
+  types: string[];
+  fields: string[];
+}
+
 const STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
 
 export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew, onInspect }: LiftingRegisterListProps) {
@@ -67,6 +73,8 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const photoTargetIdRef = useRef<string | null>(null);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [editSelectedGroup, setEditSelectedGroup] = useState<string | null>(null);
 
   const naturalSort = (a: RegisterItem, b: RegisterItem) => {
     const aNum = parseInt(a.asset_tag || '', 10);
@@ -88,6 +96,15 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     const fetch = async () => { setLoading(true); await refreshItems(); setLoading(false); };
     fetch();
   }, [clientId, siteName]);
+
+  useEffect(() => {
+    supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle().then(({ data }) => {
+      if (data?.config) {
+        const c = data.config as any;
+        if (c.category_groups?.length) setCategoryGroups(c.category_groups);
+      }
+    });
+  }, []);
 
   const statusIcon = (status: string | null) => {
     if (status === 'In Service') return <CheckCircle className="w-4 h-4 text-green-600" />;
@@ -352,7 +369,17 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   };
 
   // ─── Edit ───────────────────────────────────────────────
-  const openEdit = (item: RegisterItem) => { setEditItem(item); setEditForm({ ...item }); };
+  const openEdit = (item: RegisterItem) => {
+    setEditItem(item);
+    setEditForm({ ...item });
+    // Auto-select the group for the current equipment type
+    if (categoryGroups.length > 0) {
+      const found = categoryGroups.find(g => g.types.includes(item.equipment_type));
+      setEditSelectedGroup(found?.name || null);
+    } else {
+      setEditSelectedGroup(null);
+    }
+  };
 
   const handleSaveEdit = async () => {
     if (!editItem) return;
@@ -541,13 +568,60 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
         <DialogContent className="max-w-md max-h-[85vh] overflow-auto">
           <DialogHeader><DialogTitle>Edit Equipment</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div>
-              <Label className="text-xs">Equipment Type</Label>
-              <Select value={editForm.equipment_type || ''} onValueChange={v => setEditForm(f => ({ ...f, equipment_type: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{EQUIPMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
+            {categoryGroups.length > 0 ? (
+              <div className="space-y-2">
+                <Label className="text-xs">Equipment Group</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {categoryGroups.map(g => (
+                    <button
+                      key={g.name}
+                      type="button"
+                      onClick={() => setEditSelectedGroup(editSelectedGroup === g.name ? null : g.name)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        editSelectedGroup === g.name
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                      }`}
+                    >
+                      {g.name}
+                    </button>
+                  ))}
+                </div>
+                {editSelectedGroup && (() => {
+                  const group = categoryGroups.find(g => g.name === editSelectedGroup);
+                  const types = group?.types || [];
+                  return types.length > 0 ? (
+                    <div>
+                      <Label className="text-xs">Equipment Type</Label>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {types.map(t => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setEditForm(f => ({ ...f, equipment_type: f.equipment_type === t ? '' : t }))}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                              editForm.equipment_type === t
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background text-foreground border-border hover:border-primary/50'
+                            }`}
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            ) : (
+              <div>
+                <Label className="text-xs">Equipment Type</Label>
+                <Select value={editForm.equipment_type || ''} onValueChange={v => setEditForm(f => ({ ...f, equipment_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{EQUIPMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Manufacturer</Label><Input value={editForm.manufacturer || ''} onChange={e => setEditForm(f => ({ ...f, manufacturer: e.target.value }))} /></div>
               <div><Label className="text-xs">Model</Label><Input value={editForm.model || ''} onChange={e => setEditForm(f => ({ ...f, model: e.target.value }))} /></div>
