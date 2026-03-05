@@ -145,22 +145,36 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
 
   // ─── Import ─────────────────────────────────────────────
   const headerMap: Record<string, string> = {
+    // Unit/Number columns → equipment_type (or skip if just row numbers)
+    'unit #': 'asset_tag', 'unit#': 'asset_tag', 'unit no': 'asset_tag',
+    'unit no.': 'asset_tag', 'unit number': 'asset_tag', 'no.': 'asset_tag',
+    'no': 'asset_tag', '#': 'asset_tag', 'item #': 'asset_tag', 'item no': 'asset_tag',
+    // Equipment type
     'equipment type': 'equipment_type', 'type': 'equipment_type', 'item': 'equipment_type',
     'item type': 'equipment_type', 'description': 'equipment_type', 'equipment': 'equipment_type',
+    // Manufacturer
     'manufacturer': 'manufacturer', 'make': 'manufacturer', 'brand': 'manufacturer',
     'model': 'model',
+    // Serial number
     'serial number': 'serial_number', 'serial': 'serial_number', 'sn': 'serial_number',
     'serial no': 'serial_number', 'serial no.': 'serial_number', 'serialnumber': 'serial_number',
+    // Asset tag
     'asset tag': 'asset_tag', 'tag': 'asset_tag', 'asset id': 'asset_tag',
     'tag number': 'asset_tag', 'tag no': 'asset_tag', 'tag no.': 'asset_tag', 'id': 'asset_tag',
+    // WLL
     'wll': 'wll_value', 'swl': 'wll_value', 'wll value': 'wll_value', 'capacity': 'wll_value',
     'wll unit': 'wll_unit', 'unit': 'wll_unit',
+    // Dimensions
     'length': 'length_m', 'length (m)': 'length_m', 'length_m': 'length_m',
     'grade': 'grade',
+    // Status
     'status': 'equipment_status', 'equipment status': 'equipment_status', 'condition': 'equipment_status',
+    // Notes/Comments
     'notes': 'notes', 'comment': 'notes', 'comments': 'notes', 'remarks': 'notes', 'remark': 'notes',
     'observation': 'notes', 'observations': 'notes',
+    // Photo
     'photo': 'overall_photo_url', 'image': 'overall_photo_url', 'photo url': 'overall_photo_url',
+    // Sling/hoist
     'configuration': 'sling_configuration', 'sling configuration': 'sling_configuration',
     'legs': 'sling_leg_count', 'leg count': 'sling_leg_count',
     'lift height': 'lift_height_m', 'lift height (m)': 'lift_height_m',
