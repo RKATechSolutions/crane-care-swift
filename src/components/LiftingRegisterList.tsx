@@ -408,11 +408,17 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   // Sequential numbering across all items
   let globalIndex = 0;
 
-  // Group by equipment type
+  // Group by category group (not equipment type)
   const grouped = items.reduce((acc, item) => {
-    const key = item.equipment_type;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
+    let groupName = 'Other';
+    if (categoryGroups.length > 0) {
+      const match = categoryGroups.find(g => g.types.includes(item.equipment_type));
+      if (match) groupName = match.name;
+    } else {
+      groupName = item.equipment_type;
+    }
+    if (!acc[groupName]) acc[groupName] = [];
+    acc[groupName].push(item);
     return acc;
   }, {} as Record<string, RegisterItem[]>);
 
