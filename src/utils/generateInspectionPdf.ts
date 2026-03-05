@@ -76,7 +76,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   let assetImg: HTMLImageElement | undefined;
   if (assetPhotoUrl) {
-    try { assetImg = await loadImage(assetPhotoUrl); } catch { /* skip */ }
+    try { assetImg = await loadRemoteImage(assetPhotoUrl); } catch { /* skip */ }
   }
 
   const addHeader = () => {
