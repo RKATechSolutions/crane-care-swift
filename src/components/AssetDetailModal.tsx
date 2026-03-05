@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, Save, ChevronDown, ChevronUp, Camera, Plus, Trash2 } from 'lucide-react';
@@ -31,7 +31,13 @@ const inputClass = "w-full h-10 px-3 border border-border rounded-lg bg-backgrou
 const selectClass = "w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 const labelClass = "text-xs font-medium text-muted-foreground";
 
-const CATEGORY_OPTIONS = ['Overhead Crane','Hoist','Chain Sling','Wire Rope Sling','Synthetic Sling','Below the Hook','Jib Crane','Gantry Crane','Monorail','Monorail WRH','Monorail CH','Portal DGWRH','Portal SGWRH','Portal Balancer','Air Jib CH','Jib Balancer','Manual','KBK'];
+const FALLBACK_CATEGORY_OPTIONS = ['Overhead Crane','Hoist','Chain Sling','Wire Rope Sling','Synthetic Sling','Below the Hook','Jib Crane','Gantry Crane','Monorail','Monorail WRH','Monorail CH','Portal DGWRH','Portal SGWRH','Portal Balancer','Air Jib CH','Jib Balancer','Manual','KBK'];
+
+interface CategoryGroup {
+  name: string;
+  types: string[];
+  fields: string[];
+}
 
 function SectionHeader({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
   return (
@@ -64,6 +70,37 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
   const [areaName, setAreaName] = useState(asset.area_name || '');
   const [status, setStatus] = useState(asset.status || 'In Service');
   const [lengthLift, setLengthLift] = useState(asset.length_lift || '');
+
+  // Category groups from admin config
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [allEquipmentTypes, setAllEquipmentTypes] = useState<string[]>(FALLBACK_CATEGORY_OPTIONS);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle().then(({ data }) => {
+      if (data?.config) {
+        const c = data.config as any;
+        if (c.category_groups?.length) setCategoryGroups(c.category_groups);
+        if (c.equipment_types?.length) setAllEquipmentTypes(c.equipment_types);
+      }
+    });
+  }, []);
+
+  // Determine which group the current className belongs to
+  useEffect(() => {
+    if (className && categoryGroups.length > 0 && !selectedGroup) {
+      const found = categoryGroups.find(g => g.types.includes(className));
+      if (found) setSelectedGroup(found.name);
+    }
+  }, [className, categoryGroups]);
+
+  // Get types for selected group, or all types if no groups configured
+  const typesForSelectedGroup = useMemo(() => {
+    if (categoryGroups.length === 0) return allEquipmentTypes;
+    if (!selectedGroup) return [];
+    const group = categoryGroups.find(g => g.name === selectedGroup);
+    return group?.types || [];
+  }, [categoryGroups, selectedGroup, allEquipmentTypes]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -207,18 +244,68 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
             <input type="text" value={description} onChange={e => setDescription(e.target.value)} className={inputClass} />
           </div>
 
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className={labelClass}>Category</label>
-              <select value={className} onChange={e => setClassName(e.target.value)} className={selectClass}>
-                {CATEGORY_OPTIONS.map(o => <option key={o}>{o}</option>)}
-              </select>
+          {/* Group → Type two-step selector */}
+          {categoryGroups.length > 0 ? (
+            <div className="space-y-2">
+              <label className={labelClass}>Asset Group</label>
+              <div className="flex flex-wrap gap-1.5">
+                {categoryGroups.map(g => (
+                  <button
+                    key={g.name}
+                    type="button"
+                    onClick={() => { setSelectedGroup(g.name === selectedGroup ? null : g.name); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      selectedGroup === g.name
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+
+              {selectedGroup && typesForSelectedGroup.length > 0 && (
+                <div>
+                  <label className={labelClass}>Equipment Type</label>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {typesForSelectedGroup.map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setClassName(className === t ? '' : t)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                          className === t
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className={labelClass}>Type / Subtype</label>
+                <input type="text" value={assetType} onChange={e => setAssetType(e.target.value)} className={inputClass} placeholder="e.g. Bow Shackle" />
+              </div>
             </div>
-            <div className="flex-1">
-              <label className={labelClass}>Type</label>
-              <input type="text" value={assetType} onChange={e => setAssetType(e.target.value)} className={inputClass} />
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className={labelClass}>Category</label>
+                <select value={className} onChange={e => setClassName(e.target.value)} className={selectClass}>
+                  {FALLBACK_CATEGORY_OPTIONS.map(o => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className={labelClass}>Type</label>
+                <input type="text" value={assetType} onChange={e => setAssetType(e.target.value)} className={inputClass} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-2">
             <div className="flex-1">
