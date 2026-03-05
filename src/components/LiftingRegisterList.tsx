@@ -412,7 +412,20 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const grouped = items.reduce((acc, item) => {
     let groupName = 'Other';
     if (categoryGroups.length > 0) {
-      const match = categoryGroups.find(g => g.types.includes(item.equipment_type));
+      // Exact match first
+      let match = categoryGroups.find(g => g.types.includes(item.equipment_type));
+      // Fuzzy fallback: match if item type contains a group type word or vice versa
+      if (!match) {
+        const itemLower = item.equipment_type.toLowerCase();
+        match = categoryGroups.find(g =>
+          g.types.some(t => {
+            const tLower = t.toLowerCase();
+            return itemLower.includes(tLower) || tLower.includes(itemLower);
+          }) ||
+          g.name.toLowerCase().includes(itemLower) ||
+          itemLower.includes(g.name.toLowerCase().split(' ')[0])
+        );
+      }
       if (match) groupName = match.name;
     } else {
       groupName = item.equipment_type;
