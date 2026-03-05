@@ -59,6 +59,18 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
   const photoInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
+  // Editable fields
+  const [description, setDescription] = useState(asset.description || '');
+  const [className, setClassName] = useState(asset.class_name || '');
+  const [assetType, setAssetType] = useState(asset.asset_type || '');
+  const [capacity, setCapacity] = useState(asset.capacity || '');
+  const [serialNumber, setSerialNumber] = useState(asset.serial_number || '');
+  const [manufacturer, setManufacturer] = useState(asset.crane_manufacturer || asset.manufacturer || '');
+  const [locationName, setLocationName] = useState(asset.location_name || '');
+  const [areaName, setAreaName] = useState(asset.area_name || '');
+  const [status, setStatus] = useState(asset.status || 'In Service');
+  const [lengthLift, setLengthLift] = useState(asset.length_lift || '');
+
   // Category groups from admin config
   const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
   const [allEquipmentTypes, setAllEquipmentTypes] = useState<string[]>(FALLBACK_CATEGORY_OPTIONS);
@@ -89,18 +101,6 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
     const group = categoryGroups.find(g => g.name === selectedGroup);
     return group?.types || [];
   }, [categoryGroups, selectedGroup, allEquipmentTypes]);
-
-  // Editable fields
-  const [description, setDescription] = useState(asset.description || '');
-  const [className, setClassName] = useState(asset.class_name || '');
-  const [assetType, setAssetType] = useState(asset.asset_type || '');
-  const [capacity, setCapacity] = useState(asset.capacity || '');
-  const [serialNumber, setSerialNumber] = useState(asset.serial_number || '');
-  const [manufacturer, setManufacturer] = useState(asset.crane_manufacturer || asset.manufacturer || '');
-  const [locationName, setLocationName] = useState(asset.location_name || '');
-  const [areaName, setAreaName] = useState(asset.area_name || '');
-  const [status, setStatus] = useState(asset.status || 'In Service');
-  const [lengthLift, setLengthLift] = useState(asset.length_lift || '');
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
