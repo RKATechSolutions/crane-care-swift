@@ -7,7 +7,8 @@ import AdminCustomisation from '@/components/AdminCustomisation';
 import AdminSchedule from '@/components/AdminSchedule';
 import AdminLeaveApproval from '@/components/AdminLeaveApproval';
 import AdminTimesheetReview from '@/components/AdminTimesheetReview';
-import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar, Palmtree, Clock, Package } from 'lucide-react';
+import { Lightbulb, Check, X, FileText, Mail, LogOut, Wrench, Settings, Calendar, Palmtree, Clock, Package, ArrowLeft } from 'lucide-react';
+import { mockUsers } from '@/data/mockData';
 import { SuggestedQuestion, SentReport } from '@/types/inspection';
 import { useState } from 'react';
 
@@ -58,7 +59,15 @@ export default function AdminDashboard() {
       <AppHeader
         title="Admin Dashboard"
         subtitle={`${pendingSuggestions.length} pending suggestions`}
-        onBack={() => dispatch({ type: 'LOGOUT' })}
+        onBack={() => {
+          // Check if original role is technician — if so, exit admin mode instead of logging out
+          const originalUser = mockUsers.find(u => u.id === state.currentUser?.id);
+          if (originalUser && originalUser.role === 'technician') {
+            dispatch({ type: 'EXIT_ADMIN' });
+          } else {
+            dispatch({ type: 'LOGOUT' });
+          }
+        }}
       />
 
       <div className="flex border-b border-border bg-background sticky top-[56px] z-20 overflow-x-auto no-scrollbar">
