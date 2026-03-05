@@ -238,6 +238,7 @@ export default function RepairBreakdownForm({
         assetName,
         siteName,
         technicianName: state.currentUser?.name || 'Unknown',
+        assetPhotoUrl,
       });
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
       const filename = `${assetName.replace(/\s+/g, '_')}_RepairReport_${format(new Date(), 'yyyyMMdd')}.pdf`;
