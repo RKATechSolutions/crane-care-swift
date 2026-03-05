@@ -358,9 +358,13 @@ export const mockTemplateCommissioningLoadTest: InspectionTemplate = {
 };
 
 export const mockUsers = [
-  { id: 'tech-1', name: 'Aaron Harrison', email: 'aaron@rka.com.au', role: 'technician' as const, pin: '1234' },
-  { id: 'tech-2', name: 'Vince Fernandez', email: 'vince@rka.com.au', role: 'technician' as const, pin: '1234' },
+  { id: 'tech-1', name: 'Aaron Harrison', email: 'aaron@rka.com.au', role: 'technician' as const },
+  { id: 'tech-2', name: 'Vince Fernandez', email: 'vince@rka.com.au', role: 'technician' as const },
   { id: 'tech-3', name: 'Ryan Adams', email: 'ryan@rka.com.au', role: 'technician' as const },
   { id: 'tech-4', name: 'Seth Adams', email: 'seth@rka.com.au', role: 'technician' as const },
-  { id: 'admin-1', name: 'Lisa Chen', email: 'lisa@rka.com.au', role: 'admin' as const, pin: '1234' },
+  { id: 'tech-5', name: 'Kelly Adams', email: 'kelly@rka.com.au', role: 'admin' as const },
+  { id: 'tech-6', name: 'Jennifer Osias', email: 'jennifer@rka.com.au', role: 'admin' as const },
+  { id: 'tech-7', name: 'Efren Manso', email: 'efren@rka.com.au', role: 'admin' as const },
+  { id: 'admin-1', name: 'Lisa Chen', email: 'lisa@rka.com.au', role: 'admin' as const },
+  { id: 'test-1', name: 'Test User', email: 'test@rka.com.au', role: 'admin' as const },
 ];
