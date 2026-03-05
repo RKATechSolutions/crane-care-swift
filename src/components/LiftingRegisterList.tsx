@@ -47,19 +47,20 @@ interface RegisterItem {
   overall_photo_url: string | null;
 }
 
-const EQUIPMENT_TYPES = [
+const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
   'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
   'Lifting Lug', 'Eyebolt', 'Swivel', 'Unknown',
 ];
+
+const DEFAULT_STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
+const DEFAULT_WLL_UNITS = ['kg', 't'];
 
 interface CategoryGroup {
   name: string;
   types: string[];
   fields: string[];
 }
-
-const STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
 
 export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew, onInspect }: LiftingRegisterListProps) {
   const [items, setItems] = useState<RegisterItem[]>([]);
@@ -74,6 +75,9 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const photoInputRef = useRef<HTMLInputElement>(null);
   const photoTargetIdRef = useRef<string | null>(null);
   const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [equipmentTypes, setEquipmentTypes] = useState(DEFAULT_EQUIPMENT_TYPES);
+  const [statusOptions, setStatusOptions] = useState(DEFAULT_STATUS_OPTIONS);
+  const [wllUnits, setWllUnits] = useState(DEFAULT_WLL_UNITS);
   const [editSelectedGroup, setEditSelectedGroup] = useState<string | null>(null);
 
   const naturalSort = (a: RegisterItem, b: RegisterItem) => {
@@ -102,6 +106,9 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       if (data?.config) {
         const c = data.config as any;
         if (c.category_groups?.length) setCategoryGroups(c.category_groups);
+        if (c.equipment_types?.length) setEquipmentTypes(c.equipment_types);
+        if (c.equipment_statuses?.length) setStatusOptions(c.equipment_statuses);
+        if (c.wll_units?.length) setWllUnits(c.wll_units);
       }
     });
   }, []);
@@ -637,7 +644,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 <Label className="text-xs">Equipment Type</Label>
                 <Select value={editForm.equipment_type || ''} onValueChange={v => setEditForm(f => ({ ...f, equipment_type: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{EQUIPMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <SelectContent>{equipmentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             )}
@@ -655,7 +662,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 <Label className="text-xs">Unit</Label>
                 <Select value={editForm.wll_unit || 'kg'} onValueChange={v => setEditForm(f => ({ ...f, wll_unit: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="kg">kg</SelectItem><SelectItem value="t">t</SelectItem></SelectContent>
+                  <SelectContent>{wllUnits.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div><Label className="text-xs">Grade</Label><Input value={editForm.grade || ''} onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))} /></div>
@@ -666,7 +673,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 <Label className="text-xs">Status</Label>
                 <Select value={editForm.equipment_status || 'In Service'} onValueChange={v => setEditForm(f => ({ ...f, equipment_status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  <SelectContent>{statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
