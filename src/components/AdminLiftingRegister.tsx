@@ -177,7 +177,7 @@ export default function AdminLiftingRegister() {
     try {
       const { error } = await supabase
         .from('admin_config')
-        .upsert({ id: 'lifting_register', config: config as unknown as Record<string, unknown>, updated_at: new Date().toISOString() });
+        .upsert([{ id: 'lifting_register', config: config as any, updated_at: new Date().toISOString() }]);
 
       if (error) throw error;
       toast.success('Lifting register config saved');
