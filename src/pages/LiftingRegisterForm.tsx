@@ -130,6 +130,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
   const [reviewMode, setReviewMode] = useState(false);
   const [fieldStatuses, setFieldStatuses] = useState<Record<string, FieldStatus>>({});
   const [saving, setSaving] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   const updateField = useCallback((key: keyof FormData, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));

@@ -73,6 +73,8 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const photoTargetIdRef = useRef<string | null>(null);
+  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
+  const [editSelectedGroup, setEditSelectedGroup] = useState<string | null>(null);
 
   const naturalSort = (a: RegisterItem, b: RegisterItem) => {
     const aNum = parseInt(a.asset_tag || '', 10);
