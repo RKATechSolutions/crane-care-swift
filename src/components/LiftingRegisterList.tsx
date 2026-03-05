@@ -97,6 +97,15 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     fetch();
   }, [clientId, siteName]);
 
+  useEffect(() => {
+    supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle().then(({ data }) => {
+      if (data?.config) {
+        const c = data.config as any;
+        if (c.category_groups?.length) setCategoryGroups(c.category_groups);
+      }
+    });
+  }, []);
+
   const statusIcon = (status: string | null) => {
     if (status === 'In Service') return <CheckCircle className="w-4 h-4 text-green-600" />;
     if (status === 'Failed' || status === 'Out of Service') return <XCircle className="w-4 h-4 text-destructive" />;
