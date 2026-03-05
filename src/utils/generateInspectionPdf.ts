@@ -324,7 +324,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         let photoY = dy - 1;
         for (const photoUrl of d.photo_urls.slice(0, 2)) {
           try {
-            const photoImg = await loadImage(photoUrl);
+            const photoImg = await loadRemoteImage(photoUrl);
             const maxW = 38;
             const maxH = 28;
             const ratio = Math.min(maxW / photoImg.width, maxH / photoImg.height);
