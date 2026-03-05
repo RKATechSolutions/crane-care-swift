@@ -277,9 +277,39 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       const rows = parseRowsToInsert(headers, filteredDataRows);
       console.log('Parsed rows sample:', JSON.stringify(rows.slice(0, 3)));
       if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
-      const { error } = await supabase.from('lifting_register').insert(rows);
+      const { data: insertedData, error } = await supabase.from('lifting_register').insert(rows).select('id, equipment_type, notes, serial_number, manufacturer, model, wll_value, wll_unit, grade, length_m, sling_configuration');
       if (error) { console.error('Import error:', error); toast.error('Import failed: ' + error.message); }
-      else { toast.success(`Imported ${rows.length} items`); await refreshItems(); }
+      else {
+        toast.success(`Imported ${rows.length} items`);
+        
+        // AI categorize items that have Unknown equipment_type
+        const unknownItems = (insertedData || []).filter((item: any) => item.equipment_type === 'Unknown');
+        if (unknownItems.length > 0) {
+          toast.info(`Categorizing ${unknownItems.length} items with AI...`);
+          try {
+            const { data: catResult, error: catError } = await supabase.functions.invoke('categorize-lifting-equipment', {
+              body: { items: unknownItems },
+            });
+            if (catError) throw catError;
+            if (catResult?.categories && Array.isArray(catResult.categories)) {
+              let updated = 0;
+              for (let i = 0; i < unknownItems.length; i++) {
+                const newType = catResult.categories[i];
+                if (newType && newType !== 'Unknown') {
+                  await supabase.from('lifting_register').update({ equipment_type: newType }).eq('id', unknownItems[i].id);
+                  updated++;
+                }
+              }
+              if (updated > 0) toast.success(`AI categorized ${updated} items`);
+            }
+          } catch (catErr) {
+            console.error('AI categorize error:', catErr);
+            toast.warning('AI categorization failed — items left as Unknown');
+          }
+        }
+        
+        await refreshItems();
+      }
     } catch (err) { console.error('File parse error:', err); toast.error('Failed to parse file'); }
     setImporting(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
