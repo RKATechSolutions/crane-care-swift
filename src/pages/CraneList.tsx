@@ -587,24 +587,24 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
             </div>
           )}
           {/* Quick Action Tiles */}
-          <div className="px-4 pt-3 pb-2 grid grid-cols-4 gap-2">
+          <div className="px-4 pt-3 pb-2 grid grid-cols-5 gap-2">
             <button
               onClick={() => setShowBaseline({ existingId: existingBaseline?.id })}
-              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2.5 text-center active:scale-[0.97] transition-all"
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all"
             >
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-600">
-                <BarChart3 className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-600">
+                <BarChart3 className="w-4 h-4" />
               </div>
-              <span className="text-[9px] font-bold leading-tight text-foreground mt-0.5">Site Inspection</span>
+              <span className="text-[8px] font-bold leading-tight text-foreground mt-0.5">Site Inspection</span>
             </button>
             <button
               onClick={() => setShowLiftingRegisterList(true)}
-              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2.5 text-center active:scale-[0.97] transition-all"
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all"
             >
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-emerald-500/10 text-emerald-600">
-                <ClipboardList className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-emerald-500/10 text-emerald-600">
+                <ClipboardList className="w-4 h-4" />
               </div>
-              <span className="text-[9px] font-bold leading-tight text-foreground mt-0.5">Lifting Register</span>
+              <span className="text-[8px] font-bold leading-tight text-foreground mt-0.5">Lifting Register</span>
             </button>
             <button
               onClick={async () => {
@@ -625,25 +625,99 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                   }
                 }
               }}
-              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2.5 text-center active:scale-[0.97] transition-all"
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all"
             >
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600">
-                <Link2 className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/10 text-amber-600">
+                <Link2 className="w-4 h-4" />
               </div>
-              <span className="text-[9px] font-bold leading-tight text-foreground mt-0.5">Pre-Visit Link</span>
+              <span className="text-[8px] font-bold leading-tight text-foreground mt-0.5">Pre-Visit Link</span>
             </button>
             <button
               onClick={() => {
                 dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
               }}
-              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2.5 text-center active:scale-[0.97] transition-all"
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all"
             >
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-purple-500/10 text-purple-600">
-                <FileText className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-500/10 text-purple-600">
+                <FileText className="w-4 h-4" />
               </div>
-              <span className="text-[9px] font-bold leading-tight text-foreground mt-0.5">Job Summary</span>
+              <span className="text-[8px] font-bold leading-tight text-foreground mt-0.5">Job Summary</span>
+            </button>
+            <button
+              onClick={() => {
+                if (notebookLmLink) {
+                  window.open(notebookLmLink, '_blank');
+                } else {
+                  setShowNotebookLmEdit(true);
+                  setNotebookLmInput('');
+                }
+              }}
+              onContextMenu={(e) => { e.preventDefault(); setShowNotebookLmEdit(true); setNotebookLmInput(notebookLmLink); }}
+              className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all relative"
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-orange-500/10 text-orange-600">
+                <BookOpen className="w-4 h-4" />
+              </div>
+              <span className="text-[8px] font-bold leading-tight text-foreground mt-0.5">NotebookLM</span>
+              {!notebookLmLink && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-amber-400 flex items-center justify-center">
+                  <Plus className="w-2 h-2 text-white" />
+                </div>
+              )}
             </button>
           </div>
+
+          {/* NotebookLM Link Edit Modal */}
+          {showNotebookLmEdit && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNotebookLmEdit(false)}>
+              <div className="bg-background rounded-xl p-5 w-full max-w-sm shadow-xl space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-base">NotebookLM Link</h3>
+                  <button onClick={() => setShowNotebookLmEdit(false)}><X className="w-5 h-5 text-muted-foreground" /></button>
+                </div>
+                <input
+                  type="url"
+                  placeholder="Paste NotebookLM link here…"
+                  value={notebookLmInput}
+                  onChange={(e) => setNotebookLmInput(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-sm bg-background text-foreground"
+                />
+                <div className="flex gap-2">
+                  {notebookLmLink && (
+                    <button
+                      onClick={async () => {
+                        const cId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+                        if (cId) {
+                          await supabase.from('clients').update({ notebook_lm_link: null } as any).eq('id', cId);
+                          setNotebookLmLink('');
+                          setShowNotebookLmEdit(false);
+                          toast({ title: 'Link removed' });
+                        }
+                      }}
+                      className="flex-1 h-10 rounded-lg border border-destructive text-destructive text-sm font-bold"
+                    >
+                      Remove
+                    </button>
+                  )}
+                  <button
+                    onClick={async () => {
+                      if (!notebookLmInput.trim()) return;
+                      const cId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+                      if (cId) {
+                        await supabase.from('clients').update({ notebook_lm_link: notebookLmInput.trim() } as any).eq('id', cId);
+                        setNotebookLmLink(notebookLmInput.trim());
+                        setShowNotebookLmEdit(false);
+                        toast({ title: 'Link saved' });
+                      }
+                    }}
+                    className="flex-1 h-10 rounded-lg bg-primary text-primary-foreground text-sm font-bold"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="px-4 py-2 border-b border-border space-y-2">
             {/* Hidden: Initial Site Inspection V1 & V2 - kept for admin re-enable */}
