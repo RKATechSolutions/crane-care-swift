@@ -584,7 +584,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
           </div>
         </Card>
 
-        {/* Conditional: Sling fields */}
+        {/* Dynamic group-specific fields */}
         {isSling && (
           <Card className="p-4 space-y-3">
             <h3 className="font-bold text-sm">Sling Details</h3>
@@ -605,15 +605,16 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
                 <Input type="number" value={form.sling_leg_count} onChange={e => updateField('sling_leg_count', e.target.value)} />
               </div>
             </div>
-            <div>
-              <Label className="text-xs">Length (m)</Label>
-              <Input type="number" step="0.1" value={form.length_m} onChange={e => updateField('length_m', e.target.value)} />
-            </div>
+            {activeFields.has('length_m') && (
+              <div>
+                <Label className="text-xs">Length (m)</Label>
+                <Input type="number" step="0.1" value={form.length_m} onChange={e => updateField('length_m', e.target.value)} />
+              </div>
+            )}
           </Card>
         )}
 
-        {/* Conditional: Hoist fields */}
-        {isHoist && (
+        {isHoist && !isSling && (
           <Card className="p-4 space-y-3">
             <h3 className="font-bold text-sm">Hoist Details</h3>
             <div>
@@ -623,14 +624,35 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
           </Card>
         )}
 
-        {/* Conditional: Beam fields */}
-        {isBeam && (
+        {isBeam && !isSling && !isHoist && (
           <Card className="p-4 space-y-3">
             <h3 className="font-bold text-sm">Beam / Spreader Details</h3>
             <div>
               <Label className="text-xs">Span (m)</Label>
               <Input type="number" step="0.1" value={form.span_m} onChange={e => updateField('span_m', e.target.value)} />
             </div>
+          </Card>
+        )}
+
+        {/* Show any active fields not covered by the sections above */}
+        {!isSling && !isHoist && !isBeam && activeFields.size > 0 && (
+          <Card className="p-4 space-y-3">
+            <h3 className="font-bold text-sm">Additional Details</h3>
+            {activeFields.has('length_m') && (
+              <div><Label className="text-xs">Length (m)</Label><Input type="number" step="0.1" value={form.length_m} onChange={e => updateField('length_m', e.target.value)} /></div>
+            )}
+            {activeFields.has('grade') && (
+              <div><Label className="text-xs">Grade</Label><Input value={form.grade} onChange={e => updateField('grade', e.target.value)} /></div>
+            )}
+            {activeFields.has('sling_leg_count') && (
+              <div><Label className="text-xs">Number of Legs</Label><Input type="number" value={form.sling_leg_count} onChange={e => updateField('sling_leg_count', e.target.value)} /></div>
+            )}
+            {activeFields.has('lift_height_m') && (
+              <div><Label className="text-xs">Lift Height (m)</Label><Input type="number" step="0.1" value={form.lift_height_m} onChange={e => updateField('lift_height_m', e.target.value)} /></div>
+            )}
+            {activeFields.has('span_m') && (
+              <div><Label className="text-xs">Span (m)</Label><Input type="number" step="0.1" value={form.span_m} onChange={e => updateField('span_m', e.target.value)} /></div>
+            )}
           </Card>
         )}
 
