@@ -174,6 +174,20 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
     reader.readAsDataURL(file);
   };
 
+  const handleUpdateMainPhoto = async (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      const { error } = await supabase.from('lifting_register').update({ overall_photo_url: dataUrl }).eq('id', itemId);
+      if (error) { toast.error('Failed to update photo'); return; }
+      setItems(prev => prev.map(i => i.id === itemId ? { ...i, overall_photo_url: dataUrl } : i));
+      toast.success('Item photo updated');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const isFailedItem = (item: RegisterItem) => {
     return item.equipment_status === 'Failed' || item.equipment_status === 'Removed From Service' || item.tag_present === 'false' || lastInspections[item.id]?.result === 'fail';
   };
@@ -358,6 +372,12 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
               </div>
             )}
 
+            {/* Update item main photo */}
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Update Item Photo</p>
+              <DualPhotoButton onCapture={e => handleUpdateMainPhoto(item.id, e)} variant="small" />
+            </div>
+
             {/* Inspection comment + photos */}
             <Textarea
               placeholder={r?.result === 'fail' ? 'Comment required for failed items...' : 'Optional comment...'}
@@ -365,19 +385,22 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
               onChange={e => updateComment(item.id, e.target.value)}
               className="text-sm min-h-[60px]"
             />
-            {r?.photos && r.photos.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {r.photos.map((p, i) => (
-                  <div key={i} className="relative w-14 h-14 rounded-lg overflow-hidden border border-border">
-                    <img src={p} alt="" className="w-full h-full object-cover" />
-                    <button onClick={() => removePhoto(item.id, i)} className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <DualPhotoButton onCapture={e => handlePhoto(item.id, e)} variant="default" multiple />
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Defect / Evidence Photos</p>
+              {r?.photos && r.photos.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  {r.photos.map((p, i) => (
+                    <div key={i} className="relative w-14 h-14 rounded-lg overflow-hidden border border-border">
+                      <img src={p} alt="" className="w-full h-full object-cover" />
+                      <button onClick={() => removePhoto(item.id, i)} className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <DualPhotoButton onCapture={e => handlePhoto(item.id, e)} variant="default" multiple />
+            </div>
           </div>
         )}
       </Card>
