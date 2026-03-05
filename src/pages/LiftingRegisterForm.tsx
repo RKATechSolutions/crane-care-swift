@@ -255,9 +255,6 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
   const isSling = activeFields.has('sling_configuration');
   const isHoist = activeFields.has('lift_height_m');
   const isBeam = activeFields.has('span_m');
-  const showLength = activeFields.has('length_m');
-  const showGrade = activeFields.has('grade');
-  const showLegCount = activeFields.has('sling_leg_count');
 
   // Save
   const handleSave = useCallback(async () => {
