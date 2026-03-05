@@ -69,7 +69,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const photoTargetIdRef = useRef<string | null>(null);
 
   const refreshItems = async () => {
-    let query = supabase.from('lifting_register').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('lifting_register').select('*').order('asset_tag');
     if (clientId) query = query.eq('client_id', clientId);
     else query = query.eq('site_name', siteName);
     const { data } = await query;
