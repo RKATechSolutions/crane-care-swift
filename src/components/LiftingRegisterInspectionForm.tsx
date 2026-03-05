@@ -67,7 +67,12 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
 
       const { data, error } = await query;
       if (error) { toast.error('Failed to load items'); setLoading(false); return; }
-      const registerItems = (data || []) as RegisterItem[];
+      const registerItems = ((data || []) as RegisterItem[]).sort((a, b) => {
+        const aNum = parseInt(a.asset_tag || '', 10);
+        const bNum = parseInt(b.asset_tag || '', 10);
+        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+        return (a.asset_tag || '').localeCompare(b.asset_tag || '', undefined, { numeric: true });
+      });
       setItems(registerItems);
 
       const initial: Record<string, InspectionResult> = {};
