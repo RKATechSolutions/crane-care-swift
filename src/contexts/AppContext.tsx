@@ -90,6 +90,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'LOGIN':
       return { ...state, currentUser: action.payload };
     case 'LOGOUT':
+      supabase.auth.signOut().catch(() => {});
       return { ...initialState, sites: state.sites, templates: state.templates };
     case 'SELECT_SITE':
       return { ...state, selectedSite: action.payload, selectedCrane: null, currentInspection: null };
