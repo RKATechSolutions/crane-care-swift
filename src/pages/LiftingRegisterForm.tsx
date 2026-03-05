@@ -527,8 +527,9 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
               <Select value={form.wll_unit} onValueChange={v => updateField('wll_unit', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="kg">kg</SelectItem>
-                  <SelectItem value="t">t</SelectItem>
+                  {WLL_UNITS.map(u => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -557,10 +558,9 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
             <Select value={form.equipment_status} onValueChange={v => updateField('equipment_status', v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="In Service">In Service</SelectItem>
-                <SelectItem value="Failed">Failed</SelectItem>
-                <SelectItem value="Removed From Service">Removed From Service</SelectItem>
-                <SelectItem value="Pending Inspection">Pending Inspection</SelectItem>
+                {EQUIP_STATUSES.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -576,11 +576,9 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
                 <Select value={form.sling_configuration} onValueChange={v => updateField('sling_configuration', v)}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Single Leg">Single Leg</SelectItem>
-                    <SelectItem value="Two Leg">Two Leg</SelectItem>
-                    <SelectItem value="Three Leg">Three Leg</SelectItem>
-                    <SelectItem value="Four Leg">Four Leg</SelectItem>
-                    <SelectItem value="Endless">Endless</SelectItem>
+                    {SLING_CONFIGS.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
