@@ -662,7 +662,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 <Label className="text-xs">Unit</Label>
                 <Select value={editForm.wll_unit || 'kg'} onValueChange={v => setEditForm(f => ({ ...f, wll_unit: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="kg">kg</SelectItem><SelectItem value="t">t</SelectItem></SelectContent>
+                  <SelectContent>{wllUnits.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div><Label className="text-xs">Grade</Label><Input value={editForm.grade || ''} onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))} /></div>
