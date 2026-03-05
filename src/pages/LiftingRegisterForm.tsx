@@ -238,10 +238,26 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
     return typeSet && !!hasId;
   }, [reviewMode, form]);
 
-  // Conditional field visibility
-  const isSling = SLING_TYPES.includes(form.equipment_type);
-  const isHoist = HOIST_TYPES.includes(form.equipment_type);
-  const isBeam = BEAM_TYPES.includes(form.equipment_type);
+  // Conditional field visibility - use category_groups if available, fallback to legacy
+  const activeFields = new Set<string>();
+  if (categoryGroups.length > 0) {
+    categoryGroups.forEach(g => {
+      if (g.types.includes(form.equipment_type)) {
+        g.fields.forEach(f => activeFields.add(f));
+      }
+    });
+  } else {
+    // Legacy fallback
+    if (SLING_TYPES.includes(form.equipment_type)) { activeFields.add('sling_configuration'); activeFields.add('sling_leg_count'); activeFields.add('length_m'); }
+    if (HOIST_TYPES.includes(form.equipment_type)) { activeFields.add('lift_height_m'); }
+    if (BEAM_TYPES.includes(form.equipment_type)) { activeFields.add('span_m'); }
+  }
+  const isSling = activeFields.has('sling_configuration');
+  const isHoist = activeFields.has('lift_height_m');
+  const isBeam = activeFields.has('span_m');
+  const showLength = activeFields.has('length_m');
+  const showGrade = activeFields.has('grade');
+  const showLegCount = activeFields.has('sling_leg_count');
 
   // Save
   const handleSave = useCallback(async () => {
