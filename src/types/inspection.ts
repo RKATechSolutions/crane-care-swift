@@ -5,7 +5,6 @@ export interface User {
   name: string;
   email: string;
   role: 'technician' | 'admin';
-  pin?: string;
 }
 
 export interface Site {
