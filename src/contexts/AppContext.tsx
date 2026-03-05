@@ -46,7 +46,9 @@ type Action =
   | { type: 'ADD_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
   | { type: 'REMOVE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; itemId: string } }
   | { type: 'UPDATE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
-  | { type: 'UPDATE_ADMIN_CONFIG'; payload: Partial<AdminFormConfig> };
+  | { type: 'UPDATE_ADMIN_CONFIG'; payload: Partial<AdminFormConfig> }
+  | { type: 'ELEVATE_TO_ADMIN' }
+  | { type: 'EXIT_ADMIN' };
 
 function loadSavedAdminConfig(): AdminFormConfig {
   try {
@@ -89,6 +91,12 @@ function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'LOGIN':
       return { ...state, currentUser: action.payload };
+    case 'ELEVATE_TO_ADMIN':
+      if (!state.currentUser) return state;
+      return { ...state, currentUser: { ...state.currentUser, role: 'admin' } };
+    case 'EXIT_ADMIN':
+      if (!state.currentUser) return state;
+      return { ...state, currentUser: { ...state.currentUser, role: 'technician' } };
     case 'LOGOUT':
       supabase.auth.signOut().catch(() => {});
       return { ...initialState, sites: state.sites, templates: state.templates };

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
-import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { toast } from 'sonner';
 
 export type DashboardView = 'schedule' | 'clients' | 'assets' | 'reports' | 'timesheet' | 'quotes' | 'todo' | 'receipts' | 'tasks' | 'job-detail' | null;
 
@@ -17,6 +18,8 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
   const [todoCount, setTodoCount] = useState(0);
   const [jobsThisWeek, setJobsThisWeek] = useState(0);
   const [jobsCompleted, setJobsCompleted] = useState(0);
+  const [showAdminPin, setShowAdminPin] = useState(false);
+  const [pinInput, setPinInput] = useState('');
 
   useEffect(() => {
     const now = new Date();
@@ -130,7 +133,60 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
         </div>
       </div>
 
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border space-y-2">
+        {!showAdminPin ? (
+          <button
+            onClick={() => setShowAdminPin(true)}
+            className="w-full tap-target bg-primary/10 text-primary rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+          >
+            <Shield className="w-4 h-4" />
+            Sign in as Admin
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (pinInput === '1234') {
+                    dispatch({ type: 'ELEVATE_TO_ADMIN' });
+                    toast.success('Admin access granted');
+                  } else {
+                    toast.error('Incorrect PIN');
+                    setPinInput('');
+                  }
+                }
+              }}
+              placeholder="Enter PIN"
+              className="flex-1 h-12 bg-muted rounded-xl px-4 text-center text-lg font-bold tracking-widest border border-border focus:outline-none focus:ring-2 focus:ring-primary"
+              autoFocus
+            />
+            <button
+              onClick={() => {
+                if (pinInput === '1234') {
+                  dispatch({ type: 'ELEVATE_TO_ADMIN' });
+                  toast.success('Admin access granted');
+                } else {
+                  toast.error('Incorrect PIN');
+                  setPinInput('');
+                }
+              }}
+              className="h-12 px-5 bg-primary text-primary-foreground rounded-xl font-bold text-sm"
+            >
+              Go
+            </button>
+            <button
+              onClick={() => { setShowAdminPin(false); setPinInput(''); }}
+              className="h-12 px-3 bg-muted rounded-xl text-muted-foreground text-sm"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <button
           onClick={() => dispatch({ type: 'LOGOUT' })}
           className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
