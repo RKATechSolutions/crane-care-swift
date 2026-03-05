@@ -162,7 +162,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
       if (data) setClientJobs(data);
     };
     const fetchReports = async () => {
-      let query = supabase.from('db_inspections').select('id, asset_name, inspection_date, status, technician_name, crane_status, form_id');
+      let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id');
       if (clientId) query = query.eq('client_id', clientId);
       else query = query.eq('site_name', siteName);
       const { data } = await query.order('created_at', { ascending: false });
@@ -953,7 +953,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                         manufacturer: 'N/A',
                         yearInstalled: 0,
                       };
-                      setActiveDbForm({ formId: r.form_id, crane, assetId: undefined });
+                      setActiveDbForm({ formId: r.form_id, crane, assetId: r.asset_id || undefined });
                       // Set existing inspection ID by storing it for the form
                       setEditingReportId(r.id);
                     }}
