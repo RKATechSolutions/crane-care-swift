@@ -365,6 +365,6 @@ export const mockUsers = [
   { id: 'tech-5', name: 'Kelly Adams', email: 'kelly@rka.com.au', role: 'admin' as const },
   { id: 'tech-6', name: 'Jennifer Osias', email: 'jennifer@rka.com.au', role: 'admin' as const },
   { id: 'tech-7', name: 'Efren Manso', email: 'efren@rka.com.au', role: 'admin' as const },
-  { id: 'admin-1', name: 'Lisa Chen', email: 'lisa@rka.com.au', role: 'admin' as const },
+  { id: 'admin-1', name: 'Manny Gonot', email: 'manny@rka.com.au', role: 'admin' as const },
   { id: 'test-1', name: 'Test User', email: 'test@rka.com.au', role: 'admin' as const },
 ];
