@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/ui/button';
@@ -13,21 +13,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Camera, Check, Pencil, AlertTriangle, Loader2, ScanLine, X, ImagePlus, Sparkles } from 'lucide-react';
 
-interface LiftingRegisterFormProps {
-  onBack: () => void;
-  clientId?: string;
-  siteName?: string;
-}
-
-const EQUIPMENT_TYPES = [
+const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
   'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
   'Lifting Lug', 'Eyebolt', 'Swivel',
 ];
-
-const SLING_TYPES = ['Chain Sling', 'Wire Rope Sling', 'Web Sling'];
-const HOIST_TYPES = ['Lever Hoist', 'Chain Block'];
-const BEAM_TYPES = ['Beam Clamp', 'Spreader Beam'];
+const DEFAULT_SLING_TYPES = ['Chain Sling', 'Wire Rope Sling', 'Web Sling'];
+const DEFAULT_HOIST_TYPES = ['Lever Hoist', 'Chain Block'];
+const DEFAULT_BEAM_TYPES = ['Beam Clamp', 'Spreader Beam'];
+const DEFAULT_SLING_CONFIGS = ['Single Leg', 'Two Leg', 'Three Leg', 'Four Leg', 'Endless'];
+const DEFAULT_EQUIPMENT_STATUSES = ['In Service', 'Failed', 'Removed From Service', 'Pending Inspection'];
+const DEFAULT_WLL_UNITS = ['kg', 't'];
 
 interface AIField {
   value: string | number | null;
@@ -77,10 +73,41 @@ type FormData = {
   site_name: string;
 };
 
+interface LiftingRegisterFormProps {
+  onBack: () => void;
+  clientId?: string;
+  siteName?: string;
+}
+
 const HIGH_RISK_FIELDS = ['equipment_type', 'wll_value', 'asset_tag', 'serial_number'];
 
 export default function LiftingRegisterForm({ onBack, clientId, siteName }: LiftingRegisterFormProps) {
   const { state } = useApp();
+
+  // Dynamic config from admin
+  const [EQUIPMENT_TYPES, setEquipmentTypes] = useState(DEFAULT_EQUIPMENT_TYPES);
+  const [SLING_TYPES, setSlingTypes] = useState(DEFAULT_SLING_TYPES);
+  const [HOIST_TYPES, setHoistTypes] = useState(DEFAULT_HOIST_TYPES);
+  const [BEAM_TYPES, setBeamTypes] = useState(DEFAULT_BEAM_TYPES);
+  const [SLING_CONFIGS, setSlingConfigs] = useState(DEFAULT_SLING_CONFIGS);
+  const [EQUIP_STATUSES, setEquipStatuses] = useState(DEFAULT_EQUIPMENT_STATUSES);
+  const [WLL_UNITS, setWllUnits] = useState(DEFAULT_WLL_UNITS);
+
+  useEffect(() => {
+    supabase.from('admin_config').select('config').eq('id', 'lifting_register').single().then(({ data }) => {
+      if (data?.config) {
+        const c = data.config as any;
+        if (c.equipment_types?.length) setEquipmentTypes(c.equipment_types);
+        if (c.sling_types?.length) setSlingTypes(c.sling_types);
+        if (c.hoist_types?.length) setHoistTypes(c.hoist_types);
+        if (c.beam_types?.length) setBeamTypes(c.beam_types);
+        if (c.sling_configurations?.length) setSlingConfigs(c.sling_configurations);
+        if (c.equipment_statuses?.length) setEquipStatuses(c.equipment_statuses);
+        if (c.wll_units?.length) setWllUnits(c.wll_units);
+      }
+    });
+  }, []);
+
   const [form, setForm] = useState<FormData>({
     equipment_type: '', manufacturer: '', model: '', serial_number: '',
     asset_tag: '', wll_value: '', wll_unit: 'kg', length_m: '', grade: '',
@@ -500,8 +527,9 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
               <Select value={form.wll_unit} onValueChange={v => updateField('wll_unit', v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="kg">kg</SelectItem>
-                  <SelectItem value="t">t</SelectItem>
+                  {WLL_UNITS.map(u => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -530,10 +558,9 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
             <Select value={form.equipment_status} onValueChange={v => updateField('equipment_status', v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="In Service">In Service</SelectItem>
-                <SelectItem value="Failed">Failed</SelectItem>
-                <SelectItem value="Removed From Service">Removed From Service</SelectItem>
-                <SelectItem value="Pending Inspection">Pending Inspection</SelectItem>
+                {EQUIP_STATUSES.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -549,11 +576,9 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
                 <Select value={form.sling_configuration} onValueChange={v => updateField('sling_configuration', v)}>
                   <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Single Leg">Single Leg</SelectItem>
-                    <SelectItem value="Two Leg">Two Leg</SelectItem>
-                    <SelectItem value="Three Leg">Three Leg</SelectItem>
-                    <SelectItem value="Four Leg">Four Leg</SelectItem>
-                    <SelectItem value="Endless">Endless</SelectItem>
+                    {SLING_CONFIGS.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
