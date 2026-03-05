@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.ai-estimate]
 verify_jwt = false
+
+[functions.categorize-lifting-equipment]
+verify_jwt = false
