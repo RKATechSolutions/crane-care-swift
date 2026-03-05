@@ -2,7 +2,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Package, Plus, Pencil, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2, Users, FileBarChart, Briefcase, DollarSign, AlertCircle } from 'lucide-react';
+import { PlayCircle, Package, Plus, Pencil, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2, Users, FileBarChart, Briefcase, DollarSign, AlertCircle, BookOpen, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
@@ -74,6 +74,9 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [notebookLmLink, setNotebookLmLink] = useState<string>('');
+  const [showNotebookLmEdit, setShowNotebookLmEdit] = useState(false);
+  const [notebookLmInput, setNotebookLmInput] = useState('');
   const site = state.selectedSite;
 
   // Fetch active job name
@@ -133,6 +136,16 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
     };
     fetchBaseline();
   }, [site?.id, site?.name]);
+
+  // Fetch notebook LM link
+  useEffect(() => {
+    if (!site) return;
+    const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+    if (!clientId) return;
+    supabase.from('clients').select('notebook_lm_link').eq('id', clientId).single().then(({ data }) => {
+      if (data?.notebook_lm_link) setNotebookLmLink(data.notebook_lm_link);
+    });
+  }, [site?.id]);
 
   // Fetch quotes, jobs, reports for this client
   useEffect(() => {
