@@ -47,19 +47,20 @@ interface RegisterItem {
   overall_photo_url: string | null;
 }
 
-const EQUIPMENT_TYPES = [
+const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
   'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
   'Lifting Lug', 'Eyebolt', 'Swivel', 'Unknown',
 ];
+
+const DEFAULT_STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
+const DEFAULT_WLL_UNITS = ['kg', 't'];
 
 interface CategoryGroup {
   name: string;
   types: string[];
   fields: string[];
 }
-
-const STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
 
 export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew, onInspect }: LiftingRegisterListProps) {
   const [items, setItems] = useState<RegisterItem[]>([]);
