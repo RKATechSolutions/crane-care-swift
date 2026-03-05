@@ -362,9 +362,9 @@ export const mockUsers = [
   { id: 'tech-2', name: 'Vince Fernandez', email: 'vincent@rkaindustrialsolutions.com.au', role: 'technician' as const },
   { id: 'tech-3', name: 'Ryan Adams', email: 'ryan@rkaindustrialsolutions.com.au', role: 'technician' as const },
   { id: 'tech-4', name: 'Seth Adams', email: 'seth@rkatechsolutions.com.au', role: 'technician' as const },
-  { id: 'tech-5', name: 'Kelly Adams', email: 'admin@rkaindustrialsolutions.com.au', role: 'admin' as const },
-  { id: 'tech-6', name: 'Jennifer Osias', email: 'accounts@rkaindustrialsolutions.com.au', role: 'admin' as const },
-  { id: 'tech-7', name: 'Efren Manso', email: 'sales@rkaindustrialsolutions.com.au', role: 'admin' as const },
-  { id: 'admin-1', name: 'Manny Gonot', email: 'manilaconnection@gmail.com', role: 'admin' as const },
+  { id: 'tech-5', name: 'Kelly Adams', email: 'admin@rkaindustrialsolutions.com.au', role: 'technician' as const },
+  { id: 'tech-6', name: 'Jennifer Osias', email: 'accounts@rkaindustrialsolutions.com.au', role: 'technician' as const },
+  { id: 'tech-7', name: 'Efren Manso', email: 'sales@rkaindustrialsolutions.com.au', role: 'technician' as const },
+  { id: 'admin-1', name: 'Manny Gonot', email: 'manilaconnection@gmail.com', role: 'technician' as const },
   { id: 'test-1', name: 'Test User', email: 'test@rka.com.au', role: 'admin' as const },
 ];
