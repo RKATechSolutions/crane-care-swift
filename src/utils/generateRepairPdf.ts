@@ -129,7 +129,7 @@ export async function generateRepairPdf(data: RepairPdfData): Promise<jsPDF> {
 
   let assetImg: HTMLImageElement | undefined;
   if (assetPhotoUrl) {
-    try { assetImg = await loadImage(assetPhotoUrl); } catch { /* skip */ }
+    try { assetImg = await loadRemoteImage(assetPhotoUrl); } catch { /* skip */ }
   }
 
   // PAGE 1
