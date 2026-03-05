@@ -92,9 +92,10 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
   const [SLING_CONFIGS, setSlingConfigs] = useState(DEFAULT_SLING_CONFIGS);
   const [EQUIP_STATUSES, setEquipStatuses] = useState(DEFAULT_EQUIPMENT_STATUSES);
   const [WLL_UNITS, setWllUnits] = useState(DEFAULT_WLL_UNITS);
+  const [categoryGroups, setCategoryGroups] = useState<{ name: string; types: string[]; fields: string[] }[]>([]);
 
   useEffect(() => {
-    supabase.from('admin_config').select('config').eq('id', 'lifting_register').single().then(({ data }) => {
+    supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle().then(({ data }) => {
       if (data?.config) {
         const c = data.config as any;
         if (c.equipment_types?.length) setEquipmentTypes(c.equipment_types);
@@ -104,6 +105,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
         if (c.sling_configurations?.length) setSlingConfigs(c.sling_configurations);
         if (c.equipment_statuses?.length) setEquipStatuses(c.equipment_statuses);
         if (c.wll_units?.length) setWllUnits(c.wll_units);
+        if (c.category_groups?.length) setCategoryGroups(c.category_groups);
       }
     });
   }, []);
