@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, Save, ChevronDown, ChevronUp, Camera, Plus, Trash2 } from 'lucide-react';
@@ -31,7 +31,13 @@ const inputClass = "w-full h-10 px-3 border border-border rounded-lg bg-backgrou
 const selectClass = "w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 const labelClass = "text-xs font-medium text-muted-foreground";
 
-const CATEGORY_OPTIONS = ['Overhead Crane','Hoist','Chain Sling','Wire Rope Sling','Synthetic Sling','Below the Hook','Jib Crane','Gantry Crane','Monorail','Monorail WRH','Monorail CH','Portal DGWRH','Portal SGWRH','Portal Balancer','Air Jib CH','Jib Balancer','Manual','KBK'];
+const FALLBACK_CATEGORY_OPTIONS = ['Overhead Crane','Hoist','Chain Sling','Wire Rope Sling','Synthetic Sling','Below the Hook','Jib Crane','Gantry Crane','Monorail','Monorail WRH','Monorail CH','Portal DGWRH','Portal SGWRH','Portal Balancer','Air Jib CH','Jib Balancer','Manual','KBK'];
+
+interface CategoryGroup {
+  name: string;
+  types: string[];
+  fields: string[];
+}
 
 function SectionHeader({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
   return (
