@@ -168,7 +168,21 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   };
 
   const parseRowsToInsert = (headers: string[], dataRows: any[][]) => {
-    const colMap = headers.map(h => headerMap[h.toLowerCase().trim()] || null);
+    // Try matching each header - also try substring matching for flexibility
+    const colMap = headers.map(h => {
+      const key = h.toLowerCase().trim();
+      if (headerMap[key]) return headerMap[key];
+      // Try without trailing periods/special chars
+      const cleaned = key.replace(/[.#]/g, '').trim();
+      if (headerMap[cleaned]) return headerMap[cleaned];
+      // Try partial match
+      for (const [mapKey, mapVal] of Object.entries(headerMap)) {
+        if (key.includes(mapKey) || mapKey.includes(key)) return mapVal;
+      }
+      return null;
+    });
+    console.log('CSV headers:', headers);
+    console.log('Mapped to:', colMap);
     const techName = localStorage.getItem('technicianName') || 'Import';
     const techId = localStorage.getItem('technicianId') || 'import';
     return dataRows.filter(vals => vals.some(v => v != null && String(v).trim())).map(vals => {
