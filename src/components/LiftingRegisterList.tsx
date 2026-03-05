@@ -434,14 +434,15 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-sm">{item.equipment_type}</p>
+                        <p className="font-bold text-sm">{item.asset_tag || item.serial_number || item.equipment_type}</p>
                         <Badge variant="outline" className={`text-[10px] ${statusColor(item.equipment_status)}`}>
                           {item.equipment_status || 'Unknown'}
                         </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                        {item.equipment_type !== 'Unknown' && <p className="text-muted-foreground">{item.equipment_type}</p>}
                         {item.serial_number && <p><span className="font-medium text-foreground">SN:</span> {item.serial_number}</p>}
-                        {item.asset_tag && <p>Tag: {item.asset_tag}</p>}
+                        {item.asset_tag && item.serial_number && <p>Tag: {item.asset_tag}</p>}
                         {item.wll_value && (
                           <p className="font-medium text-foreground">WLL: {item.wll_value} {item.wll_unit || 'kg'}</p>
                         )}
