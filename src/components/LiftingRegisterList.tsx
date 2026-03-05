@@ -68,12 +68,20 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const photoInputRef = useRef<HTMLInputElement>(null);
   const photoTargetIdRef = useRef<string | null>(null);
 
+  const naturalSort = (a: RegisterItem, b: RegisterItem) => {
+    const aNum = parseInt(a.asset_tag || '', 10);
+    const bNum = parseInt(b.asset_tag || '', 10);
+    if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+    return (a.asset_tag || '').localeCompare(b.asset_tag || '', undefined, { numeric: true });
+  };
+
   const refreshItems = async () => {
     let query = supabase.from('lifting_register').select('*').order('asset_tag');
     if (clientId) query = query.eq('client_id', clientId);
     else query = query.eq('site_name', siteName);
     const { data } = await query;
-    setItems((data as RegisterItem[]) || []);
+    const sorted = ((data as RegisterItem[]) || []).sort(naturalSort);
+    setItems(sorted);
   };
 
   useEffect(() => {
