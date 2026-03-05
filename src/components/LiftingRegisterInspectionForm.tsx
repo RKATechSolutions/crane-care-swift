@@ -61,7 +61,7 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
   useEffect(() => {
     const fetchItems = async () => {
       setLoading(true);
-      let query = supabase.from('lifting_register').select('id, equipment_type, manufacturer, model, serial_number, asset_tag, wll_value, wll_unit, equipment_status, tag_present, overall_photo_url, grade, length_m, sling_configuration, sling_leg_count, lift_height_m, span_m, notes').order('equipment_type');
+      let query = supabase.from('lifting_register').select('id, equipment_type, manufacturer, model, serial_number, asset_tag, wll_value, wll_unit, equipment_status, tag_present, overall_photo_url, grade, length_m, sling_configuration, sling_leg_count, lift_height_m, span_m, notes').order('asset_tag');
       if (clientId) query = query.eq('client_id', clientId);
       else query = query.eq('site_name', siteName);
 
