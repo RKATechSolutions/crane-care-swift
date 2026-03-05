@@ -27,10 +27,26 @@ interface RepairPdfData {
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
   });
+}
+
+async function loadRemoteImage(src: string): Promise<HTMLImageElement> {
+  try {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+    return loadImage(dataUrl);
+  } catch {
+    return loadImage(src);
+  }
 }
 
 function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages): number {
