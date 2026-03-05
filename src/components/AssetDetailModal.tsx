@@ -244,18 +244,68 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
             <input type="text" value={description} onChange={e => setDescription(e.target.value)} className={inputClass} />
           </div>
 
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className={labelClass}>Category</label>
-              <select value={className} onChange={e => setClassName(e.target.value)} className={selectClass}>
-                {CATEGORY_OPTIONS.map(o => <option key={o}>{o}</option>)}
-              </select>
+          {/* Group → Type two-step selector */}
+          {categoryGroups.length > 0 ? (
+            <div className="space-y-2">
+              <label className={labelClass}>Asset Group</label>
+              <div className="flex flex-wrap gap-1.5">
+                {categoryGroups.map(g => (
+                  <button
+                    key={g.name}
+                    type="button"
+                    onClick={() => { setSelectedGroup(g.name === selectedGroup ? null : g.name); }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      selectedGroup === g.name
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                    }`}
+                  >
+                    {g.name}
+                  </button>
+                ))}
+              </div>
+
+              {selectedGroup && typesForSelectedGroup.length > 0 && (
+                <div>
+                  <label className={labelClass}>Equipment Type</label>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {typesForSelectedGroup.map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setClassName(className === t ? '' : t)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                          className === t
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className={labelClass}>Type / Subtype</label>
+                <input type="text" value={assetType} onChange={e => setAssetType(e.target.value)} className={inputClass} placeholder="e.g. Bow Shackle" />
+              </div>
             </div>
-            <div className="flex-1">
-              <label className={labelClass}>Type</label>
-              <input type="text" value={assetType} onChange={e => setAssetType(e.target.value)} className={inputClass} />
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className={labelClass}>Category</label>
+                <select value={className} onChange={e => setClassName(e.target.value)} className={selectClass}>
+                  {FALLBACK_CATEGORY_OPTIONS.map(o => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className={labelClass}>Type</label>
+                <input type="text" value={assetType} onChange={e => setAssetType(e.target.value)} className={inputClass} />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-2">
             <div className="flex-1">
