@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
@@ -108,9 +108,18 @@ export default function RepairBreakdownForm({
   const [previewPdf, setPreviewPdf] = useState<jsPDF | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | undefined>();
   const [expandedSections, setExpandedSections] = useState<Record<SectionKey, boolean>>({
     a: true, b: false, c: false, d: false, e: false,
   });
+
+  // Fetch asset main photo
+  useEffect(() => {
+    if (!assetId) return;
+    supabase.from('assets').select('main_photo_url').eq('id', assetId).single().then(({ data }) => {
+      if (data?.main_photo_url) setAssetPhotoUrl(data.main_photo_url);
+    });
+  }, [assetId]);
 
   const toggleSection = useCallback((key: SectionKey) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
@@ -201,6 +210,7 @@ export default function RepairBreakdownForm({
         assetName,
         siteName,
         technicianName: state.currentUser?.name || 'Unknown',
+        assetPhotoUrl,
       });
       setPreviewPdf(pdf);
       setShowPreview(true);
@@ -228,6 +238,7 @@ export default function RepairBreakdownForm({
         assetName,
         siteName,
         technicianName: state.currentUser?.name || 'Unknown',
+        assetPhotoUrl,
       });
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
       const filename = `${assetName.replace(/\s+/g, '_')}_RepairReport_${format(new Date(), 'yyyyMMdd')}.pdf`;

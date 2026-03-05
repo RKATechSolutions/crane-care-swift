@@ -21,6 +21,7 @@ interface RepairPdfData {
   assetName: string;
   siteName?: string;
   technicianName: string;
+  assetPhotoUrl?: string;
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -102,13 +103,18 @@ function checkPageBreak(doc: jsPDF, y: number, needed: number, imgs: PdfImages, 
 }
 
 export async function generateRepairPdf(data: RepairPdfData): Promise<jsPDF> {
-  const { formData, assetName, siteName, technicianName } = data;
+  const { formData, assetName, siteName, technicianName, assetPhotoUrl } = data;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const contentW = pageW - 28;
 
   const imgs: PdfImages = {};
   try { imgs.logoImg = await loadImage(rkaLogoUrl); } catch { /* fallback */ }
+
+  let assetImg: HTMLImageElement | undefined;
+  if (assetPhotoUrl) {
+    try { assetImg = await loadImage(assetPhotoUrl); } catch { /* skip */ }
+  }
 
   // PAGE 1
   let y = addHeader(doc, 'Repair & Breakdown Report', imgs);
@@ -122,6 +128,18 @@ export async function generateRepairPdf(data: RepairPdfData): Promise<jsPDF> {
   y = addInfoRow(doc, y, 'Job Type', formData.job_type || '—');
   y = addInfoRow(doc, y, 'Fault Source', formData.fault_source || '—');
   y += 4;
+
+  // Asset photo on cover
+  if (assetImg) {
+    const maxPhotoW = 100;
+    const maxPhotoH = 70;
+    const ratio = Math.min(maxPhotoW / assetImg.width, maxPhotoH / assetImg.height);
+    const imgW = assetImg.width * ratio;
+    const imgH = assetImg.height * ratio;
+    const imgX = (pageW - imgW) / 2;
+    doc.addImage(assetImg, 'JPEG', imgX, y, imgW, imgH);
+    y += imgH + 6;
+  }
 
   // Arrival Assessment
   y = addSectionTitle(doc, y, 'Arrival Assessment');
