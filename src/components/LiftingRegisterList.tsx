@@ -106,6 +106,9 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       if (data?.config) {
         const c = data.config as any;
         if (c.category_groups?.length) setCategoryGroups(c.category_groups);
+        if (c.equipment_types?.length) setEquipmentTypes(c.equipment_types);
+        if (c.equipment_statuses?.length) setStatusOptions(c.equipment_statuses);
+        if (c.wll_units?.length) setWllUnits(c.wll_units);
       }
     });
   }, []);
@@ -641,7 +644,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 <Label className="text-xs">Equipment Type</Label>
                 <Select value={editForm.equipment_type || ''} onValueChange={v => setEditForm(f => ({ ...f, equipment_type: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{EQUIPMENT_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  <SelectContent>{equipmentTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             )}
@@ -670,7 +673,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 <Label className="text-xs">Status</Label>
                 <Select value={editForm.equipment_status || 'In Service'} onValueChange={v => setEditForm(f => ({ ...f, equipment_status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  <SelectContent>{statusOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
