@@ -1,85 +1,14 @@
-import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { mockUsers } from '@/data/mockData';
 import { User } from '@/types/inspection';
-import { lovable } from '@/integrations/lovable/index';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
+import { ChevronRight } from 'lucide-react';
 
 export default function Login() {
   const { dispatch } = useApp();
-  const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<typeof mockUsers[0] | null>(null);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user?.email) {
-          matchAndLogin(session.user.email);
-        }
-      } catch (err) {
-        console.error('Session check error:', err);
-      }
-      setCheckingSession(false);
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user?.email) {
-        matchAndLogin(session.user.email);
-      }
-    });
-
-    checkSession();
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const matchAndLogin = (email: string) => {
-    const knownUser = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (knownUser) {
-      dispatch({ type: 'LOGIN', payload: knownUser as User });
-    } else {
-      toast.error('Your Google account is not authorised to use this app.');
-      supabase.auth.signOut();
-    }
+  const handleSelectUser = (user: typeof mockUsers[0]) => {
+    dispatch({ type: 'LOGIN', payload: user as User });
   };
-
-  const handleSelectUser = async (user: typeof mockUsers[0]) => {
-    if (user.id === 'test-1') {
-      dispatch({ type: 'LOGIN', payload: user as User });
-      return;
-    }
-
-    setSelectedUser(user);
-    setLoading(true);
-    try {
-      const result = await lovable.auth.signInWithOAuth('google', {
-        redirect_uri: window.location.origin,
-        extraParams: {
-          login_hint: user.email,
-        },
-      });
-      if (result.error) {
-        toast.error('Google sign-in failed');
-        console.error('Google auth error:', result.error);
-      }
-    } catch (err) {
-      toast.error('Sign-in failed');
-      console.error('Sign-in error:', err);
-    }
-    setLoading(false);
-    setSelectedUser(null);
-  };
-
-  if (checkingSession) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   const realUsers = mockUsers.filter(u => u.id !== 'test-1');
   const testUser = mockUsers.find(u => u.id === 'test-1');
@@ -98,8 +27,7 @@ export default function Login() {
             <button
               key={user.id}
               onClick={() => handleSelectUser(user)}
-              disabled={loading}
-              className="w-full h-14 bg-card border border-border rounded-xl px-4 flex items-center justify-between active:bg-muted transition-colors disabled:opacity-50"
+              className="w-full h-14 bg-card border border-border rounded-xl px-4 flex items-center justify-between active:bg-muted transition-colors"
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
@@ -110,11 +38,7 @@ export default function Login() {
                   <p className="text-xs text-muted-foreground">{user.role}</p>
                 </div>
               </div>
-              {loading && selectedUser?.id === user.id ? (
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              )}
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
           ))}
 
