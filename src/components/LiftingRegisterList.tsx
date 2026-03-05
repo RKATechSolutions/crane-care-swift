@@ -336,10 +336,19 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       const { error: updateError } = await supabase.from('lifting_register').update({ overall_photo_url: photoUrl }).eq('id', targetId);
       if (updateError) throw updateError;
       setItems(prev => prev.map(i => i.id === targetId ? { ...i, overall_photo_url: photoUrl } : i));
+      if (editItem?.id === targetId) setEditForm(f => ({ ...f, overall_photo_url: photoUrl }));
       toast.success('Photo uploaded');
     } catch (err) { console.error('Photo upload error:', err); toast.error('Failed to upload photo'); }
     setUploadingPhotoId(null);
     if (photoInputRef.current) photoInputRef.current.value = '';
+  };
+
+  const handleDeletePhoto = async (itemId: string) => {
+    const { error } = await supabase.from('lifting_register').update({ overall_photo_url: null }).eq('id', itemId);
+    if (error) { toast.error('Failed to remove photo'); return; }
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, overall_photo_url: null } : i));
+    if (editItem?.id === itemId) setEditForm(f => ({ ...f, overall_photo_url: null }));
+    toast.success('Photo removed');
   };
 
   // ─── Edit ───────────────────────────────────────────────
