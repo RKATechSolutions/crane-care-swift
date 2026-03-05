@@ -369,7 +369,17 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   };
 
   // ─── Edit ───────────────────────────────────────────────
-  const openEdit = (item: RegisterItem) => { setEditItem(item); setEditForm({ ...item }); };
+  const openEdit = (item: RegisterItem) => {
+    setEditItem(item);
+    setEditForm({ ...item });
+    // Auto-select the group for the current equipment type
+    if (categoryGroups.length > 0) {
+      const found = categoryGroups.find(g => g.types.includes(item.equipment_type));
+      setEditSelectedGroup(found?.name || null);
+    } else {
+      setEditSelectedGroup(null);
+    }
+  };
 
   const handleSaveEdit = async () => {
     if (!editItem) return;
