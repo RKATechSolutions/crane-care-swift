@@ -49,6 +49,21 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
+async function loadRemoteImage(src: string): Promise<HTMLImageElement> {
+  try {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+    return loadImage(dataUrl);
+  } catch {
+    return loadImage(src);
+  }
+}
+
 export async function generateInspectionPdf(data: InspectionPdfData): Promise<jsPDF> {
   const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections, aiSummary, assetPhotoUrl } = data;
   const doc = new jsPDF('p', 'mm', 'a4');
@@ -61,7 +76,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   let assetImg: HTMLImageElement | undefined;
   if (assetPhotoUrl) {
-    try { assetImg = await loadImage(assetPhotoUrl); } catch { /* skip */ }
+    try { assetImg = await loadRemoteImage(assetPhotoUrl); } catch { /* skip */ }
   }
 
   const addHeader = () => {

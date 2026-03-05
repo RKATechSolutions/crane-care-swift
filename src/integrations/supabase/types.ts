@@ -361,6 +361,7 @@ export type Database = {
           inspectall_code: string | null
           lead_or_referral_source: string | null
           location_address: string | null
+          notebook_lm_link: string | null
           payment_days: string | null
           planned_service_dates: string | null
           preferred_days_and_times: string | null
@@ -395,6 +396,7 @@ export type Database = {
           inspectall_code?: string | null
           lead_or_referral_source?: string | null
           location_address?: string | null
+          notebook_lm_link?: string | null
           payment_days?: string | null
           planned_service_dates?: string | null
           preferred_days_and_times?: string | null
@@ -429,6 +431,7 @@ export type Database = {
           inspectall_code?: string | null
           lead_or_referral_source?: string | null
           location_address?: string | null
+          notebook_lm_link?: string | null
           payment_days?: string | null
           planned_service_dates?: string | null
           preferred_days_and_times?: string | null
