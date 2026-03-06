@@ -34,11 +34,6 @@ const labelClass = "text-xs font-medium text-muted-foreground";
 
 const FALLBACK_CATEGORY_OPTIONS = ['Overhead Crane','Hoist','Chain Sling','Wire Rope Sling','Synthetic Sling','Below the Hook','Jib Crane','Gantry Crane','Monorail','Monorail WRH','Monorail CH','Portal DGWRH','Portal SGWRH','Portal Balancer','Air Jib CH','Jib Balancer','Manual','KBK'];
 
-interface CategoryGroup {
-  name: string;
-  types: string[];
-  fields: string[];
-}
 
 function SectionHeader({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
   return (
