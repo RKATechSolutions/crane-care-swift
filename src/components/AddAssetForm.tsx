@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useAssetGroups } from '@/hooks/useAssetGroups';
 
 interface AddAssetFormProps {
   siteId: string;
@@ -57,10 +58,12 @@ export function AddAssetForm({ siteName, clientId, onSaved, onCancel }: AddAsset
   const [showCore, setShowCore] = useState(true);
   const [showAdditional, setShowAdditional] = useState(false);
   const [showHoist, setShowHoist] = useState(false);
+  const { groups: assetGroups } = useAssetGroups();
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   // System fields
   const [assetName, setAssetName] = useState('');
-  const [category, setCategory] = useState('Overhead Crane');
+  const [category, setCategory] = useState('');
   const [assetType, setAssetType] = useState('');
   const [status, setStatus] = useState('In Service');
   const [barcode, setBarcode] = useState('');
@@ -202,21 +205,80 @@ export function AddAssetForm({ siteName, clientId, onSaved, onCancel }: AddAsset
           <label className={labelClass}>Asset Name *</label>
           <input type="text" value={assetName} onChange={e => setAssetName(e.target.value)} placeholder="e.g. Bay 3 - 5T Overhead Crane" className={inputClass} />
         </div>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className={labelClass}>Category *</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} className={selectClass}>
-              {CATEGORY_OPTIONS.map(o => <option key={o}>{o}</option>)}
-            </select>
+        {/* Asset Group → Type badge selector */}
+        {assetGroups.length > 0 ? (
+          <div className="space-y-2">
+            <label className={labelClass}>Asset Group *</label>
+            <div className="flex flex-wrap gap-1.5">
+              {assetGroups.map(g => (
+                <button
+                  key={g.name}
+                  type="button"
+                  onClick={() => {
+                    setSelectedGroup(selectedGroup === g.name ? null : g.name);
+                    setCategory('');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    selectedGroup === g.name
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                  }`}
+                >
+                  {g.name}
+                </button>
+              ))}
+            </div>
+
+            {selectedGroup && (() => {
+              const group = assetGroups.find(g => g.name === selectedGroup);
+              const types = group?.types || [];
+              return types.length > 0 ? (
+                <div>
+                  <label className={labelClass}>Asset Type *</label>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {types.map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setCategory(category === t ? '' : t)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                          category === t
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No types configured for this group yet.</p>
+              );
+            })()}
+
+            <div>
+              <label className={labelClass}>Subtype / Detail</label>
+              <input type="text" value={assetType} onChange={e => setAssetType(e.target.value)} placeholder="e.g. Bow Shackle" className={inputClass} />
+            </div>
           </div>
-          <div className="flex-1">
-            <label className={labelClass}>Asset Type *</label>
-            <select value={assetType} onChange={e => setAssetType(e.target.value)} className={selectClass}>
-              <option value="">Select type...</option>
-              {ASSET_TYPE_OPTIONS.map(o => <option key={o}>{o}</option>)}
-            </select>
+        ) : (
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className={labelClass}>Category *</label>
+              <select value={category} onChange={e => setCategory(e.target.value)} className={selectClass}>
+                {CATEGORY_OPTIONS.map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className={labelClass}>Asset Type *</label>
+              <select value={assetType} onChange={e => setAssetType(e.target.value)} className={selectClass}>
+                <option value="">Select type...</option>
+                {ASSET_TYPE_OPTIONS.map(o => <option key={o}>{o}</option>)}
+              </select>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex gap-2">
           <div className="flex-1">
             <label className={labelClass}>Bar Code (RKA Asset ID) *</label>

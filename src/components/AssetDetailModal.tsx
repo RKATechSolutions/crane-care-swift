@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, Save, ChevronDown, ChevronUp, Camera, Plus, Trash2 } from 'lucide-react';
+import { useAssetGroups } from '@/hooks/useAssetGroups';
 
 interface AssetDetailModalProps {
   asset: {
@@ -71,36 +72,27 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
   const [status, setStatus] = useState(asset.status || 'In Service');
   const [lengthLift, setLengthLift] = useState(asset.length_lift || '');
 
-  // Category groups from admin config
-  const [categoryGroups, setCategoryGroups] = useState<CategoryGroup[]>([]);
-  const [allEquipmentTypes, setAllEquipmentTypes] = useState<string[]>(FALLBACK_CATEGORY_OPTIONS);
+  // Asset groups from admin config
+  const { groups: assetGroups } = useAssetGroups();
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle().then(({ data }) => {
-      if (data?.config) {
-        const c = data.config as any;
-        if (c.category_groups?.length) setCategoryGroups(c.category_groups);
-        if (c.equipment_types?.length) setAllEquipmentTypes(c.equipment_types);
-      }
-    });
-  }, []);
 
   // Determine which group the current className belongs to
   useEffect(() => {
-    if (className && categoryGroups.length > 0 && !selectedGroup) {
-      const found = categoryGroups.find(g => g.types.includes(className));
+    if (className && assetGroups.length > 0 && !selectedGroup) {
+      const found = assetGroups.find(g =>
+        g.types.some(t => t.toLowerCase().trim() === className.toLowerCase().trim())
+      );
       if (found) setSelectedGroup(found.name);
     }
-  }, [className, categoryGroups]);
+  }, [className, assetGroups]);
 
-  // Get types for selected group, or all types if no groups configured
+  // Get types for selected group
   const typesForSelectedGroup = useMemo(() => {
-    if (categoryGroups.length === 0) return allEquipmentTypes;
+    if (assetGroups.length === 0) return FALLBACK_CATEGORY_OPTIONS;
     if (!selectedGroup) return [];
-    const group = categoryGroups.find(g => g.name === selectedGroup);
+    const group = assetGroups.find(g => g.name === selectedGroup);
     return group?.types || [];
-  }, [categoryGroups, selectedGroup, allEquipmentTypes]);
+  }, [assetGroups, selectedGroup]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -245,11 +237,11 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
           </div>
 
           {/* Group → Type two-step selector */}
-          {categoryGroups.length > 0 ? (
+          {assetGroups.length > 0 ? (
             <div className="space-y-2">
               <label className={labelClass}>Asset Group</label>
               <div className="flex flex-wrap gap-1.5">
-                {categoryGroups.map(g => (
+                {assetGroups.map(g => (
                   <button
                     key={g.name}
                     type="button"
