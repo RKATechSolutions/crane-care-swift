@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Package, Pencil, ChevronDown } from 'lucide-react';
+import { Search, Package, Pencil, ChevronDown, Settings, List } from 'lucide-react';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
+import AdminAssetGroups from '@/components/AdminAssetGroups';
 
 interface DbAsset {
   id: string;
