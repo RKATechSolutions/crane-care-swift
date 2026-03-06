@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Package, Pencil, ChevronDown } from 'lucide-react';
+import { Search, Package, Pencil, ChevronDown, Settings, List } from 'lucide-react';
 import { AssetDetailModal } from '@/components/AssetDetailModal';
+import AdminAssetGroups from '@/components/AdminAssetGroups';
 
 interface DbAsset {
   id: string;
@@ -32,6 +33,7 @@ export default function AdminAssets() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
+  const [view, setView] = useState<'list' | 'groups'>('list');
 
   const fetchAssets = async () => {
     setLoading(true);
@@ -71,6 +73,34 @@ export default function AdminAssets() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* View toggle */}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setView('list')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
+            view === 'list' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'
+          }`}
+        >
+          <List className="w-3.5 h-3.5" />
+          Asset List
+        </button>
+        <button
+          onClick={() => setView('groups')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold transition-colors ${
+            view === 'groups' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          Groups & Types
+        </button>
+      </div>
+
+      {view === 'groups' ? (
+        <div className="flex-1 overflow-auto">
+          <AdminAssetGroups />
+        </div>
+      ) : (
+      <>
       {/* Search & Filter */}
       <div className="p-3 space-y-2 border-b border-border">
         <div className="relative">
@@ -173,6 +203,8 @@ export default function AdminAssets() {
             fetchAssets();
           }}
         />
+      )}
+      </>
       )}
     </div>
   );
