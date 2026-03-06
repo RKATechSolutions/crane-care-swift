@@ -33,6 +33,7 @@ export default function AdminAssets() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [editingAsset, setEditingAsset] = useState<DbAsset | null>(null);
+  const [view, setView] = useState<'list' | 'groups'>('list');
 
   const fetchAssets = async () => {
     setLoading(true);
