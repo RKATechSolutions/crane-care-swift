@@ -96,6 +96,11 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     setItems(sorted);
   };
 
+  useEffect(() => {
+    const fetch = async () => { setLoading(true); await refreshItems(); setLoading(false); };
+    void fetch();
+  }, [clientId, siteName]);
+
   const loadAdminConfig = async () => {
     const { data } = await supabase.from('admin_config').select('config').eq('id', 'lifting_register').maybeSingle();
     if (!data?.config) {
@@ -395,16 +400,22 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   };
 
   // ─── Edit ───────────────────────────────────────────────
-  const openEdit = (item: RegisterItem) => {
+  const openEdit = async (item: RegisterItem) => {
+    const { groups, types } = await loadAdminConfig();
+    const normalize = (v: string) => v.trim().toLowerCase();
+    const typeKey = normalize(item.equipment_type);
+
+    const matchedGroup = groups.find(g => (g.types || []).some(t => {
+      const tKey = normalize(t);
+      return tKey === typeKey || typeKey.includes(tKey) || tKey.includes(typeKey);
+    }));
+
+    const groupedTypeKeys = new Set(groups.flatMap(g => (g.types || []).map(normalize)));
+    const hasUngrouped = types.some(t => !groupedTypeKeys.has(normalize(t)));
+
     setEditItem(item);
     setEditForm({ ...item });
-    // Auto-select the group for the current equipment type
-    if (categoryGroups.length > 0) {
-      const found = categoryGroups.find(g => g.types.includes(item.equipment_type));
-      setEditSelectedGroup(found?.name || null);
-    } else {
-      setEditSelectedGroup(null);
-    }
+    setEditSelectedGroup(matchedGroup?.name || (hasUngrouped ? 'Other' : null));
   };
 
   const handleSaveEdit = async () => {
@@ -613,11 +624,11 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
         <DialogContent className="max-w-md max-h-[85vh] overflow-auto">
           <DialogHeader><DialogTitle>Edit Equipment</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            {categoryGroups.length > 0 ? (
+            {effectiveCategoryGroups.length > 0 ? (
               <div className="space-y-2">
                 <Label className="text-xs">Equipment Group</Label>
                 <div className="flex flex-wrap gap-1.5">
-                  {categoryGroups.map(g => (
+                  {effectiveCategoryGroups.map(g => (
                     <button
                       key={g.name}
                       type="button"
@@ -633,7 +644,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                   ))}
                 </div>
                 {editSelectedGroup && (() => {
-                  const group = categoryGroups.find(g => g.name === editSelectedGroup);
+                  const group = effectiveCategoryGroups.find(g => g.name === editSelectedGroup);
                   const types = group?.types || [];
                   return types.length > 0 ? (
                     <div>
