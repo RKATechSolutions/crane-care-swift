@@ -65,6 +65,7 @@ interface CategoryGroup {
 export function LiftingRegisterList({ clientId, siteName, clientName, onBack, onAddNew, onInspect }: LiftingRegisterListProps) {
   const [items, setItems] = useState<RegisterItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [editItem, setEditItem] = useState<RegisterItem | null>(null);
   const [editForm, setEditForm] = useState<Partial<RegisterItem>>({});
@@ -87,17 +88,50 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     return (a.asset_tag || '').localeCompare(b.asset_tag || '', undefined, { numeric: true });
   };
 
+  const isTimeoutError = (error: unknown) => {
+    const e = error as { code?: string; message?: string } | null;
+    return e?.code === '57014' || /statement timeout/i.test(e?.message || '');
+  };
+
   const refreshItems = async () => {
-    let query = supabase.from('lifting_register').select('id,equipment_type,manufacturer,model,serial_number,asset_tag,wll_value,wll_unit,length_m,grade,tag_present,equipment_status,site_name,notes,registered_by_name,created_at,sling_configuration,sling_leg_count,lift_height_m,span_m,overall_photo_url').order('asset_tag');
-    if (clientId) query = query.eq('client_id', clientId);
-    else query = query.eq('site_name', siteName);
-    const { data } = await query;
-    const sorted = ((data as RegisterItem[]) || []).sort(naturalSort);
-    setItems(sorted);
+    const baseSelect = 'id,equipment_type,manufacturer,model,serial_number,asset_tag,wll_value,wll_unit,length_m,grade,tag_present,equipment_status,site_name,notes,registered_by_name,created_at,sling_configuration,sling_leg_count,lift_height_m,span_m,overall_photo_url';
+    const fetchPrimary = () => {
+      const query = supabase.from('lifting_register').select(baseSelect);
+      return clientId ? query.eq('client_id', clientId) : query.eq('site_name', siteName);
+    };
+
+    let attempts = 0;
+    let lastError: { code?: string; message?: string } | null = null;
+
+    while (attempts < 3) {
+      const { data, error } = await fetchPrimary();
+      if (!error) {
+        setLoadError(null);
+        setItems(((data as RegisterItem[]) || []).sort(naturalSort));
+        return;
+      }
+
+      lastError = error;
+      attempts += 1;
+      if (isTimeoutError(error) && attempts < 3) {
+        await new Promise(resolve => setTimeout(resolve, 350 * attempts));
+        continue;
+      }
+      break;
+    }
+
+    console.error('Failed loading lifting register:', lastError);
+    setItems([]);
+    setLoadError('Unable to load the lifting register right now. Please retry.');
+    toast.error('Failed to load lifting register. Please retry.');
   };
 
   useEffect(() => {
-    const fetch = async () => { setLoading(true); await refreshItems(); setLoading(false); };
+    const fetch = async () => {
+      setLoading(true);
+      await refreshItems();
+      setLoading(false);
+    };
     void fetch();
   }, [clientId, siteName]);
 
@@ -513,7 +547,18 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           </div>
         )}
 
-        {!loading && items.length === 0 && (
+        {!loading && loadError && (
+          <div className="p-8 text-center text-muted-foreground space-y-3">
+            <AlertTriangle className="w-10 h-10 mx-auto opacity-50" />
+            <p className="font-medium">Couldn’t load lifting equipment</p>
+            <p className="text-sm">{loadError}</p>
+            <Button variant="outline" size="sm" onClick={() => void refreshItems()}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {!loading && !loadError && items.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
             <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="font-medium">No lifting equipment registered</p>
