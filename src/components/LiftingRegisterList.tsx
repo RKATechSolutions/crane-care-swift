@@ -547,7 +547,18 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           </div>
         )}
 
-        {!loading && items.length === 0 && (
+        {!loading && loadError && (
+          <div className="p-8 text-center text-muted-foreground space-y-3">
+            <AlertTriangle className="w-10 h-10 mx-auto opacity-50" />
+            <p className="font-medium">Couldn’t load lifting equipment</p>
+            <p className="text-sm">{loadError}</p>
+            <Button variant="outline" size="sm" onClick={() => void refreshItems()}>
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {!loading && !loadError && items.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
             <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="font-medium">No lifting equipment registered</p>
