@@ -88,7 +88,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   };
 
   const refreshItems = async () => {
-    let query = supabase.from('lifting_register').select('*').order('asset_tag');
+    let query = supabase.from('lifting_register').select('id,equipment_type,manufacturer,model,serial_number,asset_tag,wll_value,wll_unit,length_m,grade,tag_present,equipment_status,site_name,notes,registered_by_name,created_at,sling_configuration,sling_leg_count,lift_height_m,span_m,overall_photo_url').order('asset_tag');
     if (clientId) query = query.eq('client_id', clientId);
     else query = query.eq('site_name', siteName);
     const { data } = await query;
