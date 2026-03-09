@@ -95,35 +95,55 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
 
   const refreshItems = async () => {
     const baseSelect = 'id,equipment_type,manufacturer,model,serial_number,asset_tag,wll_value,wll_unit,length_m,grade,tag_present,equipment_status,site_name,notes,registered_by_name,created_at,sling_configuration,sling_leg_count,lift_height_m,span_m,overall_photo_url';
-    const fetchPrimary = () => {
+
+    // Paginated fetch to avoid statement timeouts on large TOAST tables
+    const fetchPage = async (from: number, to: number) => {
       const query = supabase.from('lifting_register').select(baseSelect);
-      return clientId ? query.eq('client_id', clientId) : query.eq('site_name', siteName);
+      const filtered = clientId ? query.eq('client_id', clientId) : query.eq('site_name', siteName);
+      return filtered.range(from, to);
     };
 
-    let attempts = 0;
+    let allItems: RegisterItem[] = [];
+    let page = 0;
+    const pageSize = 50;
     let lastError: { code?: string; message?: string } | null = null;
 
-    while (attempts < 3) {
-      const { data, error } = await fetchPrimary();
-      if (!error) {
-        setLoadError(null);
-        setItems(((data as RegisterItem[]) || []).sort(naturalSort));
-        return;
+    try {
+      while (true) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        let attempts = 0;
+        let pageData: RegisterItem[] | null = null;
+
+        while (attempts < 3) {
+          const { data, error } = await fetchPage(from, to);
+          if (!error) {
+            pageData = (data as RegisterItem[]) || [];
+            break;
+          }
+          lastError = error;
+          attempts += 1;
+          if (isTimeoutError(error) && attempts < 3) {
+            await new Promise(resolve => setTimeout(resolve, 500 * attempts));
+            continue;
+          }
+          throw error;
+        }
+
+        if (!pageData) throw lastError;
+        allItems = allItems.concat(pageData);
+        if (pageData.length < pageSize) break; // last page
+        page += 1;
       }
 
-      lastError = error;
-      attempts += 1;
-      if (isTimeoutError(error) && attempts < 3) {
-        await new Promise(resolve => setTimeout(resolve, 350 * attempts));
-        continue;
-      }
-      break;
+      setLoadError(null);
+      setItems(allItems.sort(naturalSort));
+    } catch (err) {
+      console.error('Failed loading lifting register:', err);
+      setItems([]);
+      setLoadError('Unable to load the lifting register right now. Please retry.');
+      toast.error('Failed to load lifting register. Please retry.');
     }
-
-    console.error('Failed loading lifting register:', lastError);
-    setItems([]);
-    setLoadError('Unable to load the lifting register right now. Please retry.');
-    toast.error('Failed to load lifting register. Please retry.');
   };
 
   useEffect(() => {
