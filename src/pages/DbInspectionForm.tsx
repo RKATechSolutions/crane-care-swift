@@ -5,11 +5,12 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { StandardQuestionBlock, QuestionConfig, ResponseData } from '@/components/StandardQuestionBlock';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2, Sparkles } from 'lucide-react';
+import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2, Sparkles, CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import ReactMarkdown from 'react-markdown';
+import { format } from 'date-fns';
 import type jsPDF from 'jspdf';
 
 interface DbInspectionFormProps {
@@ -50,6 +51,9 @@ export default function DbInspectionForm({
   const [generatingAI, setGeneratingAI] = useState(false);
   const [otherNotes, setOtherNotes] = useState<string>('');
   const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | undefined>(undefined);
+  const [showDateConfirm, setShowDateConfirm] = useState(false);
+  const [inspectionDate, setInspectionDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  
 
   // Load questions for this form
   useEffect(() => {
@@ -173,11 +177,12 @@ export default function DbInspectionForm({
         // Load existing AI summary and other notes
         const { data: inspData } = await supabase
           .from('db_inspections')
-          .select('ai_summary, other_notes')
+          .select('ai_summary, other_notes, inspection_date')
           .eq('id', existingInspectionId)
           .single();
         if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
         if ((inspData as any)?.other_notes) setOtherNotes((inspData as any).other_notes);
+        if (inspData?.inspection_date) setInspectionDate(inspData.inspection_date);
       }
 
       setResponses(initResponses);
@@ -339,7 +344,7 @@ export default function DbInspectionForm({
         assetName,
         siteName,
         technicianName: state.currentUser?.name || 'Technician',
-        inspectionDate: new Date().toISOString(),
+        inspectionDate: inspectionDate,
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
         otherNotes: otherNotes || undefined,
@@ -382,10 +387,11 @@ export default function DbInspectionForm({
   };
 
   // Save to database
-  const saveInspection = async (status: string = 'Draft') => {
+  const saveInspection = async (status: string = 'Draft', overrideDate?: string) => {
     setSaving(true);
     try {
       let currentInspId = inspectionId;
+      const dateToUse = overrideDate || inspectionDate;
 
       if (!currentInspId) {
         // Create inspection record
@@ -398,6 +404,7 @@ export default function DbInspectionForm({
             technician_id: state.currentUser?.id || 'unknown',
             technician_name: state.currentUser?.name || 'Unknown',
             status,
+            inspection_date: dateToUse,
           };
         if (taskId) insertPayload.task_id = taskId;
 
@@ -413,7 +420,7 @@ export default function DbInspectionForm({
       } else {
         await supabase
           .from('db_inspections')
-          .update({ status, updated_at: new Date().toISOString(), other_notes: otherNotes || null } as any)
+          .update({ status, updated_at: new Date().toISOString(), other_notes: otherNotes || null, inspection_date: dateToUse } as any)
           .eq('id', currentInspId);
       }
 
@@ -689,8 +696,7 @@ export default function DbInspectionForm({
             if (defectCount > 0) {
               setShowStatusPicker(true);
             } else {
-              saveInspection('Submitted');
-              (onSubmitComplete || onBack)();
+              setShowDateConfirm(true);
             }
           }}
           disabled={saving || totalAnswered === 0}
@@ -718,8 +724,7 @@ export default function DbInspectionForm({
                     await supabase.from('db_inspections').update({ crane_status: status }).eq('id', inspectionId);
                   }
                   setShowStatusPicker(false);
-                  await saveInspection('Submitted');
-                  (onSubmitComplete || onBack)();
+                  setShowDateConfirm(true);
                 }}
                 className={`w-full tap-target rounded-xl font-bold text-base ${
                   status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
@@ -731,6 +736,45 @@ export default function DbInspectionForm({
               </button>
             ))}
             <button onClick={() => setShowStatusPicker(false)} className="w-full tap-target bg-muted rounded-xl font-semibold text-sm">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Date Confirmation Modal */}
+      {showDateConfirm && (
+        <div className="fixed inset-0 z-[100] bg-foreground/50 flex items-end justify-center">
+          <div className="bg-background w-full max-w-lg rounded-t-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarIcon className="w-6 h-6 text-primary" />
+              <h3 className="text-lg font-bold">Confirm Inspection Date</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Is this the correct date for the inspection report?
+            </p>
+            <input
+              type="date"
+              value={inspectionDate}
+              onChange={(e) => setInspectionDate(e.target.value)}
+              className="w-full p-3 border border-border rounded-xl bg-background text-foreground text-base font-semibold text-center"
+            />
+            <button
+              onClick={async () => {
+                setShowDateConfirm(false);
+                await saveInspection('Submitted', inspectionDate);
+                (onSubmitComplete || onBack)();
+              }}
+              disabled={saving}
+              className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5" />
+              {saving ? 'Submitting…' : 'Confirm & Submit'}
+            </button>
+            <button
+              onClick={() => setShowDateConfirm(false)}
+              className="w-full tap-target bg-muted rounded-xl font-semibold text-sm"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
