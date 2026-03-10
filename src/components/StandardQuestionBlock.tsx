@@ -437,9 +437,9 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 {/* Photo Upload */}
                 <div>
                   <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1.5">
-                    Photo {response.urgency === 'Immediate' || question.requires_photo_on_fail ? '(Required)' : '(Optional)'}
+                    Photo {response.urgency === 'Immediate - Remove From Service and Repair Immediately' || question.requires_photo_on_fail ? '(Required)' : '(Optional)'}
                   </p>
-                  {renderPhotosSection(response.urgency === 'Immediate' || question.requires_photo_on_fail)}
+                  {renderPhotosSection(response.urgency === 'Immediate - Remove From Service and Repair Immediately' || question.requires_photo_on_fail)}
                 </div>
 
                 {/* Technician Internal / Quoting Notes */}
