@@ -355,6 +355,7 @@ export default function DbInspectionForm({
         siteName,
         technicianName: state.currentUser?.name || 'Technician',
         inspectionDate: inspectionDate,
+        craneStatus: craneStatus || undefined,
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
         otherNotes: otherNotes || undefined,
