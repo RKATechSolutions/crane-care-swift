@@ -695,8 +695,8 @@ export default function DbInspectionForm({
             if (defectCount > 0) {
               setShowStatusPicker(true);
             } else {
-              saveInspection('Submitted');
-              (onSubmitComplete || onBack)();
+              setShowDateConfirm(true);
+              setPendingStatusForSubmit(null);
             }
           }}
           disabled={saving || totalAnswered === 0}
