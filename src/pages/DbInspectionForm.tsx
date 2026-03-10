@@ -5,11 +5,12 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { StandardQuestionBlock, QuestionConfig, ResponseData } from '@/components/StandardQuestionBlock';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2, Sparkles } from 'lucide-react';
+import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2, Sparkles, CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import ReactMarkdown from 'react-markdown';
+import { format } from 'date-fns';
 import type jsPDF from 'jspdf';
 
 interface DbInspectionFormProps {
