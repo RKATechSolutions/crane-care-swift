@@ -273,7 +273,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         doc.rect(15, dy - 2, pageW - 30, cardH + 4, 'F');
       }
 
-      const urgColor = d.urgency?.startsWith('Immediate') ? RKA_RED : d.urgency?.startsWith('Urgent') ? RKA_ORANGE : [180, 180, 180] as [number, number, number];
+      const urgColor = d.urgency?.startsWith('Immediate') ? RKA_RED : d.urgency?.startsWith('Urgent') ? RKA_ORANGE : d.urgency?.startsWith('Schedule') ? [230, 200, 50] as [number, number, number] : RKA_GREEN;
       doc.setFillColor(...(urgColor as [number, number, number]));
       doc.rect(15, dy - 2, 3, cardH + 4, 'F');
 
