@@ -268,7 +268,17 @@ export default function DbInspectionForm({
 
   const handleResponseUpdate = useCallback((questionId: string, response: ResponseData) => {
     setResponses(prev => ({ ...prev, [questionId]: response }));
-  }, []);
+    // Sync asset status question with craneStatus for PDF
+    if (questionId === 'OC2-AO-001' || questionId === 'JIB_OUT_01') {
+      const val = response.answer_value;
+      if (val) {
+        setCraneStatus(val);
+        if (inspectionId) {
+          supabase.from('db_inspections').update({ crane_status: val }).eq('id', inspectionId);
+        }
+      }
+    }
+  }, [inspectionId]);
 
   const handleSectionChange = useCallback((idx: number) => {
     setCurrentSectionIdx(idx);
@@ -675,36 +685,6 @@ export default function DbInspectionForm({
         </div>
       )}
 
-      {/* Asset Status — inline on last section */}
-      {currentSectionIdx === sections.length - 1 && (
-        <div className="px-4 py-4 border-b border-border space-y-3">
-          <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Asset Status</h3>
-          <p className="text-xs text-muted-foreground">Select the operational status of this asset based on your inspection findings.</p>
-          <div className="grid grid-cols-1 gap-2">
-            {['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'].map(status => (
-              <button
-                key={status}
-                onClick={async () => {
-                  setCraneStatus(status);
-                  if (inspectionId) {
-                    await supabase.from('db_inspections').update({ crane_status: status }).eq('id', inspectionId);
-                  }
-                }}
-                className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                  craneStatus === status
-                    ? status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground ring-2 ring-rka-green ring-offset-2'
-                      : status === 'Operate with Limitations' ? 'bg-rka-orange text-destructive-foreground ring-2 ring-rka-orange ring-offset-2'
-                      : 'bg-rka-red text-destructive-foreground ring-2 ring-rka-red ring-offset-2'
-                    : 'bg-muted text-foreground'
-                }`}
-              >
-                {craneStatus === status && <Check className="w-4 h-4" />}
-                {status}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="px-4 py-2 border-t border-border flex gap-2">
         {currentSectionIdx > 0 && (
@@ -768,10 +748,6 @@ export default function DbInspectionForm({
         </button>
         <button
           onClick={() => {
-            if (!craneStatus) {
-              toast.error('Please select an Asset Status before submitting.');
-              return;
-            }
             setShowDateConfirm(true);
           }}
           disabled={saving || totalAnswered === 0}
