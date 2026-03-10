@@ -386,10 +386,11 @@ export default function DbInspectionForm({
   };
 
   // Save to database
-  const saveInspection = async (status: string = 'Draft') => {
+  const saveInspection = async (status: string = 'Draft', overrideDate?: string) => {
     setSaving(true);
     try {
       let currentInspId = inspectionId;
+      const dateToUse = overrideDate || inspectionDate;
 
       if (!currentInspId) {
         // Create inspection record
@@ -402,6 +403,7 @@ export default function DbInspectionForm({
             technician_id: state.currentUser?.id || 'unknown',
             technician_name: state.currentUser?.name || 'Unknown',
             status,
+            inspection_date: dateToUse,
           };
         if (taskId) insertPayload.task_id = taskId;
 
@@ -417,7 +419,7 @@ export default function DbInspectionForm({
       } else {
         await supabase
           .from('db_inspections')
-          .update({ status, updated_at: new Date().toISOString(), other_notes: otherNotes || null } as any)
+          .update({ status, updated_at: new Date().toISOString(), other_notes: otherNotes || null, inspection_date: dateToUse } as any)
           .eq('id', currentInspId);
       }
 
