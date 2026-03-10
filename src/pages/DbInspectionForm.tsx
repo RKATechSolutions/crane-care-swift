@@ -748,10 +748,6 @@ export default function DbInspectionForm({
         </button>
         <button
           onClick={() => {
-            if (!craneStatus) {
-              toast.error('Please select an Asset Status before submitting.');
-              return;
-            }
             setShowDateConfirm(true);
           }}
           disabled={saving || totalAnswered === 0}
