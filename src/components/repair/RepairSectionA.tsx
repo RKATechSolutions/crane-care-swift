@@ -95,8 +95,8 @@ export function RepairSectionA({ formData, updateForm, assetId }: Props) {
     .filter(d => !defectFilter || d.urgency === defectFilter)
     .filter(d => !defectSearch || d.question_text.toLowerCase().includes(defectSearch.toLowerCase()) || d.comment?.toLowerCase().includes(defectSearch.toLowerCase()))
     .sort((a, b) => {
-      const order = { 'Immediate': 0, 'Urgent': 1, 'Scheduled': 2, 'Monitor': 3 };
-      return (order[a.urgency as keyof typeof order] ?? 4) - (order[b.urgency as keyof typeof order] ?? 4);
+      const order: Record<string, number> = { 'Immediate - Remove From Service and Repair Immediately': 0, 'Urgent Repair Before Next Use': 1, 'Schedule Repair Before Next Service': 2, 'Monitor': 3 };
+      return (order[a.urgency as string] ?? 4) - (order[b.urgency as string] ?? 4);
     });
 
   const toggleDefect = (id: string) => {
