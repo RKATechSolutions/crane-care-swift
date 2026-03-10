@@ -60,9 +60,9 @@ Deno.serve(async (req) => {
 
       const answer = r.answer_value || r.pass_fail_status || "No answer";
       let line = `- ${q.text}: ${answer}`;
-      if (r.comment) line += ` — Note: ${r.comment}`;
+      if (r.comment) line += ` — Comment: ${r.comment}`;
       if (r.defect_flag) {
-        line += ` [DEFECT${r.urgency ? ` - ${r.urgency}` : ''}]`;
+        line += ` [DEFECT - Section: ${section}, Question: ${q.text}${r.urgency ? `, Urgency: ${r.urgency}` : ''}${r.comment ? `, Comment: ${r.comment}` : ''}]`;
         if (r.defect_types && r.defect_types.length > 0) line += ` Categories: ${r.defect_types.join(', ')}`;
         defectCount++;
       }
