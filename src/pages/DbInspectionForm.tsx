@@ -450,6 +450,39 @@ export default function DbInspectionForm({
           .from('inspection_responses')
           .upsert(responseRows, { onConflict: 'inspection_id,question_id' });
         if (respError) throw respError;
+
+        // Save defect suggestions to defect_suggestions table
+        if (status === 'Submitted') {
+          const suggestions = Object.values(responses)
+            .filter(r => r.defect_flag && (r.suggested_defect_type || r.suggested_defect_detail))
+            .flatMap(r => {
+              const items: any[] = [];
+              if (r.suggested_defect_type) {
+                items.push({
+                  inspection_id: currentInspId,
+                  question_id: r.question_id,
+                  suggestion_type: 'defect_type',
+                  suggestion_value: r.suggested_defect_type,
+                  suggested_by_id: state.currentUser?.id || 'unknown',
+                  suggested_by_name: state.currentUser?.name || 'Unknown',
+                });
+              }
+              if (r.suggested_defect_detail) {
+                items.push({
+                  inspection_id: currentInspId,
+                  question_id: r.question_id,
+                  suggestion_type: 'defect_detail',
+                  suggestion_value: r.suggested_defect_detail,
+                  suggested_by_id: state.currentUser?.id || 'unknown',
+                  suggested_by_name: state.currentUser?.name || 'Unknown',
+                });
+              }
+              return items;
+            });
+          if (suggestions.length > 0) {
+            await supabase.from('defect_suggestions').insert(suggestions);
+          }
+        }
       }
 
       toast.success(status === 'Submitted' ? 'Inspection submitted!' : 'Progress saved');
