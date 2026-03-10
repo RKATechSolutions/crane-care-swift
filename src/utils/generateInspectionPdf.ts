@@ -353,7 +353,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const bottomMargin = 18;
 
   for (const section of sections) {
-    const passedItems = section.questions.filter(q => !q.defect_flag);
+    const passedItems = section.questions.filter(q => !q.defect_flag && q.question_text !== 'Asset Status');
     if (passedItems.length === 0) continue;
 
     if (sy > pageH - bottomMargin - 20) { doc.addPage(); addHeader(); addFooter(); sy = 18; }
