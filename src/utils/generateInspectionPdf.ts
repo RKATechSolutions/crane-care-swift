@@ -102,7 +102,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   doc.setFontSize(22);
   doc.setTextColor(...DARK);
   doc.setFont('helvetica', 'bold');
-  doc.text(formName, pageW / 2, y, { align: 'center' });
+  doc.text('Inspection Report', pageW / 2, y, { align: 'center' });
   y += 12;
 
   doc.setFontSize(16);
