@@ -102,7 +102,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   doc.setFontSize(22);
   doc.setTextColor(...DARK);
   doc.setFont('helvetica', 'bold');
-  doc.text(formName, pageW / 2, y, { align: 'center' });
+  doc.text('Inspection Report', pageW / 2, y, { align: 'center' });
   y += 12;
 
   doc.setFontSize(16);
@@ -122,18 +122,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   doc.text(`Date: ${dateStr}`, pageW / 2, y, { align: 'center' });
   y += 10;
 
-  // Overall status badge
-  if (craneStatus) {
-    const statusColor = craneStatus === 'Safe to Operate' ? RKA_GREEN
-      : craneStatus === 'Operate with Limitations' ? RKA_ORANGE : RKA_RED;
-    doc.setFillColor(...statusColor);
-    doc.roundedRect(pageW / 2 - 40, y, 80, 10, 3, 3, 'F');
-    doc.setFontSize(11);
-    doc.setTextColor(...WHITE);
-    doc.setFont('helvetica', 'bold');
-    doc.text(craneStatus.toUpperCase(), pageW / 2, y + 7, { align: 'center' });
-    y += 16;
-  }
+  // Status badge moved to after summary
 
   // Stats
   const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
@@ -229,6 +218,27 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         y += 4;
       }
     }
+  }
+
+  // Overall Condition Rating badge after summary
+  if (craneStatus) {
+    y += 4;
+    const statusLabel = craneStatus === 'Safe to Operate' ? 'SERVICEABLE'
+      : craneStatus === 'Operate with Limitations' ? 'SERVICEABLE WITH DEFECTS'
+      : 'UNSAFE – REMOVE FROM SERVICE';
+    const statusColor = craneStatus === 'Safe to Operate' ? RKA_GREEN
+      : craneStatus === 'Operate with Limitations' ? RKA_ORANGE : RKA_RED;
+
+    if (y > pageH - 30) { doc.addPage(); addHeader(); y = 22; }
+
+    doc.setFillColor(...statusColor);
+    const badgeW = Math.max(100, doc.getTextWidth(statusLabel) * 1.2 + 20);
+    doc.roundedRect((pageW - badgeW) / 2, y, badgeW, 12, 3, 3, 'F');
+    doc.setFontSize(12);
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold');
+    doc.text(statusLabel, pageW / 2, y + 8.5, { align: 'center' });
+    y += 18;
   }
 
   addFooter();
