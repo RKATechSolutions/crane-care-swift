@@ -43,8 +43,10 @@ serve(async (req) => {
       .in("question_id", questionIds);
 
     const questionMap: Record<string, { text: string; section: string }> = {};
+    const sectionOverrides: Record<string, string> = {};
+    (ftqData || []).forEach(f => { if (f.section_override) sectionOverrides[f.question_id] = f.section_override; });
     (questions || []).forEach(q => {
-      questionMap[q.question_id] = { text: q.question_text, section: q.section };
+      questionMap[q.question_id] = { text: q.question_text, section: sectionOverrides[q.question_id] || q.section };
     });
 
     const sectionData: Record<string, string[]> = {};
