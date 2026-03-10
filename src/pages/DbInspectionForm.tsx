@@ -146,6 +146,8 @@ export default function DbInspectionForm({
           defect_types: [],
           advanced_defect_detail: [],
           internal_note: null,
+          suggested_defect_type: null,
+          suggested_defect_detail: null,
         };
       });
 
