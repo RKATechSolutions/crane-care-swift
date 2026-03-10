@@ -268,7 +268,17 @@ export default function DbInspectionForm({
 
   const handleResponseUpdate = useCallback((questionId: string, response: ResponseData) => {
     setResponses(prev => ({ ...prev, [questionId]: response }));
-  }, []);
+    // Sync asset status question with craneStatus for PDF
+    if (questionId === 'OC2-AO-001' || questionId === 'JIB_OUT_01') {
+      const val = response.answer_value;
+      if (val) {
+        setCraneStatus(val);
+        if (inspectionId) {
+          supabase.from('db_inspections').update({ crane_status: val }).eq('id', inspectionId);
+        }
+      }
+    }
+  }, [inspectionId]);
 
   const handleSectionChange = useCallback((idx: number) => {
     setCurrentSectionIdx(idx);
