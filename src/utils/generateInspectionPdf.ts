@@ -122,7 +122,21 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   doc.text(`Date: ${dateStr}`, pageW / 2, y, { align: 'center' });
   y += 10;
 
-  // Status badge moved to after summary
+  // Asset Outcome badge — prominently on front page
+  if (craneStatus) {
+    const statusColor = craneStatus === 'Safe to Operate' ? RKA_GREEN
+      : craneStatus === 'Operate with Limitations' ? RKA_ORANGE : RKA_RED;
+
+    doc.setFillColor(...statusColor);
+    const badgeLabel = craneStatus;
+    const badgeW = Math.max(120, doc.getTextWidth(badgeLabel) * 1.5 + 20);
+    doc.roundedRect((pageW - badgeW) / 2, y, badgeW, 14, 3, 3, 'F');
+    doc.setFontSize(13);
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold');
+    doc.text(badgeLabel, pageW / 2, y + 9.5, { align: 'center' });
+    y += 20;
+  }
 
   // Stats
   const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
