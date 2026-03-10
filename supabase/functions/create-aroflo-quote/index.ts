@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// create-aroflo-quote
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -109,7 +109,7 @@ async function makeArofloRequest(
   return data;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
