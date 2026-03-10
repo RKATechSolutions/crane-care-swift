@@ -219,21 +219,8 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       const trimmed = part.trim();
       if (!trimmed) { y += 2; continue; }
 
-      const headingMatch = trimmed.match(/^#{1,3}\s+(.+)/);
-      if (headingMatch) {
-        if (y > pageH - 20) { doc.addPage(); addHeader(); addFooter(); y = 22; }
-        y += 2;
-        doc.setFillColor(...RKA_GREEN_DARK);
-        doc.rect(20, y - 3, pageW - 40, 6, 'F');
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...WHITE);
-        doc.text(headingMatch[1], pageW / 2, y + 1, { align: 'center' });
-        doc.setTextColor(...DARK);
-        doc.setFont('helvetica', 'normal');
-        y += 6;
-        continue;
-      }
+      // Skip markdown headings (e.g. "## Overall Summary", "## Defects Found")
+      if (/^#{1,3}\s+/.test(trimmed)) continue;
 
       const lines = doc.splitTextToSize(trimmed, pageW - 44);
       for (const line of lines) {
