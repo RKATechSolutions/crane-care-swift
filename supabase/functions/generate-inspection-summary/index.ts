@@ -35,9 +35,18 @@ serve(async (req) => {
       .select("question_id, question_text, section")
       .in("question_id", questionIds);
 
+    // Also get section info from form_template_questions for this inspection's form
+    const { data: ftqData } = await supabase
+      .from("form_template_questions")
+      .select("question_id, section_override")
+      .eq("form_id", inspection.form_id)
+      .in("question_id", questionIds);
+
     const questionMap: Record<string, { text: string; section: string }> = {};
+    const sectionOverrides: Record<string, string> = {};
+    (ftqData || []).forEach(f => { if (f.section_override) sectionOverrides[f.question_id] = f.section_override; });
     (questions || []).forEach(q => {
-      questionMap[q.question_id] = { text: q.question_text, section: q.section };
+      questionMap[q.question_id] = { text: q.question_text, section: sectionOverrides[q.question_id] || q.section };
     });
 
     const sectionData: Record<string, string[]> = {};
@@ -95,9 +104,10 @@ Write a direct 80-100 word paragraph covering:
 - Strongest areas
 
 ## Defects Found
-List each defect as a bullet point with urgency level and a one-line description. Example:
-- **[Urgent]** Wire rope showing signs of wear — schedule replacement before next service
-- **[Monitor]** Minor surface rust on gantry beam — monitor at next inspection
+List each defect using the format: **Section: Question Text** — Urgency Level
+Include the technician comment if provided. Example:
+- **Hoist: Wire Rope** — Schedule Repair Before Next Service
+- **Electrical: Emergency Stop** — Urgent Repair Before Next Use. Note: Button sticking intermittently
 
 Keep entire output under 250 words total. Direct, professional tone. No fluff.`;
 

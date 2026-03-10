@@ -95,8 +95,8 @@ export function RepairSectionA({ formData, updateForm, assetId }: Props) {
     .filter(d => !defectFilter || d.urgency === defectFilter)
     .filter(d => !defectSearch || d.question_text.toLowerCase().includes(defectSearch.toLowerCase()) || d.comment?.toLowerCase().includes(defectSearch.toLowerCase()))
     .sort((a, b) => {
-      const order = { 'Immediate': 0, 'Urgent': 1, 'Scheduled': 2, 'Monitor': 3 };
-      return (order[a.urgency as keyof typeof order] ?? 4) - (order[b.urgency as keyof typeof order] ?? 4);
+      const order: Record<string, number> = { 'Immediate - Remove From Service and Repair Immediately': 0, 'Urgent Repair Before Next Use': 1, 'Schedule Repair Before Next Service': 2, 'Monitor': 3 };
+      return (order[a.urgency as string] ?? 4) - (order[b.urgency as string] ?? 4);
     });
 
   const toggleDefect = (id: string) => {
@@ -140,7 +140,7 @@ export function RepairSectionA({ formData, updateForm, assetId }: Props) {
 
           {/* Filter chips */}
           <div className="flex gap-1.5 flex-wrap">
-            {['Immediate', 'Urgent', 'Scheduled', 'Monitor'].map(f => (
+            {['Immediate - Remove From Service and Repair Immediately', 'Urgent Repair Before Next Use', 'Schedule Repair Before Next Service', 'Monitor'].map(f => (
               <button
                 key={f}
                 onClick={() => setDefectFilter(defectFilter === f ? null : f)}
@@ -182,8 +182,8 @@ export function RepairSectionA({ formData, updateForm, assetId }: Props) {
                         <div className="flex items-center gap-2 mt-1">
                           {d.urgency && (
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              d.urgency === 'Immediate' ? 'bg-destructive/10 text-destructive' :
-                              d.urgency === 'Urgent' ? 'bg-rka-orange/10 text-rka-orange' :
+                              d.urgency?.startsWith('Immediate') ? 'bg-destructive/10 text-destructive' :
+                              d.urgency?.startsWith('Urgent') ? 'bg-rka-orange/10 text-rka-orange' :
                               'bg-muted text-muted-foreground'
                             }`}>
                               {d.urgency}

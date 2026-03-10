@@ -774,6 +774,56 @@ export type Database = {
           },
         ]
       }
+      defect_suggestions: {
+        Row: {
+          created_at: string
+          id: string
+          inspection_id: string | null
+          question_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          suggested_by_id: string
+          suggested_by_name: string
+          suggestion_type: string
+          suggestion_value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inspection_id?: string | null
+          question_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_by_id: string
+          suggested_by_name: string
+          suggestion_type?: string
+          suggestion_value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inspection_id?: string | null
+          question_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          suggested_by_id?: string
+          suggested_by_name?: string
+          suggestion_type?: string
+          suggestion_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "defect_suggestions_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "db_inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_template_questions: {
         Row: {
           conditional_rule: string | null

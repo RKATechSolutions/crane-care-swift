@@ -273,7 +273,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         doc.rect(15, dy - 2, pageW - 30, cardH + 4, 'F');
       }
 
-      const urgColor = d.urgency === 'Immediate' ? RKA_RED : d.urgency === 'Urgent' ? RKA_ORANGE : [180, 180, 180] as [number, number, number];
+      const urgColor = d.urgency?.startsWith('Immediate') ? RKA_RED : d.urgency?.startsWith('Urgent') ? RKA_ORANGE : [180, 180, 180] as [number, number, number];
       doc.setFillColor(...(urgColor as [number, number, number]));
       doc.rect(15, dy - 2, 3, cardH + 4, 'F');
 
@@ -292,8 +292,8 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       if (d.urgency) {
-        if (d.urgency === 'Immediate' || d.urgency === 'Urgent') {
-          doc.setTextColor(...(d.urgency === 'Immediate' ? RKA_RED : RKA_ORANGE));
+        if (d.urgency?.startsWith('Immediate') || d.urgency?.startsWith('Urgent')) {
+          doc.setTextColor(...(d.urgency.startsWith('Immediate') ? RKA_RED : RKA_ORANGE));
         } else {
           doc.setTextColor(...DARK);
         }

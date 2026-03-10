@@ -31,6 +31,8 @@ export interface ResponseData {
   defect_types?: string[];
   advanced_defect_detail?: string[];
   internal_note?: string | null;
+  suggested_defect_type?: string | null;
+  suggested_defect_detail?: string | null;
 }
 
 interface Props {
@@ -50,9 +52,9 @@ const ALL_DEFECT_CATEGORIES = [
 
 const URGENCY_LEVELS = [
   { value: 'Monitor', label: 'Monitor', color: 'bg-green-600 text-white' },
-  { value: 'Scheduled', label: 'Scheduled – Repair Before Next Service', color: 'bg-yellow-500 text-foreground' },
-  { value: 'Urgent', label: 'Urgent – Repair Before Next Use', color: 'bg-rka-orange text-destructive-foreground' },
-  { value: 'Immediate', label: 'Immediate – Remove From Service', color: 'bg-rka-red text-destructive-foreground' },
+  { value: 'Schedule Repair Before Next Service', label: 'Schedule Repair Before Next Service', color: 'bg-yellow-500 text-foreground' },
+  { value: 'Urgent Repair Before Next Use', label: 'Urgent Repair Before Next Use', color: 'bg-rka-orange text-destructive-foreground' },
+  { value: 'Immediate - Remove From Service and Repair Immediately', label: 'Immediate - Remove From Service', color: 'bg-rka-red text-destructive-foreground' },
 ];
 
 export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
@@ -372,7 +374,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                       </button>
                     ))}
                   </div>
-                  {response.urgency === 'Immediate' && (
+                  {response.urgency === 'Immediate - Remove From Service and Repair Immediately' && (
                     <div className="mt-2 p-2 bg-rka-red/20 rounded-lg flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-rka-red flex-shrink-0" />
                       <p className="text-xs font-bold text-rka-red">⚠️ Photo required. Consider setting Overall Condition = Unsafe.</p>
@@ -437,9 +439,9 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 {/* Photo Upload */}
                 <div>
                   <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1.5">
-                    Photo {response.urgency === 'Immediate' || question.requires_photo_on_fail ? '(Required)' : '(Optional)'}
+                    Photo {response.urgency === 'Immediate - Remove From Service and Repair Immediately' || question.requires_photo_on_fail ? '(Required)' : '(Optional)'}
                   </p>
-                  {renderPhotosSection(response.urgency === 'Immediate' || question.requires_photo_on_fail)}
+                  {renderPhotosSection(response.urgency === 'Immediate - Remove From Service and Repair Immediately' || question.requires_photo_on_fail)}
                 </div>
 
                 {/* Technician Internal / Quoting Notes */}
@@ -451,6 +453,25 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                     placeholder="Internal note – not shown on customer report…"
                     rows={2}
                     className="w-full p-2.5 border border-rka-orange/30 rounded-lg bg-rka-orange/5 text-sm resize-none"
+                  />
+                </div>
+
+                {/* Suggest Defect Type / Detail for Admin Approval */}
+                <div className="border-t border-border pt-3 space-y-2">
+                  <p className="text-xs font-bold text-primary uppercase tracking-wide">Suggest New Defect Type / Detail <span className="font-normal text-muted-foreground">(Optional – used immediately, sent to admin for approval)</span></p>
+                  <input
+                    type="text"
+                    value={response.suggested_defect_type || ''}
+                    onChange={(e) => update({ suggested_defect_type: e.target.value || null })}
+                    placeholder="Suggest a new defect type category…"
+                    className="w-full p-2.5 border border-primary/30 rounded-lg bg-primary/5 text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={response.suggested_defect_detail || ''}
+                    onChange={(e) => update({ suggested_defect_detail: e.target.value || null })}
+                    placeholder="Suggest defect detail (optional)…"
+                    className="w-full p-2.5 border border-primary/30 rounded-lg bg-primary/5 text-sm"
                   />
                 </div>
               </div>
