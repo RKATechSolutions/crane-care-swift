@@ -203,7 +203,7 @@ const VALID_COLS = new Set([
   'year_manufactured', 'duty_class', 'access_suggestion',
 ]);
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }

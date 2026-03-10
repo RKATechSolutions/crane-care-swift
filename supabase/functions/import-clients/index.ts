@@ -64,7 +64,7 @@ const CONTACT_HEADER_MAP: Record<string, string> = {
   'other contacts surname': 'contact_surname',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }

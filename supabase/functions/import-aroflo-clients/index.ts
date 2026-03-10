@@ -20,7 +20,7 @@ async function generateHmacSignature(message: string, secretKey: string): Promis
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
