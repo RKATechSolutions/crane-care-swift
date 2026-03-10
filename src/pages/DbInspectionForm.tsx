@@ -177,11 +177,12 @@ export default function DbInspectionForm({
         // Load existing AI summary and other notes
         const { data: inspData } = await supabase
           .from('db_inspections')
-          .select('ai_summary, other_notes')
+          .select('ai_summary, other_notes, inspection_date')
           .eq('id', existingInspectionId)
           .single();
         if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
         if ((inspData as any)?.other_notes) setOtherNotes((inspData as any).other_notes);
+        if (inspData?.inspection_date) setInspectionDate(inspData.inspection_date);
       }
 
       setResponses(initResponses);
