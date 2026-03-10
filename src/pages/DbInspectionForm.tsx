@@ -696,7 +696,6 @@ export default function DbInspectionForm({
               setShowStatusPicker(true);
             } else {
               setShowDateConfirm(true);
-              setPendingStatusForSubmit(null);
             }
           }}
           disabled={saving || totalAnswered === 0}
