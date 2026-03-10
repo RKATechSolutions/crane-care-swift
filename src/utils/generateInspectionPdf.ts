@@ -292,8 +292,8 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       if (d.urgency) {
-        if (d.urgency === 'Immediate' || d.urgency === 'Urgent') {
-          doc.setTextColor(...(d.urgency === 'Immediate' ? RKA_RED : RKA_ORANGE));
+        if (d.urgency?.startsWith('Immediate') || d.urgency?.startsWith('Urgent')) {
+          doc.setTextColor(...(d.urgency.startsWith('Immediate') ? RKA_RED : RKA_ORANGE));
         } else {
           doc.setTextColor(...DARK);
         }

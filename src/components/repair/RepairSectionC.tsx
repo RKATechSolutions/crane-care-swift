@@ -90,8 +90,8 @@ export function RepairSectionC({ formData, updateForm }: Props) {
               <div className="flex items-center gap-2 mt-1">
                 {defect.urgency && (
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                    defect.urgency === 'Immediate' ? 'bg-destructive/10 text-destructive' :
-                    defect.urgency === 'Urgent' ? 'bg-rka-orange/10 text-rka-orange' :
+                    defect.urgency?.startsWith('Immediate') ? 'bg-destructive/10 text-destructive' :
+                    defect.urgency?.startsWith('Urgent') ? 'bg-rka-orange/10 text-rka-orange' :
                     'bg-muted text-muted-foreground'
                   }`}>
                     {defect.urgency}
