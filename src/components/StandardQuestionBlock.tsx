@@ -372,7 +372,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                       </button>
                     ))}
                   </div>
-                  {response.urgency === 'Immediate' && (
+                  {response.urgency === 'Immediate - Remove From Service and Repair Immediately' && (
                     <div className="mt-2 p-2 bg-rka-red/20 rounded-lg flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4 text-rka-red flex-shrink-0" />
                       <p className="text-xs font-bold text-rka-red">⚠️ Photo required. Consider setting Overall Condition = Unsafe.</p>
