@@ -53,6 +53,7 @@ export default function DbInspectionForm({
   const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | undefined>(undefined);
   const [showDateConfirm, setShowDateConfirm] = useState(false);
   const [inspectionDate, setInspectionDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [craneStatus, setCraneStatus] = useState<string | null>(null);
   
 
   // Load questions for this form
