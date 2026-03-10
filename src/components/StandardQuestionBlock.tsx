@@ -455,6 +455,25 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                     className="w-full p-2.5 border border-rka-orange/30 rounded-lg bg-rka-orange/5 text-sm resize-none"
                   />
                 </div>
+
+                {/* Suggest Defect Type / Detail for Admin Approval */}
+                <div className="border-t border-border pt-3 space-y-2">
+                  <p className="text-xs font-bold text-primary uppercase tracking-wide">Suggest New Defect Type / Detail <span className="font-normal text-muted-foreground">(Optional – used immediately, sent to admin for approval)</span></p>
+                  <input
+                    type="text"
+                    value={response.suggested_defect_type || ''}
+                    onChange={(e) => update({ suggested_defect_type: e.target.value || null })}
+                    placeholder="Suggest a new defect type category…"
+                    className="w-full p-2.5 border border-primary/30 rounded-lg bg-primary/5 text-sm"
+                  />
+                  <input
+                    type="text"
+                    value={response.suggested_defect_detail || ''}
+                    onChange={(e) => update({ suggested_defect_detail: e.target.value || null })}
+                    placeholder="Suggest defect detail (optional)…"
+                    className="w-full p-2.5 border border-primary/30 rounded-lg bg-primary/5 text-sm"
+                  />
+                </div>
               </div>
             )}
           </div>
