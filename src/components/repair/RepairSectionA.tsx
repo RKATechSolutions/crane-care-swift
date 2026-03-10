@@ -140,7 +140,7 @@ export function RepairSectionA({ formData, updateForm, assetId }: Props) {
 
           {/* Filter chips */}
           <div className="flex gap-1.5 flex-wrap">
-            {['Immediate', 'Urgent', 'Scheduled', 'Monitor'].map(f => (
+            {['Immediate - Remove From Service and Repair Immediately', 'Urgent Repair Before Next Use', 'Schedule Repair Before Next Service', 'Monitor'].map(f => (
               <button
                 key={f}
                 onClick={() => setDefectFilter(defectFilter === f ? null : f)}
