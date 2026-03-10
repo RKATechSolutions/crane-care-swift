@@ -768,11 +768,11 @@ export default function DbInspectionForm({
         </button>
         <button
           onClick={() => {
-            if (defectCount > 0) {
-              setShowStatusPicker(true);
-            } else {
-              setShowDateConfirm(true);
+            if (!craneStatus) {
+              toast.error('Please select an Asset Status before submitting.');
+              return;
             }
+            setShowDateConfirm(true);
           }}
           disabled={saving || totalAnswered === 0}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
