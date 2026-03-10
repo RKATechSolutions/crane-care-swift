@@ -782,40 +782,6 @@ export default function DbInspectionForm({
         </button>
       </div>
 
-      {/* Status Picker */}
-      {showStatusPicker && (
-        <div className="fixed inset-0 z-[100] bg-foreground/50 flex items-end justify-center">
-          <div className="bg-background w-full max-w-lg rounded-t-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-6 h-6 text-rka-orange" />
-              <h3 className="text-lg font-bold">Set Asset Status</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">{defectCount} defect{defectCount !== 1 ? 's' : ''} found.</p>
-            {['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'].map(status => (
-              <button
-                key={status}
-                onClick={async () => {
-                  setCraneStatus(status);
-                  if (inspectionId) {
-                    await supabase.from('db_inspections').update({ crane_status: status }).eq('id', inspectionId);
-                  }
-                  setShowStatusPicker(false);
-                  setShowDateConfirm(true);
-                }}
-                className={`w-full tap-target rounded-xl font-bold text-base ${
-                  status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
-                  status === 'Operate with Limitations' ? 'bg-rka-orange text-destructive-foreground' :
-                  'bg-rka-red text-destructive-foreground'
-                }`}
-              >
-                {status}
-              </button>
-            ))}
-            <button onClick={() => setShowStatusPicker(false)} className="w-full tap-target bg-muted rounded-xl font-semibold text-sm">Cancel</button>
-          </div>
-        </div>
-      )}
-
       {/* Date Confirmation Modal */}
       {showDateConfirm && (
         <div className="fixed inset-0 z-[100] bg-foreground/50 flex items-end justify-center">
