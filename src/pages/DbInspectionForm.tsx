@@ -53,6 +53,7 @@ export default function DbInspectionForm({
   const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | undefined>(undefined);
   const [showDateConfirm, setShowDateConfirm] = useState(false);
   const [inspectionDate, setInspectionDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [craneStatus, setCraneStatus] = useState<string | null>(null);
   
 
   // Load questions for this form
@@ -185,6 +186,13 @@ export default function DbInspectionForm({
         if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
         if ((inspData as any)?.other_notes) setOtherNotes((inspData as any).other_notes);
         if (inspData?.inspection_date) setInspectionDate(inspData.inspection_date);
+        // Load crane_status
+        const { data: statusData } = await supabase
+          .from('db_inspections')
+          .select('crane_status')
+          .eq('id', existingInspectionId)
+          .single();
+        if (statusData?.crane_status) setCraneStatus(statusData.crane_status);
       }
 
       setResponses(initResponses);
@@ -347,6 +355,7 @@ export default function DbInspectionForm({
         siteName,
         technicianName: state.currentUser?.name || 'Technician',
         inspectionDate: inspectionDate,
+        craneStatus: craneStatus || undefined,
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
         otherNotes: otherNotes || undefined,
@@ -755,6 +764,7 @@ export default function DbInspectionForm({
               <button
                 key={status}
                 onClick={async () => {
+                  setCraneStatus(status);
                   if (inspectionId) {
                     await supabase.from('db_inspections').update({ crane_status: status }).eq('id', inspectionId);
                   }

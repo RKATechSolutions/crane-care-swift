@@ -122,7 +122,21 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   doc.text(`Date: ${dateStr}`, pageW / 2, y, { align: 'center' });
   y += 10;
 
-  // Status badge moved to after summary
+  // Asset Outcome badge — prominently on front page
+  if (craneStatus) {
+    const statusColor = craneStatus === 'Safe to Operate' ? RKA_GREEN
+      : craneStatus === 'Operate with Limitations' ? RKA_ORANGE : RKA_RED;
+
+    doc.setFillColor(...statusColor);
+    const badgeLabel = craneStatus;
+    const badgeW = Math.max(120, doc.getTextWidth(badgeLabel) * 1.5 + 20);
+    doc.roundedRect((pageW - badgeW) / 2, y, badgeW, 14, 3, 3, 'F');
+    doc.setFontSize(13);
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold');
+    doc.text(badgeLabel, pageW / 2, y + 9.5, { align: 'center' });
+    y += 20;
+  }
 
   // Stats
   const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
@@ -220,31 +234,17 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     }
   }
 
-  // Overall Condition Rating badge after summary
-  if (craneStatus) {
-    y += 4;
-    const statusLabel = craneStatus === 'Safe to Operate' ? 'SERVICEABLE'
-      : craneStatus === 'Operate with Limitations' ? 'SERVICEABLE WITH DEFECTS'
-      : 'UNSAFE – REMOVE FROM SERVICE';
-    const statusColor = craneStatus === 'Safe to Operate' ? RKA_GREEN
-      : craneStatus === 'Operate with Limitations' ? RKA_ORANGE : RKA_RED;
-
-    if (y > pageH - 30) { doc.addPage(); addHeader(); y = 22; }
-
-    doc.setFillColor(...statusColor);
-    const badgeW = Math.max(100, doc.getTextWidth(statusLabel) * 1.2 + 20);
-    doc.roundedRect((pageW - badgeW) / 2, y, badgeW, 12, 3, 3, 'F');
-    doc.setFontSize(12);
-    doc.setTextColor(...WHITE);
-    doc.setFont('helvetica', 'bold');
-    doc.text(statusLabel, pageW / 2, y + 8.5, { align: 'center' });
-    y += 18;
-  }
+  // (Asset Outcome badge already placed at top of page 1)
 
   addFooter();
 
   // ========== PAGE 2: DEFECT REGISTER ==========
-  const urgencyOrder: Record<string, number> = { 'Immediate': 0, 'Urgent': 1, 'Scheduled': 2, 'Monitor': 3 };
+  const urgencyOrder: Record<string, number> = {
+    'Immediate - Remove From Service and Repair Immediately': 0,
+    'Urgent Repair Before Next Use': 1,
+    'Schedule Repair Before Next Service': 2,
+    'Monitor': 3,
+  };
   const allDefects = sections.flatMap(s => s.questions.filter(q => q.defect_flag))
     .sort((a, b) => (urgencyOrder[a.urgency || ''] ?? 99) - (urgencyOrder[b.urgency || ''] ?? 99));
 
@@ -273,7 +273,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         doc.rect(15, dy - 2, pageW - 30, cardH + 4, 'F');
       }
 
-      const urgColor = d.urgency?.startsWith('Immediate') ? RKA_RED : d.urgency?.startsWith('Urgent') ? RKA_ORANGE : [180, 180, 180] as [number, number, number];
+      const urgColor = d.urgency?.startsWith('Immediate') ? RKA_RED : d.urgency?.startsWith('Urgent') ? RKA_ORANGE : d.urgency?.startsWith('Schedule') ? [230, 200, 50] as [number, number, number] : RKA_GREEN;
       doc.setFillColor(...(urgColor as [number, number, number]));
       doc.rect(15, dy - 2, 3, cardH + 4, 'F');
 
