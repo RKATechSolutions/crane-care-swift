@@ -764,6 +764,7 @@ export default function DbInspectionForm({
               <button
                 key={status}
                 onClick={async () => {
+                  setCraneStatus(status);
                   if (inspectionId) {
                     await supabase.from('db_inspections').update({ crane_status: status }).eq('id', inspectionId);
                   }

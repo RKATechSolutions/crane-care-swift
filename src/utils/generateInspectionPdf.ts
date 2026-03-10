@@ -239,7 +239,12 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   addFooter();
 
   // ========== PAGE 2: DEFECT REGISTER ==========
-  const urgencyOrder: Record<string, number> = { 'Immediate': 0, 'Urgent': 1, 'Scheduled': 2, 'Monitor': 3 };
+  const urgencyOrder: Record<string, number> = {
+    'Immediate - Remove From Service and Repair Immediately': 0,
+    'Urgent Repair Before Next Use': 1,
+    'Schedule Repair Before Next Service': 2,
+    'Monitor': 3,
+  };
   const allDefects = sections.flatMap(s => s.questions.filter(q => q.defect_flag))
     .sort((a, b) => (urgencyOrder[a.urgency || ''] ?? 99) - (urgencyOrder[b.urgency || ''] ?? 99));
 
