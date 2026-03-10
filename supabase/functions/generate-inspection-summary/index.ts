@@ -35,6 +35,13 @@ serve(async (req) => {
       .select("question_id, question_text, section")
       .in("question_id", questionIds);
 
+    // Also get section info from form_template_questions for this inspection's form
+    const { data: ftqData } = await supabase
+      .from("form_template_questions")
+      .select("question_id, section_override")
+      .eq("form_id", inspection.form_id)
+      .in("question_id", questionIds);
+
     const questionMap: Record<string, { text: string; section: string }> = {};
     (questions || []).forEach(q => {
       questionMap[q.question_id] = { text: q.question_text, section: q.section };
