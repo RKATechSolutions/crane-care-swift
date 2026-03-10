@@ -103,10 +103,11 @@ Write a direct 80-100 word paragraph covering:
 - Strongest areas
 
 ## Defects Found
-List each defect using the format: **Section: Question Text** — Urgency Level
-Include the technician comment if provided. Example:
-- **Hoist: Wire Rope** — Schedule Repair Before Next Service
-- **Electrical: Emergency Stop** — Urgent Repair Before Next Use. Note: Button sticking intermittently
+List each defect using EXACTLY this format: **Section: Question Text** — Urgency Level. Comment: technician comment
+Always include the section name, then the question, then the urgency, then the technician's comment if one was provided. Examples:
+- **Hoist: Wire Rope** — Schedule Repair Before Next Service. Comment: Visible wear on outer strands
+- **Electrical: Emergency Stop** — Urgent Repair Before Next Use. Comment: Button sticking intermittently
+- **Structure: End Stops** — Monitor
 
 Keep entire output under 250 words total. Direct, professional tone. No fluff.`;
 
