@@ -44,7 +44,7 @@ export default function DbInspectionForm({
   const [saving, setSaving] = useState(false);
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [formName, setFormName] = useState('');
-  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  
   const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
