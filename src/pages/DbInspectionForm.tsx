@@ -343,7 +343,7 @@ export default function DbInspectionForm({
         assetName,
         siteName,
         technicianName: state.currentUser?.name || 'Technician',
-        inspectionDate: new Date().toISOString(),
+        inspectionDate: inspectionDate,
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
         otherNotes: otherNotes || undefined,
