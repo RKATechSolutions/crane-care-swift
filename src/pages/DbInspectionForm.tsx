@@ -186,6 +186,13 @@ export default function DbInspectionForm({
         if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
         if ((inspData as any)?.other_notes) setOtherNotes((inspData as any).other_notes);
         if (inspData?.inspection_date) setInspectionDate(inspData.inspection_date);
+        // Load crane_status
+        const { data: statusData } = await supabase
+          .from('db_inspections')
+          .select('crane_status')
+          .eq('id', existingInspectionId)
+          .single();
+        if (statusData?.crane_status) setCraneStatus(statusData.crane_status);
       }
 
       setResponses(initResponses);
