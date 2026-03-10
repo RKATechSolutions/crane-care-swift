@@ -51,6 +51,9 @@ export default function DbInspectionForm({
   const [generatingAI, setGeneratingAI] = useState(false);
   const [otherNotes, setOtherNotes] = useState<string>('');
   const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | undefined>(undefined);
+  const [showDateConfirm, setShowDateConfirm] = useState(false);
+  const [inspectionDate, setInspectionDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [pendingStatusForSubmit, setPendingStatusForSubmit] = useState<string | null>(null);
 
   // Load questions for this form
   useEffect(() => {
