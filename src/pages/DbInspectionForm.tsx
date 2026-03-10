@@ -5,7 +5,7 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { StandardQuestionBlock, QuestionConfig, ResponseData } from '@/components/StandardQuestionBlock';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, CheckCircle, Check, AlertTriangle, Eye, Loader2, Sparkles, CalendarIcon } from 'lucide-react';
+import { Save, CheckCircle, Check, Eye, Loader2, Sparkles, CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
@@ -44,7 +44,7 @@ export default function DbInspectionForm({
   const [saving, setSaving] = useState(false);
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [formName, setFormName] = useState('');
-  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  
   const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
@@ -675,6 +675,37 @@ export default function DbInspectionForm({
         </div>
       )}
 
+      {/* Asset Status — inline on last section */}
+      {currentSectionIdx === sections.length - 1 && (
+        <div className="px-4 py-4 border-b border-border space-y-3">
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wide">Asset Status</h3>
+          <p className="text-xs text-muted-foreground">Select the operational status of this asset based on your inspection findings.</p>
+          <div className="grid grid-cols-1 gap-2">
+            {['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'].map(status => (
+              <button
+                key={status}
+                onClick={async () => {
+                  setCraneStatus(status);
+                  if (inspectionId) {
+                    await supabase.from('db_inspections').update({ crane_status: status }).eq('id', inspectionId);
+                  }
+                }}
+                className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+                  craneStatus === status
+                    ? status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground ring-2 ring-rka-green ring-offset-2'
+                      : status === 'Operate with Limitations' ? 'bg-rka-orange text-destructive-foreground ring-2 ring-rka-orange ring-offset-2'
+                      : 'bg-rka-red text-destructive-foreground ring-2 ring-rka-red ring-offset-2'
+                    : 'bg-muted text-foreground'
+                }`}
+              >
+                {craneStatus === status && <Check className="w-4 h-4" />}
+                {status}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="px-4 py-2 border-t border-border flex gap-2">
         {currentSectionIdx > 0 && (
           <button
@@ -737,11 +768,11 @@ export default function DbInspectionForm({
         </button>
         <button
           onClick={() => {
-            if (defectCount > 0) {
-              setShowStatusPicker(true);
-            } else {
-              setShowDateConfirm(true);
+            if (!craneStatus) {
+              toast.error('Please select an Asset Status before submitting.');
+              return;
             }
+            setShowDateConfirm(true);
           }}
           disabled={saving || totalAnswered === 0}
           className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
@@ -750,40 +781,6 @@ export default function DbInspectionForm({
           Submit Form & Complete Job Site Summary ({totalAnswered}/{totalQuestions})
         </button>
       </div>
-
-      {/* Status Picker */}
-      {showStatusPicker && (
-        <div className="fixed inset-0 z-[100] bg-foreground/50 flex items-end justify-center">
-          <div className="bg-background w-full max-w-lg rounded-t-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-6 h-6 text-rka-orange" />
-              <h3 className="text-lg font-bold">Set Asset Status</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">{defectCount} defect{defectCount !== 1 ? 's' : ''} found.</p>
-            {['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'].map(status => (
-              <button
-                key={status}
-                onClick={async () => {
-                  setCraneStatus(status);
-                  if (inspectionId) {
-                    await supabase.from('db_inspections').update({ crane_status: status }).eq('id', inspectionId);
-                  }
-                  setShowStatusPicker(false);
-                  setShowDateConfirm(true);
-                }}
-                className={`w-full tap-target rounded-xl font-bold text-base ${
-                  status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
-                  status === 'Operate with Limitations' ? 'bg-rka-orange text-destructive-foreground' :
-                  'bg-rka-red text-destructive-foreground'
-                }`}
-              >
-                {status}
-              </button>
-            ))}
-            <button onClick={() => setShowStatusPicker(false)} className="w-full tap-target bg-muted rounded-xl font-semibold text-sm">Cancel</button>
-          </div>
-        </div>
-      )}
 
       {/* Date Confirmation Modal */}
       {showDateConfirm && (
