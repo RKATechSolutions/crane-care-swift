@@ -724,8 +724,8 @@ export default function DbInspectionForm({
                     await supabase.from('db_inspections').update({ crane_status: status }).eq('id', inspectionId);
                   }
                   setShowStatusPicker(false);
-                  await saveInspection('Submitted');
-                  (onSubmitComplete || onBack)();
+                  setPendingStatusForSubmit(status);
+                  setShowDateConfirm(true);
                 }}
                 className={`w-full tap-target rounded-xl font-bold text-base ${
                   status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
