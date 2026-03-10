@@ -741,6 +741,45 @@ export default function DbInspectionForm({
         </div>
       )}
 
+      {/* Date Confirmation Modal */}
+      {showDateConfirm && (
+        <div className="fixed inset-0 z-[100] bg-foreground/50 flex items-end justify-center">
+          <div className="bg-background w-full max-w-lg rounded-t-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <CalendarIcon className="w-6 h-6 text-primary" />
+              <h3 className="text-lg font-bold">Confirm Inspection Date</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Is this the correct date for the inspection report?
+            </p>
+            <input
+              type="date"
+              value={inspectionDate}
+              onChange={(e) => setInspectionDate(e.target.value)}
+              className="w-full p-3 border border-border rounded-xl bg-background text-foreground text-base font-semibold text-center"
+            />
+            <button
+              onClick={async () => {
+                setShowDateConfirm(false);
+                await saveInspection('Submitted', inspectionDate);
+                (onSubmitComplete || onBack)();
+              }}
+              disabled={saving}
+              className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5" />
+              {saving ? 'Submitting…' : 'Confirm & Submit'}
+            </button>
+            <button
+              onClick={() => setShowDateConfirm(false)}
+              className="w-full tap-target bg-muted rounded-xl font-semibold text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
 
       <PdfPreviewModal
