@@ -31,6 +31,8 @@ export interface ResponseData {
   defect_types?: string[];
   advanced_defect_detail?: string[];
   internal_note?: string | null;
+  suggested_defect_type?: string | null;
+  suggested_defect_detail?: string | null;
 }
 
 interface Props {
