@@ -319,7 +319,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         // Check if user has admin role in user_roles table
         let role: 'technician' | 'admin' = 'technician';
         try {
-          const { data: roleData } = await supabase
+          const { data: roleData } = await (supabase as any)
             .from('user_roles')
             .select('role')
             .eq('user_id', session.user.id)
