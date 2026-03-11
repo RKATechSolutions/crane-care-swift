@@ -68,7 +68,7 @@ export default function Login() {
             onClick={async () => {
               setLoading(true);
               const { error } = await supabase.auth.signInWithPassword({
-                email: 'aaron@rka.com.au',
+                email: 'admin@rkaindustrialsolutions.com.au',
                 password: '123456',
               });
               if (error) toast.error(error.message);
