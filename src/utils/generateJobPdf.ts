@@ -85,7 +85,7 @@ function severityColor(severity: string): [number, number, number] {
 }
 
 function statusColor(status: string): [number, number, number] {
-  if (status === 'Safe to Operate') return RKA_GREEN;
+  if (status === 'Crane is Operational') return RKA_GREEN;
   if (status === 'Unsafe to Operate') return RKA_RED;
   return RKA_ORANGE;
 }
@@ -256,7 +256,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
     didParseCell(data) {
       if (data.section === 'body' && data.column.index === 4) {
         const val = data.cell.raw as string;
-        if (val === 'Safe to Operate') data.cell.styles.textColor = RKA_GREEN;
+        if (val === 'Crane is Operational') data.cell.styles.textColor = RKA_GREEN;
         else if (val === 'Unsafe to Operate') data.cell.styles.textColor = RKA_RED;
         else if (val.includes('Limitations')) data.cell.styles.textColor = RKA_ORANGE;
       }

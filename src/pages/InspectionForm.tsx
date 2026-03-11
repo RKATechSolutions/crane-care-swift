@@ -135,7 +135,7 @@ export default function InspectionForm() {
     dispatch({ type: 'BACK_TO_CRANES' });
   };
 
-  const craneStatuses: CraneOperationalStatus[] = ['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'];
+  const craneStatuses: CraneOperationalStatus[] = ['Crane is Operational', 'Operate with Limitations', 'Unsafe to Operate'];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -359,7 +359,7 @@ export default function InspectionForm() {
                   dispatch({ type: 'COMPLETE_INSPECTION' });
                 }}
                 className={`w-full tap-target rounded-xl font-bold text-base ${
-                  status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+                  status === 'Crane is Operational' ? 'bg-rka-green text-primary-foreground' :
                   status === 'Operate with Limitations' ? 'bg-rka-orange text-destructive-foreground' :
                   'bg-rka-red text-destructive-foreground'
                 }`}

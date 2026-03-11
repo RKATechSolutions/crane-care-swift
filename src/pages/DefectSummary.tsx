@@ -21,7 +21,7 @@ export default function DefectSummary() {
     return '';
   };
 
-  const craneStatuses: CraneOperationalStatus[] = ['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'];
+  const craneStatuses: CraneOperationalStatus[] = ['Crane is Operational', 'Operate with Limitations', 'Unsafe to Operate'];
 
   const handleComplete = () => {
     if (defects.length > 0 && !inspection.craneStatus) {
@@ -163,7 +163,7 @@ export default function DefectSummary() {
         <div className="px-4 py-3 border-t border-border">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asset Operational Status</p>
           <div className={`w-full text-center py-3 rounded-xl font-bold text-base ${
-            inspection.craneStatus === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+            inspection.craneStatus === 'Crane is Operational' ? 'bg-rka-green text-primary-foreground' :
             inspection.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red text-destructive-foreground' :
             'bg-rka-orange text-destructive-foreground'
           }`}>
@@ -201,7 +201,7 @@ export default function DefectSummary() {
                   dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
                 }}
                 className={`w-full tap-target rounded-xl font-bold text-base ${
-                  status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+                  status === 'Crane is Operational' ? 'bg-rka-green text-primary-foreground' :
                   status === 'Operate with Limitations' ? 'bg-rka-orange text-destructive-foreground' :
                   'bg-rka-red text-destructive-foreground'
                 }`}

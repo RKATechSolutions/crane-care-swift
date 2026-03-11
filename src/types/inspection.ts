@@ -71,7 +71,7 @@ export interface TemplateItem {
 // ===== Inspection =====
 
 export type InspectionStatus = 'draft' | 'in_progress' | 'completed';
-export type CraneOperationalStatus = 'Safe to Operate' | 'Operate with Limitations' | 'Unsafe to Operate';
+export type CraneOperationalStatus = 'Crane is Operational' | 'Operate with Limitations' | 'Unsafe to Operate';
 export type DefectSeverity = 'Minor' | 'Major' | 'Critical';
 export type RectificationTimeframe = 'Immediately' | 'Within 7 Days' | 'Within 30 Days' | 'Before Next Service';
 export type DefectType = 'Mechanical' | 'Electrical' | 'Structural' | 'Safety Device' | 'Operational' | 'Cosmetic';

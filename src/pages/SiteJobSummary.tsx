@@ -676,7 +676,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {insp.crane_status && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${
-                        insp.crane_status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+                        insp.crane_status === 'Crane is Operational' ? 'bg-rka-green text-primary-foreground' :
                         insp.crane_status === 'Unsafe to Operate' ? 'bg-rka-red text-destructive-foreground' :
                         'bg-rka-orange text-destructive-foreground'
                       }`}>{insp.crane_status}</span>
@@ -1235,7 +1235,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
                 <div key={insp.id} className="flex items-center justify-between py-2">
                   <span className="font-medium text-sm">{crane?.name}</span>
                   <span className={`text-xs font-bold px-3 py-1 rounded-lg ${
-                    insp.craneStatus === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+                    insp.craneStatus === 'Crane is Operational' ? 'bg-rka-green text-primary-foreground' :
                     insp.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red text-destructive-foreground' :
                     'bg-rka-orange text-destructive-foreground'
                   }`}>

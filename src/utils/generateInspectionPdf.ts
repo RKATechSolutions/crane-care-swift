@@ -124,7 +124,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   // Asset Outcome badge — prominently on front page
   if (craneStatus) {
-    const statusColor = craneStatus === 'Safe to Operate' ? RKA_GREEN
+    const statusColor = craneStatus === 'Crane is Operational' ? RKA_GREEN
       : craneStatus === 'Operate with Limitations' ? RKA_ORANGE : RKA_RED;
 
     doc.setFillColor(...statusColor);
