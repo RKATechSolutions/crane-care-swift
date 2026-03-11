@@ -18,15 +18,24 @@ import ToDoPage from './ToDoPage';
 import ReceiptsPage from './ReceiptsPage';
 import TasksPage from './TasksPage';
 import JobDetailPage from './JobDetailPage';
+import { Loader2 } from 'lucide-react';
 
 
 const Index = () => {
-  const { state, dispatch } = useApp();
+  const { state, dispatch, authLoading } = useApp();
   const [dashboardView, setDashboardView] = useState<DashboardView>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [clientInitialTab, setClientInitialTab] = useState<'details' | 'assets' | undefined>(undefined);
   const [quoteMode, setQuoteMode] = useState<{ active: boolean; defects?: any[]; fromQuotesPage?: boolean; draftQuote?: any; estimateNotes?: string }>({ active: false });
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!state.currentUser) return <Login />;
   if (state.currentUser.role === 'admin') return <AdminDashboard />;
@@ -34,7 +43,6 @@ const Index = () => {
   // Job detail view
   if (selectedJobId) {
     return <JobDetailPage jobId={selectedJobId} onBack={() => { setSelectedJobId(null); setDashboardView('tasks'); }} onStartInspection={(job) => {
-      // Set active job context, find & select the client site, navigate to asset list
       setActiveJobId(job.id);
       if (job.client_name) {
         dispatch({ type: 'SELECT_SITE', payload: { id: `job-${job.id}`, name: job.client_name, address: '', contactName: '', contactPhone: '', cranes: [] } });
@@ -89,7 +97,6 @@ const Index = () => {
     setSelectedJobId(id);
     setActiveJobId(id);
   }} onOpenClient={async (clientName) => {
-    // Look up the client by name and navigate to their details
     const { data } = await supabase.from('clients').select('id, client_name, location_address, primary_contact_name, primary_contact_mobile').eq('client_name', clientName).maybeSingle();
     if (data) {
       dispatch({ type: 'SELECT_SITE', payload: { id: `db-${data.id}`, name: data.client_name, address: data.location_address || '', contactName: data.primary_contact_name || '', contactPhone: data.primary_contact_mobile || '', cranes: [] } });
