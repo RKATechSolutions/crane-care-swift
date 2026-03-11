@@ -356,6 +356,22 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
         if (error) throw error;
         setDraftQuoteCreated(true);
         toast.success(`Draft quote created with ${fixNowDefects.length} Fix Now defect${fixNowDefects.length !== 1 ? 's' : ''} — check Quotes page to review & send`);
+
+        // Send Slack notification for draft quote
+        try {
+          await supabase.functions.invoke('slack-notify', {
+            body: {
+              type: 'quote_drafted',
+              clientName: clientInfo?.client_name || site.name,
+              siteName: site.name,
+              technicianName: state.currentUser?.name || 'Technician',
+              quoteTotal: total,
+              lineItemCount: fixNowDefects.length,
+            },
+          });
+        } catch (slackErr) {
+          console.error('Slack quote notification error:', slackErr);
+        }
       } catch (err: any) {
         console.error('Draft quote error:', err);
         toast.error(`Failed to create draft quote: ${err.message}`);
