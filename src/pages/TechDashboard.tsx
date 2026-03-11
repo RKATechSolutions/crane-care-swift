@@ -18,9 +18,8 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
   const [todoCount, setTodoCount] = useState(0);
   const [jobsThisWeek, setJobsThisWeek] = useState(0);
   const [jobsCompleted, setJobsCompleted] = useState(0);
-  const [showAdminPin, setShowAdminPin] = useState(false);
-  const [pinInput, setPinInput] = useState('');
   const [statsError, setStatsError] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
 
   const loadStats = () => {
