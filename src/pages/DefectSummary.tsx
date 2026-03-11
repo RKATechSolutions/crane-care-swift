@@ -21,7 +21,7 @@ export default function DefectSummary() {
     return '';
   };
 
-  const craneStatuses: CraneOperationalStatus[] = ['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'];
+  const craneStatuses: CraneOperationalStatus[] = ['Crane is Operational', 'Operate with Limitations', 'Unsafe to Operate'];
 
   const handleComplete = () => {
     if (defects.length > 0 && !inspection.craneStatus) {
