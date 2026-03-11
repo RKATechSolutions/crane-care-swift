@@ -264,7 +264,7 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
       },
     });
 
-    y = (doc as any).lastAutoTable?.finalY + 6 || y + 20;
+    y = (doc as any).previousAutoTable?.finalY + 6 || y + 20;
 
     // Check if we need a new page for next group
     if (y > pageH - 30) {
