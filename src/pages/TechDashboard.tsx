@@ -20,7 +20,6 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
   const [jobsCompleted, setJobsCompleted] = useState(0);
   const [statsError, setStatsError] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(true);
 
   const loadStats = () => {
     setStatsLoading(true);
