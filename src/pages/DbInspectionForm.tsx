@@ -442,7 +442,7 @@ export default function DbInspectionForm({
       } else {
         await supabase
           .from('db_inspections')
-          .update({ status, updated_at: new Date().toISOString(), other_notes: otherNotes || null, inspection_date: dateToUse } as any)
+          .update({ status, updated_at: new Date().toISOString(), other_notes: otherNotes || null, inspection_date: dateToUse, crane_status: craneStatus || null } as any)
           .eq('id', currentInspId);
       }
 
