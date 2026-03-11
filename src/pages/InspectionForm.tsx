@@ -132,6 +132,7 @@ export default function InspectionForm() {
       return;
     }
     dispatch({ type: 'COMPLETE_INSPECTION' });
+    dispatch({ type: 'BACK_TO_CRANES' });
   };
 
   const craneStatuses: CraneOperationalStatus[] = ['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'];
@@ -332,7 +333,7 @@ export default function InspectionForm() {
               className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
             >
               <CheckCircle className="w-5 h-5" />
-              Submit Form & Complete Job Site Summary ({totalCompleted}/{totalItems})
+              Complete Form ({totalCompleted}/{totalItems})
             </button>
           </>
         )}
