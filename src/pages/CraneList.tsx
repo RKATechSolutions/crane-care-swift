@@ -463,7 +463,6 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
         onBack={() => setShowSiteInspectionV2(false)}
         onSubmitComplete={() => {
           setShowSiteInspectionV2(false);
-          dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
         }}
       />
     );
