@@ -80,6 +80,8 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const [statusOptions, setStatusOptions] = useState(DEFAULT_STATUS_OPTIONS);
   const [wllUnits, setWllUnits] = useState(DEFAULT_WLL_UNITS);
   const [editSelectedGroup, setEditSelectedGroup] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [lastInspections, setLastInspections] = useState<Record<string, { technician_name: string; inspection_date: string }>>({});
 
   const naturalSort = (a: RegisterItem, b: RegisterItem) => {
     const aNum = parseInt(a.asset_tag || '', 10);
