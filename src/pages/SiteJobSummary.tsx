@@ -130,7 +130,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
         // Find inspections for this site — scoped to active job if available
         let inspQuery = supabase
           .from('db_inspections')
-          .select('id, asset_name, site_name, status, inspection_date, form_id, crane_status, technician_name');
+          .select('id, asset_name, site_name, status, inspection_date, form_id, crane_status, technician_name')
+          .eq('status', 'Submitted');
         
         if (activeJobId) {
           inspQuery = inspQuery.eq('task_id', activeJobId);
