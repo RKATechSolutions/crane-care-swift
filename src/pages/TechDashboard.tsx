@@ -20,26 +20,40 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
   const [jobsCompleted, setJobsCompleted] = useState(0);
   const [showAdminPin, setShowAdminPin] = useState(false);
   const [pinInput, setPinInput] = useState('');
+  const [statsError, setStatsError] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  useEffect(() => {
+  const loadStats = () => {
+    setStatsLoading(true);
+    setStatsError(false);
     const now = new Date();
     const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
     const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     Promise.all([
-      // To-do count: overdue quotes + pending tasks
       supabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sent').lt('created_at', cutoff),
       supabase.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'completed'),
-      // Jobs scheduled this week (not completed)
       supabase.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'completed').gte('scheduled_date', weekStart).lte('scheduled_date', weekEnd),
-      // Jobs completed this week
       supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'completed').gte('completed_at', `${weekStart}T00:00:00`).lte('completed_at', `${weekEnd}T23:59:59`),
     ]).then(([overdueRes, tasksRes, scheduledRes, completedRes]) => {
-      setTodoCount((overdueRes.count ?? 0) + (tasksRes.count ?? 0));
-      setJobsThisWeek(scheduledRes.count ?? 0);
-      setJobsCompleted(completedRes.count ?? 0);
+      const hasError = [overdueRes, tasksRes, scheduledRes, completedRes].some(r => r.error);
+      if (hasError) {
+        setStatsError(true);
+      } else {
+        setTodoCount((overdueRes.count ?? 0) + (tasksRes.count ?? 0));
+        setJobsThisWeek(scheduledRes.count ?? 0);
+        setJobsCompleted(completedRes.count ?? 0);
+      }
+      setStatsLoading(false);
+    }).catch(() => {
+      setStatsError(true);
+      setStatsLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadStats();
   }, []);
 
   const cards: { id: DashboardView; icon: React.ReactNode; title: string; desc: string; color: string }[] = [

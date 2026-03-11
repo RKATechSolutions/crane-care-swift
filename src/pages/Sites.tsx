@@ -239,6 +239,25 @@ export default function Sites({ onBack }: { onBack?: () => void }) {
       </div>
 
       <div className="flex-1">
+        {loadError && (
+          <div className="mx-4 mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-center space-y-2">
+            <p className="text-sm text-destructive font-medium">{loadError}</p>
+            <button
+              onClick={fetchData}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 h-9 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Retrying...' : 'Retry'}
+            </button>
+          </div>
+        )}
+        {loading && dbClients.length === 0 && !loadError && (
+          <div className="p-8 text-center text-muted-foreground">
+            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
+            Loading clients...
+          </div>
+        )}
         {filtered.map(site => {
           const dbAssetCount = getAssetCount(site.id, site.name);
           const totalEquipment = site.cranes.length > 0 ? site.cranes.length : dbAssetCount;
