@@ -50,7 +50,7 @@ interface RegisterItem {
 const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
   'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
-  'Lifting Lug', 'Eyebolt', 'Swivel', 'Unknown',
+  'Lifting Lug', 'Swivel', 'Unknown',
 ];
 
 const DEFAULT_STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
