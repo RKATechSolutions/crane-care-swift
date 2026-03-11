@@ -163,7 +163,7 @@ export default function DefectSummary() {
         <div className="px-4 py-3 border-t border-border">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Asset Operational Status</p>
           <div className={`w-full text-center py-3 rounded-xl font-bold text-base ${
-            inspection.craneStatus === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+            inspection.craneStatus === 'Crane is Operational' ? 'bg-rka-green text-primary-foreground' :
             inspection.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red text-destructive-foreground' :
             'bg-rka-orange text-destructive-foreground'
           }`}>
