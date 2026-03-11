@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
 import CraneBaselineForm from '@/pages/CraneBaselineForm';
 import DbInspectionForm from '@/pages/DbInspectionForm';
+import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
 import RepairBreakdownForm from '@/pages/RepairBreakdownForm';
 import LiftingRegisterForm from '@/pages/LiftingRegisterForm';
 import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
