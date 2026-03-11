@@ -162,61 +162,11 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
       </div>
 
       <div className="p-4 border-t border-border space-y-2">
-        {!showAdminPin ? (
-          <button
-            onClick={() => setShowAdminPin(true)}
-            className="w-full tap-target bg-primary/10 text-primary rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
-          >
-            <Shield className="w-4 h-4" />
-            Sign in as Admin
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <input
-              type="password"
-              inputMode="numeric"
-              maxLength={4}
-              value={pinInput}
-              onChange={(e) => setPinInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (pinInput === '1234') {
-                    dispatch({ type: 'ELEVATE_TO_ADMIN' });
-                    toast.success('Admin access granted');
-                  } else {
-                    toast.error('Incorrect PIN');
-                    setPinInput('');
-                  }
-                }
-              }}
-              placeholder="Enter PIN"
-              className="flex-1 h-12 bg-muted rounded-xl px-4 text-center text-lg font-bold tracking-widest border border-border focus:outline-none focus:ring-2 focus:ring-primary"
-              autoFocus
-            />
-            <button
-              onClick={() => {
-                if (pinInput === '1234') {
-                  dispatch({ type: 'ELEVATE_TO_ADMIN' });
-                  toast.success('Admin access granted');
-                } else {
-                  toast.error('Incorrect PIN');
-                  setPinInput('');
-                }
-              }}
-              className="h-12 px-5 bg-primary text-primary-foreground rounded-xl font-bold text-sm"
-            >
-              Go
-            </button>
-            <button
-              onClick={() => { setShowAdminPin(false); setPinInput(''); }}
-              className="h-12 px-3 bg-muted rounded-xl text-muted-foreground text-sm"
-            >
-              ✕
-            </button>
-          </div>
-        )}
         <button
-          onClick={() => dispatch({ type: 'LOGOUT' })}
+          onClick={() => {
+            supabase.auth.signOut();
+            dispatch({ type: 'LOGOUT' });
+          }}
           className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
         >
           <LogOut className="w-4 h-4" />
