@@ -1,0 +1,1 @@
+UPDATE question_library SET options = ARRAY['Crane is Operational', 'Operate with Limitations', 'Unsafe to Operate'] WHERE question_id IN ('OC2-AO-001', 'JIB_OUT_01')
