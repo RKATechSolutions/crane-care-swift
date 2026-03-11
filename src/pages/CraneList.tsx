@@ -842,7 +842,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                       </div>
                       {existing?.status === 'completed' && (
                         <span className={`text-xs font-bold px-2 py-1 rounded ${
-                          existing.craneStatus === 'Safe to Operate' ? 'bg-rka-green-light text-rka-green-dark' :
+                          existing.craneStatus === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
                           existing.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
                           'bg-rka-orange-light text-rka-orange'
                         }`}>
