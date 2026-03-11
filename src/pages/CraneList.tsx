@@ -446,7 +446,6 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
           setActiveDbForm(null);
           setEditingReportId(null);
           refreshReports();
-          dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
         }}
       />
     );
