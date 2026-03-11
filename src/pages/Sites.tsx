@@ -33,36 +33,48 @@ export default function Sites({ onBack }: { onBack?: () => void }) {
   const [newScheduleReminders, setNewScheduleReminders] = useState('');
   const [addingClient, setAddingClient] = useState(false);
   const [importingAroflo, setImportingAroflo] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
       // Fetch clients
-      const { data: clients } = await supabase
+      const { data: clients, error: clientsErr } = await supabase
         .from('clients')
         .select('id, client_name, location_address, primary_contact_name, primary_contact_mobile, status')
         .eq('status', 'Active')
         .order('client_name');
+      if (clientsErr) throw new Error(clientsErr.message);
       if (clients) setDbClients(clients);
 
       // Fetch asset counts grouped by client_id and account_name
-      const { data: assets } = await supabase
+      const { data: assets, error: assetsErr } = await supabase
         .from('assets')
         .select('client_id, account_name');
+      if (assetsErr) throw new Error(assetsErr.message);
       
       if (assets) {
         const counts: Record<string, number> = {};
         for (const a of assets) {
-          // Index by client_id
           if (a.client_id) {
             counts[`cid:${a.client_id}`] = (counts[`cid:${a.client_id}`] || 0) + 1;
           }
-          // Also index by account_name for fallback
           const name = (a.account_name as string | null)?.toLowerCase();
           if (name) counts[name] = (counts[name] || 0) + 1;
         }
         setAssetCounts(counts);
       }
-    };
+    } catch (err: any) {
+      console.error('Failed to load clients/assets:', err);
+      setLoadError(err.message || 'Failed to load data. Check your connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -227,6 +239,25 @@ export default function Sites({ onBack }: { onBack?: () => void }) {
       </div>
 
       <div className="flex-1">
+        {loadError && (
+          <div className="mx-4 mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-center space-y-2">
+            <p className="text-sm text-destructive font-medium">{loadError}</p>
+            <button
+              onClick={fetchData}
+              disabled={loading}
+              className="inline-flex items-center gap-2 px-4 h-9 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Retrying...' : 'Retry'}
+            </button>
+          </div>
+        )}
+        {loading && dbClients.length === 0 && !loadError && (
+          <div className="p-8 text-center text-muted-foreground">
+            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
+            Loading clients...
+          </div>
+        )}
         {filtered.map(site => {
           const dbAssetCount = getAssetCount(site.id, site.name);
           const totalEquipment = site.cranes.length > 0 ? site.cranes.length : dbAssetCount;

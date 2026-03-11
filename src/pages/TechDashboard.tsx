@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
-import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench, Shield } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench, Shield, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import { toast } from 'sonner';
@@ -20,26 +20,40 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
   const [jobsCompleted, setJobsCompleted] = useState(0);
   const [showAdminPin, setShowAdminPin] = useState(false);
   const [pinInput, setPinInput] = useState('');
+  const [statsError, setStatsError] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  useEffect(() => {
+  const loadStats = () => {
+    setStatsLoading(true);
+    setStatsError(false);
     const now = new Date();
     const weekStart = format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
     const weekEnd = format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd');
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     Promise.all([
-      // To-do count: overdue quotes + pending tasks
       supabase.from('quotes').select('*', { count: 'exact', head: true }).neq('status', 'sent').lt('created_at', cutoff),
       supabase.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'completed'),
-      // Jobs scheduled this week (not completed)
       supabase.from('tasks').select('*', { count: 'exact', head: true }).neq('status', 'completed').gte('scheduled_date', weekStart).lte('scheduled_date', weekEnd),
-      // Jobs completed this week
       supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('status', 'completed').gte('completed_at', `${weekStart}T00:00:00`).lte('completed_at', `${weekEnd}T23:59:59`),
     ]).then(([overdueRes, tasksRes, scheduledRes, completedRes]) => {
-      setTodoCount((overdueRes.count ?? 0) + (tasksRes.count ?? 0));
-      setJobsThisWeek(scheduledRes.count ?? 0);
-      setJobsCompleted(completedRes.count ?? 0);
+      const hasError = [overdueRes, tasksRes, scheduledRes, completedRes].some(r => r.error);
+      if (hasError) {
+        setStatsError(true);
+      } else {
+        setTodoCount((overdueRes.count ?? 0) + (tasksRes.count ?? 0));
+        setJobsThisWeek(scheduledRes.count ?? 0);
+        setJobsCompleted(completedRes.count ?? 0);
+      }
+      setStatsLoading(false);
+    }).catch(() => {
+      setStatsError(true);
+      setStatsLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadStats();
   }, []);
 
   const cards: { id: DashboardView; icon: React.ReactNode; title: string; desc: string; color: string }[] = [
@@ -98,6 +112,19 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
         <FiveStarGoalBanner />
 
         {/* Quick Stats */}
+        {statsError ? (
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-center space-y-2">
+            <p className="text-sm text-destructive font-medium">Failed to load dashboard data</p>
+            <button
+              onClick={loadStats}
+              disabled={statsLoading}
+              className="inline-flex items-center gap-2 px-4 h-9 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} />
+              {statsLoading ? 'Retrying...' : 'Retry'}
+            </button>
+          </div>
+        ) : (
         <div className="flex gap-3">
           <button onClick={() => onNavigate('todo')} className="flex-1 bg-muted rounded-xl p-3 text-center active:scale-[0.97] transition-all">
             <p className="text-2xl font-bold text-foreground">{todoCount}</p>
@@ -112,6 +139,7 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
             <p className="text-[10px] text-muted-foreground font-medium">Completed</p>
           </button>
         </div>
+        )}
 
         {/* Navigation Cards */}
         <div className="grid grid-cols-2 gap-3">
