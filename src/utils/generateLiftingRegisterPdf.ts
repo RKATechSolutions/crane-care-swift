@@ -257,14 +257,15 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
               const cellX = data.cell.x + 0.5;
               const cellY = data.cell.y + 0.5;
               const imgSize = Math.min(data.cell.width - 1, data.cell.height - 1, 11);
-              doc.addImage(photoUrl, 'JPEG', cellX, cellY, imgSize, imgSize);
+              const imgFormat = photoUrl.includes('image/png') ? 'PNG' : 'JPEG';
+              doc.addImage(photoUrl, imgFormat, cellX, cellY, imgSize, imgSize);
             } catch { /* skip failed image */ }
           }
         }
       },
     });
 
-    y = (doc as any).lastAutoTable?.finalY + 6 || y + 20;
+    y = (doc as any).previousAutoTable?.finalY + 6 || y + 20;
 
     // Check if we need a new page for next group
     if (y > pageH - 30) {
