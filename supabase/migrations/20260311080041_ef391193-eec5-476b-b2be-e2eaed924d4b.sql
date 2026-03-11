@@ -1,0 +1,1 @@
+UPDATE db_inspections SET crane_status = 'Crane is Operational' WHERE crane_status = 'Safe to Operate';
