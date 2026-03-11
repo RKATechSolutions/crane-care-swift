@@ -431,7 +431,18 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           }
         }
         
-        await refreshItems();
+        // Add imported items locally instead of full reload
+        if (insertedData) {
+          const newItems = insertedData.map((item: any) => ({
+            ...item,
+            site_name: siteName,
+            registered_by_name: localStorage.getItem('technicianName') || 'Import',
+            created_at: new Date().toISOString(),
+          })) as RegisterItem[];
+          setItems(prev => [...prev, ...newItems].sort(naturalSort));
+        } else {
+          await refreshItems();
+        }
       }
     } catch (err) { console.error('File parse error:', err); toast.error('Failed to parse file'); }
     setImporting(false);
