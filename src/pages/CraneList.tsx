@@ -9,6 +9,7 @@ import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
 import CraneBaselineForm from '@/pages/CraneBaselineForm';
 import DbInspectionForm from '@/pages/DbInspectionForm';
 import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
+import JSZip from 'jszip';
 import RepairBreakdownForm from '@/pages/RepairBreakdownForm';
 import LiftingRegisterForm from '@/pages/LiftingRegisterForm';
 import { Crane, InspectionItemResult, InspectionTemplate } from '@/types/inspection';
@@ -1030,7 +1031,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                     setDownloadingReports(true);
                     toast({ title: `Generating ${selectedReportIds.size} PDF(s)…` });
                     const selected = clientReports.filter(r => selectedReportIds.has(r.id));
-                    
+                    const zip = new JSZip();
                     for (const report of selected) {
                       try {
                         // Fetch form template questions
@@ -1107,17 +1108,29 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                         });
 
                         const fileName = `${(report.asset_name || 'Inspection').replace(/[^a-zA-Z0-9]/g, '_')}_${report.inspection_date}.pdf`;
-                        pdf.save(fileName);
-
-                        // Small delay between downloads so browser doesn't block them
-                        await new Promise(resolve => setTimeout(resolve, 500));
+                        zip.file(fileName, pdf.output('arraybuffer'));
                       } catch (err) {
-                        console.error('Failed to download report', report.id, err);
-                        toast({ title: `Failed to download: ${report.asset_name || 'report'}`, variant: 'destructive' });
+                        console.error('Failed to generate report', report.id, err);
+                        toast({ title: `Failed: ${report.asset_name || 'report'}`, variant: 'destructive' });
                       }
                     }
+
+                    try {
+                      const blob = await zip.generateAsync({ type: 'blob' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${(site?.name || 'Reports').replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.zip`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast({ title: `${selected.length} report(s) downloaded as ZIP` });
+                    } catch (err) {
+                      console.error('ZIP generation failed', err);
+                      toast({ title: 'Failed to create ZIP file', variant: 'destructive' });
+                    }
                     setDownloadingReports(false);
-                    toast({ title: `${selected.length} report(s) downloaded` });
                   }}
                   disabled={selectedReportIds.size === 0 || downloadingReports}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-border text-foreground font-bold text-sm disabled:opacity-40"
