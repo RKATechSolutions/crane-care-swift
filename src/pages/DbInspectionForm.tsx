@@ -426,6 +426,7 @@ export default function DbInspectionForm({
             technician_name: state.currentUser?.name || 'Unknown',
             status,
             inspection_date: dateToUse,
+            crane_status: craneStatus || null,
           };
         if (taskId) insertPayload.task_id = taskId;
 
