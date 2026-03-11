@@ -28,6 +28,7 @@ interface RegisterItem {
   sling_leg_count: number | null;
   lift_height_m: number | null;
   span_m: number | null;
+  overall_photo_url: string | null;
 }
 
 interface CategoryGroup {
