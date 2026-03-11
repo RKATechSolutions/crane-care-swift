@@ -23,6 +23,3 @@ verify_jwt = false
 
 [functions.slack-notify]
 verify_jwt = false
-
-[functions.slack-events]
-verify_jwt = false

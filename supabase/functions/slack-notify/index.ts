@@ -1,3 +1,5 @@
+const GATEWAY_URL = 'https://connector-gateway.lovable.dev/slack/api';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -8,11 +10,9 @@ interface SlackNotification {
   clientName: string;
   siteName: string;
   technicianName: string;
-  // Job completion fields
   defectCount?: number;
   assetsInspected?: number;
   nextInspectionDate?: string;
-  // Quote fields
   quoteTotal?: number;
   lineItemCount?: number;
   quoteName?: string;
@@ -88,19 +88,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const SLACK_BOT_TOKEN = Deno.env.get('SLACK_BOT_TOKEN');
-    const SLACK_JOBS_CHANNEL = Deno.env.get('SLACK_JOBS_CHANNEL');
-    const SLACK_QUOTES_CHANNEL = Deno.env.get('SLACK_QUOTES_CHANNEL');
-
-    if (!SLACK_BOT_TOKEN) {
-      throw new Error('SLACK_BOT_TOKEN is not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
+
+    const SLACK_API_KEY = Deno.env.get('SLACK_API_KEY');
+    if (!SLACK_API_KEY) {
+      throw new Error('SLACK_API_KEY is not configured');
+    }
+
+    const SLACK_JOBS_CHANNEL = Deno.env.get('SLACK_JOBS_CHANNEL') || 'rka-jobs';
+    const SLACK_QUOTES_CHANNEL = Deno.env.get('SLACK_QUOTES_CHANNEL') || 'rka-quotes';
 
     const data: SlackNotification = await req.json();
 
-    const channel = data.type === 'job_completed'
-      ? (SLACK_JOBS_CHANNEL || 'jobs')
-      : (SLACK_QUOTES_CHANNEL || 'quotes');
+    const channel = data.type === 'job_completed' ? SLACK_JOBS_CHANNEL : SLACK_QUOTES_CHANNEL;
 
     const blocks = data.type === 'job_completed'
       ? buildJobCompletedBlocks(data)
@@ -110,23 +113,26 @@ Deno.serve(async (req) => {
       ? `Job completed: ${data.clientName} — ${data.siteName} by ${data.technicianName}`
       : `Draft quote created: ${data.clientName} — ${data.siteName} ($${data.quoteTotal?.toFixed(2) || '0'})`;
 
-    const slackResponse = await fetch('https://slack.com/api/chat.postMessage', {
+    const response = await fetch(`${GATEWAY_URL}/chat.postMessage`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'X-Connection-Api-Key': SLACK_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         channel,
         text: fallbackText,
         blocks,
+        username: 'RKA Jobs',
+        icon_emoji: ':wrench:',
       }),
     });
 
-    const slackData = await slackResponse.json();
+    const slackData = await response.json();
 
-    if (!slackData.ok) {
-      throw new Error(`Slack API error: ${slackData.error}`);
+    if (!response.ok || !slackData.ok) {
+      throw new Error(`Slack API error [${response.status}]: ${slackData.error || JSON.stringify(slackData)}`);
     }
 
     return new Response(
