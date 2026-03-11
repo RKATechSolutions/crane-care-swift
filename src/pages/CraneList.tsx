@@ -929,7 +929,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                   <div className="flex items-center gap-2">
                     {r.crane_status && (
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        r.crane_status === 'Safe to Operate' ? 'bg-rka-green-light text-rka-green-dark' :
+                        r.crane_status === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
                         r.crane_status === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
                         'bg-rka-orange-light text-rka-orange'
                       }`}>{r.crane_status}</span>

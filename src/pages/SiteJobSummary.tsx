@@ -1235,7 +1235,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
                 <div key={insp.id} className="flex items-center justify-between py-2">
                   <span className="font-medium text-sm">{crane?.name}</span>
                   <span className={`text-xs font-bold px-3 py-1 rounded-lg ${
-                    insp.craneStatus === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+                    insp.craneStatus === 'Crane is Operational' ? 'bg-rka-green text-primary-foreground' :
                     insp.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red text-destructive-foreground' :
                     'bg-rka-orange text-destructive-foreground'
                   }`}>
