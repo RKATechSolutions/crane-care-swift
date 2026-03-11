@@ -539,6 +539,11 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       wll_value: editForm.wll_value ?? null, wll_unit: editForm.wll_unit || null,
       length_m: editForm.length_m ?? null, grade: editForm.grade || null,
       equipment_status: editForm.equipment_status || null, notes: editForm.notes || null,
+      tag_present: (editForm as any).tag_present || null,
+      sling_configuration: (editForm as any).sling_configuration || null,
+      sling_leg_count: (editForm as any).sling_leg_count ?? null,
+      lift_height_m: (editForm as any).lift_height_m ?? null,
+      span_m: (editForm as any).span_m ?? null,
     };
     const { error } = await supabase.from('lifting_register').update(updates).eq('id', editItem.id);
     if (error) { toast.error('Failed to save'); console.error(error); }
