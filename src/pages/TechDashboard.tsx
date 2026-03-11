@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { FiveStarGoalBanner } from '@/components/FiveStarGoalBanner';
-import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench, Shield, RefreshCw } from 'lucide-react';
+import { Calendar, Users, Package, FileText, LogOut, Clock, FileCheck, Receipt, Wrench, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import { toast } from 'sonner';
