@@ -10,6 +10,7 @@ const DARK: [number, number, number] = [40, 32, 39];
 const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
 
 interface RegisterItem {
+  id?: string;
   equipment_type: string;
   manufacturer: string | null;
   model: string | null;
