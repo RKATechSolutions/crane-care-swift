@@ -61,6 +61,24 @@ export default function Login() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        {import.meta.env.DEV && (
+          <button
+            type="button"
+            onClick={async () => {
+              setLoading(true);
+              const { error } = await supabase.auth.signInWithPassword({
+                email: 'aaron@rka.com.au',
+                password: '123456',
+              });
+              if (error) toast.error(error.message);
+              setLoading(false);
+            }}
+            className="mt-4 text-xs text-muted-foreground/50 hover:text-muted-foreground underline"
+          >
+            Dev: Quick Admin Sign In
+          </button>
+        )}
       </div>
     </div>
   );
