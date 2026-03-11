@@ -135,7 +135,7 @@ export default function InspectionForm() {
     dispatch({ type: 'BACK_TO_CRANES' });
   };
 
-  const craneStatuses: CraneOperationalStatus[] = ['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'];
+  const craneStatuses: CraneOperationalStatus[] = ['Crane is Operational', 'Operate with Limitations', 'Unsafe to Operate'];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
