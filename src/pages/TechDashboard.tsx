@@ -139,6 +139,7 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
             <p className="text-[10px] text-muted-foreground font-medium">Completed</p>
           </button>
         </div>
+        )}
 
         {/* Navigation Cards */}
         <div className="grid grid-cols-2 gap-3">
