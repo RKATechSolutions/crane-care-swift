@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     }
 
     const SLACK_JOBS_CHANNEL = Deno.env.get('SLACK_JOBS_CHANNEL') || 'rka-jobs';
-    const SLACK_QUOTES_CHANNEL = Deno.env.get('SLACK_QUOTES_CHANNEL') || 'rka-quotes';
+    const SLACK_QUOTES_CHANNEL = Deno.env.get('SLACK_QUOTES_CHANNEL') || 'operations-quotes-to-be-sent';
 
     const data: SlackNotification = await req.json();
 
