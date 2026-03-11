@@ -94,18 +94,18 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   };
 
   const refreshItems = async () => {
-    const baseSelect = 'id,equipment_type,manufacturer,model,serial_number,asset_tag,wll_value,wll_unit,length_m,grade,tag_present,equipment_status,site_name,notes,registered_by_name,created_at,sling_configuration,sling_leg_count,lift_height_m,span_m,overall_photo_url';
+    // Use lightweight select excluding bloated base64 photo columns (overall_photo_url can be multi-MB)
+    const liteSelect = 'id,equipment_type,manufacturer,model,serial_number,asset_tag,wll_value,wll_unit,length_m,grade,tag_present,equipment_status,site_name,notes,registered_by_name,created_at,sling_configuration,sling_leg_count,lift_height_m,span_m';
 
-    // Paginated fetch to avoid statement timeouts on large TOAST tables
     const fetchPage = async (from: number, to: number) => {
-      const query = supabase.from('lifting_register').select(baseSelect);
+      const query = supabase.from('lifting_register').select(liteSelect);
       const filtered = clientId ? query.eq('client_id', clientId) : query.eq('site_name', siteName);
       return filtered.range(from, to);
     };
 
     let allItems: RegisterItem[] = [];
     let page = 0;
-    const pageSize = 50;
+    const pageSize = 100;
     let lastError: { code?: string; message?: string } | null = null;
 
     try {
@@ -132,12 +132,33 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
 
         if (!pageData) throw lastError;
         allItems = allItems.concat(pageData);
-        if (pageData.length < pageSize) break; // last page
+        if (pageData.length < pageSize) break;
         page += 1;
       }
 
       setLoadError(null);
-      setItems(allItems.sort(naturalSort));
+      const sorted = allItems.sort(naturalSort);
+      setItems(sorted);
+
+      // Lazy-load photos in background (separate query to avoid TOAST bloat timeout)
+      if (sorted.length > 0) {
+        const ids = sorted.map(i => i.id);
+        const batchSize = 20;
+        for (let i = 0; i < ids.length; i += batchSize) {
+          const batch = ids.slice(i, i + batchSize);
+          const { data: photoData } = await supabase
+            .from('lifting_register')
+            .select('id, overall_photo_url')
+            .in('id', batch);
+          if (photoData) {
+            const photoMap = new Map(photoData.map(p => [p.id, p.overall_photo_url]));
+            setItems(prev => prev.map(item => {
+              const url = photoMap.get(item.id);
+              return url ? { ...item, overall_photo_url: url } : item;
+            }));
+          }
+        }
+      }
     } catch (err) {
       console.error('Failed loading lifting register:', err);
       setItems([]);
