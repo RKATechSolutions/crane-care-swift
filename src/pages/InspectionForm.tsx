@@ -359,7 +359,7 @@ export default function InspectionForm() {
                   dispatch({ type: 'COMPLETE_INSPECTION' });
                 }}
                 className={`w-full tap-target rounded-xl font-bold text-base ${
-                  status === 'Safe to Operate' ? 'bg-rka-green text-primary-foreground' :
+                  status === 'Crane is Operational' ? 'bg-rka-green text-primary-foreground' :
                   status === 'Operate with Limitations' ? 'bg-rka-orange text-destructive-foreground' :
                   'bg-rka-red text-destructive-foreground'
                 }`}

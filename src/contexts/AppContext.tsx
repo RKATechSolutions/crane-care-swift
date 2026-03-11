@@ -149,7 +149,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state.currentInspection,
         status: 'completed' as const,
         completedAt: new Date().toISOString(),
-        craneStatus: state.currentInspection.craneStatus || computeCraneStatus(state.currentInspection.items) || 'Safe to Operate',
+        craneStatus: state.currentInspection.craneStatus || computeCraneStatus(state.currentInspection.items) || 'Crane is Operational',
       };
       return {
         ...state,
