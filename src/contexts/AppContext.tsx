@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import {
   User, Site, Crane, Inspection, InspectionItemResult,
   InspectionTemplate, CraneOperationalStatus, SiteJobSummary, AdminNote,
-  DefectSeverity, RectificationTimeframe, SuggestedQuestion, SentReport,
+  SentReport,
 } from '@/types/inspection';
 import { AdminFormConfig, DEFAULT_ADMIN_CONFIG } from '@/types/adminConfig';
 import { mockSites, mockTemplate, mockTemplateLiftingEquipment, mockTemplateServiceBreakdown, mockTemplateCommissioningLoadTest } from '@/data/mockData';
