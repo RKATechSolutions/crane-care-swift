@@ -431,7 +431,18 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
           }
         }
         
-        await refreshItems();
+        // Add imported items locally instead of full reload
+        if (insertedData) {
+          const newItems = insertedData.map((item: any) => ({
+            ...item,
+            site_name: siteName,
+            registered_by_name: localStorage.getItem('technicianName') || 'Import',
+            created_at: new Date().toISOString(),
+          })) as RegisterItem[];
+          setItems(prev => [...prev, ...newItems].sort(naturalSort));
+        } else {
+          await refreshItems();
+        }
       }
     } catch (err) { console.error('File parse error:', err); toast.error('Failed to parse file'); }
     setImporting(false);
@@ -496,16 +507,22 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const handleSaveEdit = async () => {
     if (!editItem) return;
     setSaving(true);
-    const { error } = await supabase.from('lifting_register').update({
+    const updates = {
       equipment_type: editForm.equipment_type || editItem.equipment_type,
       manufacturer: editForm.manufacturer || null, model: editForm.model || null,
       serial_number: editForm.serial_number || null, asset_tag: editForm.asset_tag || null,
       wll_value: editForm.wll_value ?? null, wll_unit: editForm.wll_unit || null,
       length_m: editForm.length_m ?? null, grade: editForm.grade || null,
       equipment_status: editForm.equipment_status || null, notes: editForm.notes || null,
-    }).eq('id', editItem.id);
+    };
+    const { error } = await supabase.from('lifting_register').update(updates).eq('id', editItem.id);
     if (error) { toast.error('Failed to save'); console.error(error); }
-    else { toast.success('Item updated'); await refreshItems(); setEditItem(null); }
+    else {
+      toast.success('Item updated');
+      // Optimistic local update — no full reload needed
+      setItems(prev => prev.map(i => i.id === editItem.id ? { ...i, ...updates } : i).sort(naturalSort));
+      setEditItem(null);
+    }
     setSaving(false);
   };
 
