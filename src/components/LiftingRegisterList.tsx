@@ -867,6 +867,19 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
               </div>
               <div><Label className="text-xs">Grade</Label><Input value={editForm.grade || ''} onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))} /></div>
             </div>
+            {/* Tag Present */}
+            <div>
+              <Label className="text-xs">Tag Present</Label>
+              <Select value={(editForm as any).tag_present || 'unknown'} onValueChange={v => setEditForm(f => ({ ...f, tag_present: v } as any))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Yes</SelectItem>
+                  <SelectItem value="false">No</SelectItem>
+                  <SelectItem value="illegible">Illegible</SelectItem>
+                  <SelectItem value="unknown">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Length (m)</Label><Input type="number" value={editForm.length_m ?? ''} onChange={e => setEditForm(f => ({ ...f, length_m: e.target.value ? Number(e.target.value) : null }))} /></div>
               <div>
@@ -877,6 +890,33 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 </Select>
               </div>
             </div>
+            {/* Dynamic group fields */}
+            {(() => {
+              const editActiveFields = new Set<string>();
+              if (categoryGroups.length > 0) {
+                categoryGroups.forEach(g => {
+                  if (g.types.includes(editForm.equipment_type || '')) {
+                    g.fields.forEach(f => editActiveFields.add(f));
+                  }
+                });
+              }
+              return editActiveFields.size > 0 ? (
+                <div className="space-y-2">
+                  {editActiveFields.has('sling_configuration') && (
+                    <div><Label className="text-xs">Sling Configuration</Label><Input value={(editForm as any).sling_configuration || ''} onChange={e => setEditForm(f => ({ ...f, sling_configuration: e.target.value } as any))} /></div>
+                  )}
+                  {editActiveFields.has('sling_leg_count') && (
+                    <div><Label className="text-xs">Number of Legs</Label><Input type="number" value={(editForm as any).sling_leg_count ?? ''} onChange={e => setEditForm(f => ({ ...f, sling_leg_count: e.target.value ? Number(e.target.value) : null } as any))} /></div>
+                  )}
+                  {editActiveFields.has('lift_height_m') && (
+                    <div><Label className="text-xs">Lift Height (m)</Label><Input type="number" step="0.1" value={(editForm as any).lift_height_m ?? ''} onChange={e => setEditForm(f => ({ ...f, lift_height_m: e.target.value ? Number(e.target.value) : null } as any))} /></div>
+                  )}
+                  {editActiveFields.has('span_m') && (
+                    <div><Label className="text-xs">Span (m)</Label><Input type="number" step="0.1" value={(editForm as any).span_m ?? ''} onChange={e => setEditForm(f => ({ ...f, span_m: e.target.value ? Number(e.target.value) : null } as any))} /></div>
+                  )}
+                </div>
+              ) : null;
+            })()}
             <div><Label className="text-xs">Notes / Comments</Label><Input value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
             {/* Photo in edit dialog */}
             <div>
