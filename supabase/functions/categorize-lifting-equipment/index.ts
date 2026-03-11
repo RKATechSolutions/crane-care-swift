@@ -1,4 +1,5 @@
 // categorize-lifting-equipment
+import { authenticateRequest } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +22,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const auth = await authenticateRequest(req);
+  if (auth.error) return auth.error;
 
   try {
     const { items } = await req.json();

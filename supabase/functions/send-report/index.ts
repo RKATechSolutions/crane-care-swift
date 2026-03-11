@@ -1,4 +1,5 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { authenticateRequest } from "../_shared/auth.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
@@ -6,6 +7,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const auth = await authenticateRequest(req);
+  if (auth.error) return auth.error;
 
   try {
     if (!RESEND_API_KEY) {
