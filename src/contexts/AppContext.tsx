@@ -77,7 +77,7 @@ const initialState: AppState = {
 
 function computeCraneStatus(items: InspectionItemResult[]): CraneOperationalStatus | undefined {
   const defects = items.filter(i => (i.result === 'defect' || i.result === 'unresolved') && i.defect);
-  if (defects.length === 0 && !items.some(i => i.result === 'unresolved')) return 'Safe to Operate';
+  if (defects.length === 0 && !items.some(i => i.result === 'unresolved')) return 'Crane is Operational';
 
   const hasCriticalImmediate = defects.some(
     d => d.defect?.severity === 'Critical' && d.defect?.rectificationTimeframe === 'Immediately'
