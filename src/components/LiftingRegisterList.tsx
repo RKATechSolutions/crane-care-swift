@@ -142,6 +142,29 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       const sorted = allItems.sort(naturalSort);
       setItems(sorted);
 
+      // Load latest inspections for tick display
+      if (sorted.length > 0) {
+        const ids = sorted.map(i => i.id);
+        const batchSize = 50;
+        const allInspections: Record<string, { technician_name: string; inspection_date: string }> = {};
+        for (let i = 0; i < ids.length; i += batchSize) {
+          const batch = ids.slice(i, i + batchSize);
+          const { data: inspData } = await supabase
+            .from('lifting_register_inspections')
+            .select('register_item_id, technician_name, inspection_date')
+            .in('register_item_id', batch)
+            .order('inspection_date', { ascending: false });
+          if (inspData) {
+            (inspData as any[]).forEach(row => {
+              if (!allInspections[row.register_item_id]) {
+                allInspections[row.register_item_id] = { technician_name: row.technician_name, inspection_date: row.inspection_date };
+              }
+            });
+          }
+        }
+        setLastInspections(allInspections);
+      }
+
       // Lazy-load photos in background (separate query to avoid TOAST bloat timeout)
       if (sorted.length > 0) {
         const ids = sorted.map(i => i.id);
