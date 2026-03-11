@@ -1,13 +1,13 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   User, Site, Crane, Inspection, InspectionItemResult,
   InspectionTemplate, CraneOperationalStatus, SiteJobSummary, AdminNote,
-  DefectSeverity, RectificationTimeframe, SuggestedQuestion, SentReport,
+  SentReport,
 } from '@/types/inspection';
 import { AdminFormConfig, DEFAULT_ADMIN_CONFIG } from '@/types/adminConfig';
-import { mockSites, mockTemplate, mockTemplateLiftingEquipment, mockTemplateServiceBreakdown, mockTemplateCommissioningLoadTest, mockUsers } from '@/data/mockData';
-import { addDays, format } from 'date-fns';
+import { mockSites, mockTemplate, mockTemplateLiftingEquipment, mockTemplateServiceBreakdown, mockTemplateCommissioningLoadTest } from '@/data/mockData';
+
 
 interface AppState {
   currentUser: User | null;
@@ -83,7 +83,7 @@ function computeCraneStatus(items: InspectionItemResult[]): CraneOperationalStat
     d => d.defect?.severity === 'Critical' && d.defect?.rectificationTimeframe === 'Immediately'
   );
   if (hasCriticalImmediate) return 'Unsafe to Operate';
-  if (items.some(i => i.result === 'unresolved')) return undefined; // technician must choose
+  if (items.some(i => i.result === 'unresolved')) return undefined;
   return undefined;
 }
 
@@ -193,7 +193,6 @@ function reducer(state: AppState, action: Action): AppState {
           return item;
         });
 
-      // Update in inspections list (for SiteJobSummary)
       const updatedInspections = state.inspections.map(insp => {
         if (action.payload.inspectionId && insp.id === action.payload.inspectionId) {
           return { ...insp, items: updateQuoteItems(insp.items) };
@@ -201,7 +200,6 @@ function reducer(state: AppState, action: Action): AppState {
         return insp;
       });
 
-      // Also update currentInspection if active
       const updatedCurrent = state.currentInspection
         ? { ...state.currentInspection, items: updateQuoteItems(state.currentInspection.items) }
         : state.currentInspection;
@@ -291,8 +289,7 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'UPDATE_ADMIN_CONFIG': {
       const newConfig = { ...state.adminConfig, ...action.payload };
-      try { localStorage.setItem('rka_admin_config', JSON.stringify(newConfig)); } catch {}
-      // Also persist to database
+      try { localStorage.setItem('rka_admin_config', JSON.stringify(newConfig)); } catch { }
       supabase.from('admin_config').upsert({ id: 'default', config: newConfig as any, updated_at: new Date().toISOString() }).then();
       return { ...state, adminConfig: newConfig };
     }
@@ -304,23 +301,72 @@ function reducer(state: AppState, action: Action): AppState {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<Action>;
-}>({ state: initialState, dispatch: () => {} });
+  authLoading: boolean;
+}>({ state: initialState, dispatch: () => { }, authLoading: true });
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Listen for Supabase auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const email = session.user.email || '';
+        const meta = session.user.user_metadata || {};
+        const displayName = meta.display_name || meta.full_name || email.split('@')[0];
+        
+        // Check if user has admin role in user_roles table
+        let role: 'technician' | 'admin' = 'technician';
+        try {
+          const { data: roleData } = await (supabase as any)
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .eq('role', 'admin')
+            .maybeSingle();
+          if (roleData) role = 'admin';
+        } catch {
+          // user_roles table may not exist yet during migration
+        }
+
+        dispatch({
+          type: 'LOGIN',
+          payload: {
+            id: session.user.id,
+            name: displayName,
+            email,
+            role,
+          },
+        });
+      } else if (event === 'SIGNED_OUT') {
+        dispatch({ type: 'LOGOUT' });
+      }
+      setAuthLoading(false);
+    });
+
+    // Check existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) setAuthLoading(false);
+      // onAuthStateChange will handle the LOGIN dispatch
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Load admin config from database on mount
   useEffect(() => {
+    if (!state.currentUser) return;
     supabase.from('admin_config').select('config').eq('id', 'default').maybeSingle().then(({ data }) => {
       if (data?.config && typeof data.config === 'object') {
         const dbConfig = { ...DEFAULT_ADMIN_CONFIG, ...(data.config as any) };
         dispatch({ type: 'UPDATE_ADMIN_CONFIG', payload: dbConfig });
       }
     });
-  }, []);
+  }, [state.currentUser?.id]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, authLoading }}>
       {children}
     </AppContext.Provider>
   );

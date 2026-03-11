@@ -1,3 +1,5 @@
+import { authenticateRequest } from "../_shared/auth.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -8,6 +10,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const auth = await authenticateRequest(req);
+  if (auth.error) return auth.error;
 
   try {
     const { description, client_name, asset_name } = await req.json();
