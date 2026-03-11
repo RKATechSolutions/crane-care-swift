@@ -559,11 +559,26 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     setDeleteConfirm(null);
   };
 
+  // Filter items by search query
+  const filteredItems = searchQuery.trim()
+    ? items.filter(item => {
+        const q = searchQuery.toLowerCase();
+        return (
+          item.equipment_type.toLowerCase().includes(q) ||
+          (item.serial_number || '').toLowerCase().includes(q) ||
+          (item.asset_tag || '').toLowerCase().includes(q) ||
+          (item.manufacturer || '').toLowerCase().includes(q) ||
+          (item.model || '').toLowerCase().includes(q) ||
+          (item.notes || '').toLowerCase().includes(q)
+        );
+      })
+    : items;
+
   // Sequential numbering across all items
   let globalIndex = 0;
 
   // Group by category group (not equipment type)
-  const grouped = items.reduce((acc, item) => {
+  const grouped = filteredItems.reduce((acc, item) => {
     let groupName = 'Other';
     if (categoryGroups.length > 0) {
       // Exact match first
