@@ -761,9 +761,22 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                       </button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 pl-10">
-                    Registered by {item.registered_by_name} • {new Date(item.created_at).toLocaleDateString('en-AU')}
-                  </p>
+                  <div className="flex items-center justify-between mt-2 pl-10">
+                    <p className="text-[10px] text-muted-foreground">
+                      Registered by {item.registered_by_name} • {new Date(item.created_at).toLocaleDateString('en-AU')}
+                    </p>
+                    {lastInspections[item.id] && (
+                      <div className="flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                        <span className="text-[10px] text-green-700 font-medium">Inspected</span>
+                      </div>
+                    )}
+                  </div>
+                  {lastInspections[item.id] && (
+                    <p className="text-[10px] text-muted-foreground pl-10 mt-0.5">
+                      Inspected by {lastInspections[item.id].technician_name} • {new Date(lastInspections[item.id].inspection_date).toLocaleDateString('en-AU')}
+                    </p>
+                  )}
                 </Card>
               );
             })}
