@@ -1031,7 +1031,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                     setDownloadingReports(true);
                     toast({ title: `Generating ${selectedReportIds.size} PDF(s)…` });
                     const selected = clientReports.filter(r => selectedReportIds.has(r.id));
-                    
+                    const zip = new JSZip();
                     for (const report of selected) {
                       try {
                         // Fetch form template questions
