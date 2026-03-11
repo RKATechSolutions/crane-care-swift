@@ -1325,6 +1325,13 @@ export type Database = {
             referencedRelation: "lifting_register"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lifting_register_inspections_register_item_id_fkey"
+            columns: ["register_item_id"]
+            isOneToOne: false
+            referencedRelation: "lifting_register_lite"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lifting_register_scans: {
@@ -1373,6 +1380,13 @@ export type Database = {
             columns: ["register_id"]
             isOneToOne: false
             referencedRelation: "lifting_register"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lifting_register_scans_register_id_fkey"
+            columns: ["register_id"]
+            isOneToOne: false
+            referencedRelation: "lifting_register_lite"
             referencedColumns: ["id"]
           },
         ]
@@ -2034,7 +2048,101 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      lifting_register_lite: {
+        Row: {
+          asset_tag: string | null
+          client_id: string | null
+          confirmed_by_id: string | null
+          confirmed_by_name: string | null
+          created_at: string | null
+          equipment_status: string | null
+          equipment_type: string | null
+          grade: string | null
+          id: string | null
+          length_m: number | null
+          lift_height_m: number | null
+          manufacturer: string | null
+          model: string | null
+          notes: string | null
+          registered_by_id: string | null
+          registered_by_name: string | null
+          serial_number: string | null
+          site_name: string | null
+          sling_configuration: string | null
+          sling_leg_count: number | null
+          span_m: number | null
+          tag_present: string | null
+          updated_at: string | null
+          wll_unit: string | null
+          wll_unit_dup: string | null
+          wll_value: number | null
+        }
+        Insert: {
+          asset_tag?: string | null
+          client_id?: string | null
+          confirmed_by_id?: string | null
+          confirmed_by_name?: string | null
+          created_at?: string | null
+          equipment_status?: string | null
+          equipment_type?: string | null
+          grade?: string | null
+          id?: string | null
+          length_m?: number | null
+          lift_height_m?: number | null
+          manufacturer?: string | null
+          model?: string | null
+          notes?: string | null
+          registered_by_id?: string | null
+          registered_by_name?: string | null
+          serial_number?: string | null
+          site_name?: string | null
+          sling_configuration?: string | null
+          sling_leg_count?: number | null
+          span_m?: number | null
+          tag_present?: string | null
+          updated_at?: string | null
+          wll_unit?: string | null
+          wll_unit_dup?: string | null
+          wll_value?: number | null
+        }
+        Update: {
+          asset_tag?: string | null
+          client_id?: string | null
+          confirmed_by_id?: string | null
+          confirmed_by_name?: string | null
+          created_at?: string | null
+          equipment_status?: string | null
+          equipment_type?: string | null
+          grade?: string | null
+          id?: string | null
+          length_m?: number | null
+          lift_height_m?: number | null
+          manufacturer?: string | null
+          model?: string | null
+          notes?: string | null
+          registered_by_id?: string | null
+          registered_by_name?: string | null
+          serial_number?: string | null
+          site_name?: string | null
+          sling_configuration?: string | null
+          sling_leg_count?: number | null
+          span_m?: number | null
+          tag_present?: string | null
+          updated_at?: string | null
+          wll_unit?: string | null
+          wll_unit_dup?: string | null
+          wll_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifting_register_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
