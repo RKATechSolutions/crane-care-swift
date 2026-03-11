@@ -608,7 +608,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader title="Lifting Equipment Register" subtitle={`${siteName} • ${items.length} items`} onBack={onBack} />
 
-      <div className="px-4 py-2 border-b border-border space-y-2">
+      <div className="sticky top-0 z-20 bg-background px-4 py-2 border-b border-border space-y-2">
         <div className="flex gap-2">
           <Button onClick={handleShare} variant="outline" className="flex-1 gap-1 text-xs">
             <Share2 className="w-3.5 h-3.5" /> Share
@@ -632,6 +632,15 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
             </Button>
           )}
           <Button onClick={onAddNew} className="flex-1 gap-2">+ Add Item</Button>
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search..."
+              className="pl-8 h-9 text-sm"
+            />
+          </div>
         </div>
       </div>
 
