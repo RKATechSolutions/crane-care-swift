@@ -529,6 +529,23 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
         toast.info('Report downloaded. No client email on file — email not sent.');
       }
 
+      // Send Slack notification for job completion
+      try {
+        await supabase.functions.invoke('slack-notify', {
+          body: {
+            type: 'job_completed',
+            clientName: clientInfo?.client_name || site.name,
+            siteName: site.name,
+            technicianName: state.currentUser?.name || 'Technician',
+            defectCount: dbDefects.length || totalDefectCount,
+            assetsInspected: dbInspections.length || completedInspections.length,
+            nextInspectionDate: format(new Date(nextDate), 'dd MMM yyyy'),
+          },
+        });
+      } catch (slackErr) {
+        console.error('Slack job notification error:', slackErr);
+      }
+
       setSubmitted(true);
     } catch (err) {
       console.error('Submit error:', err);
