@@ -1025,12 +1025,101 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                   Complete Job Site Summary with these reports
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
-                    toast({ title: `Downloading ${selectedReportIds.size} report(s)…` });
-                    // TODO: Trigger individual PDF downloads for each selected report
+                    setDownloadingReports(true);
+                    toast({ title: `Generating ${selectedReportIds.size} PDF(s)…` });
+                    const selected = clientReports.filter(r => selectedReportIds.has(r.id));
+                    
+                    for (const report of selected) {
+                      try {
+                        // Fetch form template questions
+                        const { data: ftqs } = await supabase
+                          .from('form_template_questions')
+                          .select('question_id, section_override, override_sort_order, sub_heading')
+                          .eq('form_id', report.form_id)
+                          .order('override_sort_order', { ascending: true });
+
+                        const questionIds = (ftqs || []).map(q => q.question_id);
+                        
+                        // Fetch questions
+                        const { data: questions } = await supabase
+                          .from('question_library')
+                          .select('*')
+                          .in('question_id', questionIds);
+
+                        // Fetch responses
+                        const { data: responses } = await supabase
+                          .from('inspection_responses')
+                          .select('*')
+                          .eq('inspection_id', report.id);
+
+                        const responseMap: Record<string, any> = {};
+                        (responses || []).forEach(r => { responseMap[r.question_id] = r; });
+
+                        // Build sections
+                        const sectionMap = new Map<string, any[]>();
+                        for (const ftq of (ftqs || [])) {
+                          const q = (questions || []).find(ql => ql.question_id === ftq.question_id);
+                          if (!q) continue;
+                          const sectionName = ftq.section_override || q.section || 'General';
+                          if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
+                          const resp = responseMap[q.question_id] || {};
+                          sectionMap.get(sectionName)!.push({
+                            question_text: q.question_text,
+                            section: sectionName,
+                            answer_value: resp.answer_value || null,
+                            pass_fail_status: resp.pass_fail_status || null,
+                            severity: resp.severity || null,
+                            comment: resp.comment || null,
+                            defect_flag: resp.defect_flag || false,
+                            photo_urls: resp.photo_urls || [],
+                            standard_ref: q.standard_ref || null,
+                            urgency: resp.urgency || null,
+                            defect_types: resp.defect_types || [],
+                            internal_note: resp.internal_note || null,
+                          });
+                        }
+
+                        const pdfSections = Array.from(sectionMap.entries()).map(([name, qs]) => ({ name, questions: qs }));
+
+                        // Fetch form name
+                        const { data: formData } = await supabase.from('form_templates').select('form_name').eq('form_id', report.form_id).single();
+
+                        // Fetch asset photo
+                        let assetPhotoUrl: string | undefined;
+                        if (report.asset_id) {
+                          const { data: asset } = await supabase.from('assets').select('main_photo_url').eq('id', report.asset_id).single();
+                          if (asset?.main_photo_url) assetPhotoUrl = asset.main_photo_url;
+                        }
+
+                        const pdf = await generateInspectionPdf({
+                          formName: formData?.form_name || 'Inspection',
+                          assetName: report.asset_name || 'Site Inspection',
+                          siteName: report.site_name || site?.name,
+                          technicianName: report.technician_name,
+                          inspectionDate: report.inspection_date,
+                          craneStatus: report.crane_status || undefined,
+                          sections: pdfSections,
+                          aiSummary: report.ai_summary || undefined,
+                          otherNotes: report.other_notes || undefined,
+                          assetPhotoUrl,
+                        });
+
+                        const fileName = `${(report.asset_name || 'Inspection').replace(/[^a-zA-Z0-9]/g, '_')}_${report.inspection_date}.pdf`;
+                        pdf.save(fileName);
+
+                        // Small delay between downloads so browser doesn't block them
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                      } catch (err) {
+                        console.error('Failed to download report', report.id, err);
+                        toast({ title: `Failed to download: ${report.asset_name || 'report'}`, variant: 'destructive' });
+                      }
+                    }
+                    setDownloadingReports(false);
+                    toast({ title: `${selected.length} report(s) downloaded` });
                   }}
-                  disabled={selectedReportIds.size === 0}
+                  disabled={selectedReportIds.size === 0 || downloadingReports}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-border text-foreground font-bold text-sm disabled:opacity-40"
                 >
                   <Download className="w-4 h-4" />
