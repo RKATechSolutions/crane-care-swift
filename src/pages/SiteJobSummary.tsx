@@ -466,6 +466,46 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId }: SiteJobSu
       // Also download a copy locally
       pdf.save(filename);
 
+      // Send Fix Now defects to AroFlo as a draft quote
+      const fixNowForAroflo = dbDefects.filter(d => d.quoteStatus === 'Quote Now');
+      if (fixNowForAroflo.length > 0) {
+        try {
+          const LABOUR_SELL_RATE = 195;
+          const { data: arofloResult, error: arofloErr } = await supabase.functions.invoke('create-aroflo-quote', {
+            body: {
+              clientName: clientInfo?.client_name || site.name,
+              siteName: site.name,
+              siteAddress: clientInfo?.location_address || site.address || '',
+              technicianName: state.currentUser?.name || 'Technician',
+              jobDate: format(new Date(), 'yyyy-MM-dd'),
+              defects: fixNowForAroflo.map(d => ({
+                itemLabel: d.questionText,
+                craneName: d.assetName,
+                severity: d.severity || 'Minor',
+                defectType: d.defectTypes.join(', ') || 'General',
+                rectificationTimeframe: d.urgency || 'Next Service',
+                notes: d.comment || '',
+                recommendedAction: d.quoteInstructions || '',
+              })),
+              lineItems: fixNowForAroflo.map(d => ({
+                category: 'labour' as const,
+                description: `${d.assetName} — ${d.questionText}${d.comment ? ': ' + d.comment : ''}`,
+                quantity: 1,
+                unitPrice: LABOUR_SELL_RATE,
+              })),
+            },
+          });
+          if (arofloErr) {
+            console.error('AroFlo quote error:', arofloErr);
+            toast.error('Report sent but AroFlo draft quote failed');
+          } else if (arofloResult?.success) {
+            toast.success(`AroFlo draft quote created: ${arofloResult.quoteName}`);
+          }
+        } catch (arofloErr) {
+          console.error('AroFlo quote error:', arofloErr);
+        }
+      }
+
       // Send email if we have a recipient
       const recipientEmail = clientInfo?.primary_contact_email;
       if (recipientEmail) {
