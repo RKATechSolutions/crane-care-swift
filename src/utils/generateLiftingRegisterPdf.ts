@@ -10,6 +10,7 @@ const DARK: [number, number, number] = [40, 32, 39];
 const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
 
 interface RegisterItem {
+  id?: string;
   equipment_type: string;
   manufacturer: string | null;
   model: string | null;
@@ -28,6 +29,7 @@ interface RegisterItem {
   sling_leg_count: number | null;
   lift_height_m: number | null;
   span_m: number | null;
+  overall_photo_url: string | null;
 }
 
 interface CategoryGroup {
@@ -78,6 +80,21 @@ function buildDynamicFields(item: RegisterItem): string {
   return parts.join(' | ');
 }
 
+async function loadRemoteImage(url: string): Promise<string | null> {
+  try {
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): Promise<jsPDF> {
   const { siteName, clientName, technicianName, items, categoryGroups = [] } = data;
   const hasGroups = categoryGroups.length > 0;
@@ -126,73 +143,135 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
   doc.text(`Total: ${items.length}`, 135, y + 3);
   y += 8;
 
-  // Build table with group column and dynamic details
-  const head = [
-    ...(hasGroups ? ['Group'] : []),
-    'Type', 'Tag/ID', 'Serial No.', 'WLL', 'Manufacturer', 'Model', 'Tag?', 'Status', 'Details', 'Notes', 'Date',
-  ];
-
-  const rows = items.map(item => {
-    const dynamicDetails = buildDynamicFields(item);
-    return [
-      ...(hasGroups ? [findGroup(item, categoryGroups)] : []),
-      item.equipment_type,
-      item.asset_tag || '—',
-      item.serial_number || '—',
-      item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
-      item.manufacturer || '—',
-      item.model || '—',
-      item.tag_present === 'true' ? 'Yes' : item.tag_present === 'false' ? 'NO' : item.tag_present || '—',
-      item.equipment_status || '—',
-      dynamicDetails || '—',
-      item.notes || '',
-      format(new Date(item.created_at), 'dd/MM/yy'),
-    ];
-  });
-
-  // Sort by group then asset tag
+  // Group items the same way as the register list
+  const groupedItems: { groupName: string; groupItems: RegisterItem[] }[] = [];
   if (hasGroups) {
-    rows.sort((a, b) => (a[0] as string).localeCompare(b[0] as string));
+    const groupMap: Record<string, RegisterItem[]> = {};
+    items.forEach(item => {
+      const gName = findGroup(item, categoryGroups);
+      if (!groupMap[gName]) groupMap[gName] = [];
+      groupMap[gName].push(item);
+    });
+    // Order: defined groups first, then Other
+    const groupOrder = categoryGroups.map(g => g.name);
+    const allGroupNames = Object.keys(groupMap);
+    const orderedNames = [...groupOrder.filter(n => allGroupNames.includes(n)), ...allGroupNames.filter(n => !groupOrder.includes(n))];
+    orderedNames.forEach(name => {
+      groupedItems.push({ groupName: name, groupItems: groupMap[name] });
+    });
+  } else {
+    groupedItems.push({ groupName: 'All Equipment', groupItems: items });
   }
 
-  const statusColIdx = hasGroups ? 8 : 7;
-  const tagColIdx = hasGroups ? 7 : 6;
+  // Pre-load item photos (small batch)
+  const photoCache: Record<string, string> = {};
+  for (const item of items) {
+    if (item.overall_photo_url) {
+      // Base64 images can be used directly; external URLs need fetching
+      if (item.overall_photo_url.startsWith('data:')) {
+        photoCache[item.id || item.asset_tag || ''] = item.overall_photo_url;
+      } else {
+        const dataUrl = await loadRemoteImage(item.overall_photo_url);
+        if (dataUrl) photoCache[item.id || item.asset_tag || ''] = dataUrl;
+      }
+    }
+  }
 
-  autoTable(doc, {
-    startY: y,
-    head: [head],
-    body: rows,
-    margin: { left: 10, right: 10 },
-    styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak' },
-    headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 6 },
-    columnStyles: {
-      ...(hasGroups ? { 0: { cellWidth: 22 } } : {}),
-      [hasGroups ? 9 : 8]: { cellWidth: 38 }, // Details column
-      [hasGroups ? 10 : 9]: { cellWidth: 28 }, // Notes column
-    },
-    didParseCell(data) {
-      if (data.section === 'body' && data.column.index === statusColIdx) {
-        const val = data.cell.raw as string;
-        if (val === 'In Service') {
-          data.cell.styles.textColor = RKA_GREEN;
-          data.cell.styles.fontStyle = 'bold';
-        } else if (val === 'Failed' || val === 'Defect Noted' || val === 'Out of Service') {
-          data.cell.styles.textColor = RKA_RED;
-          data.cell.styles.fontStyle = 'bold';
+  // Render grouped tables
+  for (const { groupName, groupItems } of groupedItems) {
+    // Group header
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...DARK);
+    doc.text(`${groupName} (${groupItems.length})`, 14, y + 4);
+    y += 7;
+
+    const head = [
+      'Photo', 'Type', 'Tag/ID', 'Serial No.', 'WLL', 'Manufacturer', 'Model', 'Tag?', 'Status', 'Details', 'Notes', 'Date',
+    ];
+
+    const rows = groupItems.map(item => {
+      const dynamicDetails = buildDynamicFields(item);
+      const itemKey = (item as any).id || item.asset_tag || '';
+      return [
+        photoCache[itemKey] ? '' : '—', // placeholder; actual image drawn in didDrawCell
+        item.equipment_type,
+        item.asset_tag || '—',
+        item.serial_number || '—',
+        item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
+        item.manufacturer || '—',
+        item.model || '—',
+        item.tag_present === 'true' ? 'Yes' : item.tag_present === 'false' ? 'NO' : item.tag_present || '—',
+        item.equipment_status || '—',
+        dynamicDetails || '—',
+        item.notes || '',
+        format(new Date(item.created_at), 'dd/MM/yy'),
+      ];
+    });
+
+    const statusColIdx = 8;
+    const tagColIdx = 7;
+
+    autoTable(doc, {
+      startY: y,
+      head: [head],
+      body: rows,
+      margin: { left: 10, right: 10 },
+      styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak', minCellHeight: 12 },
+      headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 6 },
+      columnStyles: {
+        0: { cellWidth: 14 }, // Photo column
+        9: { cellWidth: 36 }, // Details column
+        10: { cellWidth: 26 }, // Notes column
+      },
+      didParseCell(data) {
+        if (data.section === 'body' && data.column.index === statusColIdx) {
+          const val = data.cell.raw as string;
+          if (val === 'In Service') {
+            data.cell.styles.textColor = RKA_GREEN;
+            data.cell.styles.fontStyle = 'bold';
+          } else if (val === 'Failed' || val === 'Defect Noted' || val === 'Out of Service') {
+            data.cell.styles.textColor = RKA_RED;
+            data.cell.styles.fontStyle = 'bold';
+          }
         }
-      }
-      if (data.section === 'body' && data.column.index === tagColIdx) {
-        const val = data.cell.raw as string;
-        if (val === 'NO') {
-          data.cell.styles.textColor = RKA_RED;
-          data.cell.styles.fontStyle = 'bold';
+        if (data.section === 'body' && data.column.index === tagColIdx) {
+          const val = data.cell.raw as string;
+          if (val === 'NO') {
+            data.cell.styles.textColor = RKA_RED;
+            data.cell.styles.fontStyle = 'bold';
+          }
         }
-      }
-      if (data.section === 'body' && data.row.index % 2 === 0) {
-        data.cell.styles.fillColor = LIGHT_GRAY;
-      }
-    },
-  });
+        if (data.section === 'body' && data.row.index % 2 === 0) {
+          data.cell.styles.fillColor = LIGHT_GRAY;
+        }
+      },
+      didDrawCell(data) {
+        // Draw photo in first column
+        if (data.section === 'body' && data.column.index === 0) {
+          const item = groupItems[data.row.index];
+          const itemKey = (item as any).id || item.asset_tag || '';
+          const photoUrl = photoCache[itemKey];
+          if (photoUrl) {
+            try {
+              const cellX = data.cell.x + 0.5;
+              const cellY = data.cell.y + 0.5;
+              const imgSize = Math.min(data.cell.width - 1, data.cell.height - 1, 11);
+              doc.addImage(photoUrl, 'JPEG', cellX, cellY, imgSize, imgSize);
+            } catch { /* skip failed image */ }
+          }
+        }
+      },
+    });
+
+    y = (doc as any).lastAutoTable?.finalY + 6 || y + 20;
+
+    // Check if we need a new page for next group
+    if (y > pageH - 30) {
+      doc.addPage();
+      y = 15;
+    }
+  }
 
   // Page numbers
   const totalPages = doc.getNumberOfPages();

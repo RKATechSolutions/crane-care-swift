@@ -16,7 +16,7 @@ import { Camera, Check, Pencil, AlertTriangle, Loader2, ScanLine, X, ImagePlus, 
 const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
   'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
-  'Lifting Lug', 'Eyebolt', 'Swivel',
+  'Lifting Lug', 'Swivel',
 ];
 const DEFAULT_SLING_TYPES = ['Chain Sling', 'Wire Rope Sling', 'Web Sling'];
 const DEFAULT_HOIST_TYPES = ['Lever Hoist', 'Chain Block'];

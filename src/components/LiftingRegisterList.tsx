@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2, Camera, X } from 'lucide-react';
+import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2, Camera, X, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
 import { format } from 'date-fns';
@@ -50,7 +50,7 @@ interface RegisterItem {
 const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
   'Lever Hoist', 'Chain Block', 'Beam Clamp', 'Spreader Beam',
-  'Lifting Lug', 'Eyebolt', 'Swivel', 'Unknown',
+  'Lifting Lug', 'Swivel', 'Unknown',
 ];
 
 const DEFAULT_STATUS_OPTIONS = ['In Service', 'Defect Noted', 'Out of Service', 'Quarantined'];
@@ -80,6 +80,8 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const [statusOptions, setStatusOptions] = useState(DEFAULT_STATUS_OPTIONS);
   const [wllUnits, setWllUnits] = useState(DEFAULT_WLL_UNITS);
   const [editSelectedGroup, setEditSelectedGroup] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [lastInspections, setLastInspections] = useState<Record<string, { technician_name: string; inspection_date: string }>>({});
 
   const naturalSort = (a: RegisterItem, b: RegisterItem) => {
     const aNum = parseInt(a.asset_tag || '', 10);
@@ -139,6 +141,29 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       setLoadError(null);
       const sorted = allItems.sort(naturalSort);
       setItems(sorted);
+
+      // Load latest inspections for tick display
+      if (sorted.length > 0) {
+        const ids = sorted.map(i => i.id);
+        const batchSize = 50;
+        const allInspections: Record<string, { technician_name: string; inspection_date: string }> = {};
+        for (let i = 0; i < ids.length; i += batchSize) {
+          const batch = ids.slice(i, i + batchSize);
+          const { data: inspData } = await supabase
+            .from('lifting_register_inspections')
+            .select('register_item_id, technician_name, inspection_date')
+            .in('register_item_id', batch)
+            .order('inspection_date', { ascending: false });
+          if (inspData) {
+            (inspData as any[]).forEach(row => {
+              if (!allInspections[row.register_item_id]) {
+                allInspections[row.register_item_id] = { technician_name: row.technician_name, inspection_date: row.inspection_date };
+              }
+            });
+          }
+        }
+        setLastInspections(allInspections);
+      }
 
       // Lazy-load photos in background (separate query to avoid TOAST bloat timeout)
       if (sorted.length > 0) {
@@ -514,6 +539,11 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       wll_value: editForm.wll_value ?? null, wll_unit: editForm.wll_unit || null,
       length_m: editForm.length_m ?? null, grade: editForm.grade || null,
       equipment_status: editForm.equipment_status || null, notes: editForm.notes || null,
+      tag_present: (editForm as any).tag_present || null,
+      sling_configuration: (editForm as any).sling_configuration || null,
+      sling_leg_count: (editForm as any).sling_leg_count ?? null,
+      lift_height_m: (editForm as any).lift_height_m ?? null,
+      span_m: (editForm as any).span_m ?? null,
     };
     const { error } = await supabase.from('lifting_register').update(updates).eq('id', editItem.id);
     if (error) { toast.error('Failed to save'); console.error(error); }
@@ -534,11 +564,26 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     setDeleteConfirm(null);
   };
 
+  // Filter items by search query
+  const filteredItems = searchQuery.trim()
+    ? items.filter(item => {
+        const q = searchQuery.toLowerCase();
+        return (
+          item.equipment_type.toLowerCase().includes(q) ||
+          (item.serial_number || '').toLowerCase().includes(q) ||
+          (item.asset_tag || '').toLowerCase().includes(q) ||
+          (item.manufacturer || '').toLowerCase().includes(q) ||
+          (item.model || '').toLowerCase().includes(q) ||
+          (item.notes || '').toLowerCase().includes(q)
+        );
+      })
+    : items;
+
   // Sequential numbering across all items
   let globalIndex = 0;
 
   // Group by category group (not equipment type)
-  const grouped = items.reduce((acc, item) => {
+  const grouped = filteredItems.reduce((acc, item) => {
     let groupName = 'Other';
     if (categoryGroups.length > 0) {
       // Exact match first
@@ -568,7 +613,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader title="Lifting Equipment Register" subtitle={`${siteName} • ${items.length} items`} onBack={onBack} />
 
-      <div className="px-4 py-2 border-b border-border space-y-2">
+      <div className="sticky top-0 z-20 bg-background px-4 py-2 border-b border-border space-y-2">
         <div className="flex gap-2">
           <Button onClick={handleShare} variant="outline" className="flex-1 gap-1 text-xs">
             <Share2 className="w-3.5 h-3.5" /> Share
@@ -592,6 +637,15 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
             </Button>
           )}
           <Button onClick={onAddNew} className="flex-1 gap-2">+ Add Item</Button>
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search..."
+              className="pl-8 h-9 text-sm"
+            />
+          </div>
         </div>
       </div>
 
@@ -712,9 +766,22 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                       </button>
                     </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-2 pl-10">
-                    Registered by {item.registered_by_name} • {new Date(item.created_at).toLocaleDateString('en-AU')}
-                  </p>
+                  <div className="flex items-center justify-between mt-2 pl-10">
+                    <p className="text-[10px] text-muted-foreground">
+                      Registered by {item.registered_by_name} • {new Date(item.created_at).toLocaleDateString('en-AU')}
+                    </p>
+                    {lastInspections[item.id] && (
+                      <div className="flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                        <span className="text-[10px] text-green-700 font-medium">Inspected</span>
+                      </div>
+                    )}
+                  </div>
+                  {lastInspections[item.id] && (
+                    <p className="text-[10px] text-muted-foreground pl-10 mt-0.5">
+                      Inspected by {lastInspections[item.id].technician_name} • {new Date(lastInspections[item.id].inspection_date).toLocaleDateString('en-AU')}
+                    </p>
+                  )}
                 </Card>
               );
             })}
@@ -800,6 +867,19 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
               </div>
               <div><Label className="text-xs">Grade</Label><Input value={editForm.grade || ''} onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))} /></div>
             </div>
+            {/* Tag Present */}
+            <div>
+              <Label className="text-xs">Tag Present</Label>
+              <Select value={(editForm as any).tag_present || 'unknown'} onValueChange={v => setEditForm(f => ({ ...f, tag_present: v } as any))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">Yes</SelectItem>
+                  <SelectItem value="false">No</SelectItem>
+                  <SelectItem value="illegible">Illegible</SelectItem>
+                  <SelectItem value="unknown">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div><Label className="text-xs">Length (m)</Label><Input type="number" value={editForm.length_m ?? ''} onChange={e => setEditForm(f => ({ ...f, length_m: e.target.value ? Number(e.target.value) : null }))} /></div>
               <div>
@@ -810,6 +890,33 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 </Select>
               </div>
             </div>
+            {/* Dynamic group fields */}
+            {(() => {
+              const editActiveFields = new Set<string>();
+              if (categoryGroups.length > 0) {
+                categoryGroups.forEach(g => {
+                  if (g.types.includes(editForm.equipment_type || '')) {
+                    g.fields.forEach(f => editActiveFields.add(f));
+                  }
+                });
+              }
+              return editActiveFields.size > 0 ? (
+                <div className="space-y-2">
+                  {editActiveFields.has('sling_configuration') && (
+                    <div><Label className="text-xs">Sling Configuration</Label><Input value={(editForm as any).sling_configuration || ''} onChange={e => setEditForm(f => ({ ...f, sling_configuration: e.target.value } as any))} /></div>
+                  )}
+                  {editActiveFields.has('sling_leg_count') && (
+                    <div><Label className="text-xs">Number of Legs</Label><Input type="number" value={(editForm as any).sling_leg_count ?? ''} onChange={e => setEditForm(f => ({ ...f, sling_leg_count: e.target.value ? Number(e.target.value) : null } as any))} /></div>
+                  )}
+                  {editActiveFields.has('lift_height_m') && (
+                    <div><Label className="text-xs">Lift Height (m)</Label><Input type="number" step="0.1" value={(editForm as any).lift_height_m ?? ''} onChange={e => setEditForm(f => ({ ...f, lift_height_m: e.target.value ? Number(e.target.value) : null } as any))} /></div>
+                  )}
+                  {editActiveFields.has('span_m') && (
+                    <div><Label className="text-xs">Span (m)</Label><Input type="number" step="0.1" value={(editForm as any).span_m ?? ''} onChange={e => setEditForm(f => ({ ...f, span_m: e.target.value ? Number(e.target.value) : null } as any))} /></div>
+                  )}
+                </div>
+              ) : null;
+            })()}
             <div><Label className="text-xs">Notes / Comments</Label><Input value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
             {/* Photo in edit dialog */}
             <div>
