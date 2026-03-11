@@ -74,6 +74,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
   const [notebookLmLink, setNotebookLmLink] = useState<string>('');
   const [showNotebookLmEdit, setShowNotebookLmEdit] = useState(false);
   const [notebookLmInput, setNotebookLmInput] = useState('');
