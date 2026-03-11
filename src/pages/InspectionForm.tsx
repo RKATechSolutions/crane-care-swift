@@ -132,6 +132,7 @@ export default function InspectionForm() {
       return;
     }
     dispatch({ type: 'COMPLETE_INSPECTION' });
+    dispatch({ type: 'BACK_TO_CRANES' });
   };
 
   const craneStatuses: CraneOperationalStatus[] = ['Safe to Operate', 'Operate with Limitations', 'Unsafe to Operate'];
