@@ -112,6 +112,19 @@ export default function TechDashboard({ onNavigate }: TechDashboardProps) {
         <FiveStarGoalBanner />
 
         {/* Quick Stats */}
+        {statsError ? (
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-center space-y-2">
+            <p className="text-sm text-destructive font-medium">Failed to load dashboard data</p>
+            <button
+              onClick={loadStats}
+              disabled={statsLoading}
+              className="inline-flex items-center gap-2 px-4 h-9 bg-primary text-primary-foreground rounded-lg font-medium text-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${statsLoading ? 'animate-spin' : ''}`} />
+              {statsLoading ? 'Retrying...' : 'Retry'}
+            </button>
+          </div>
+        ) : (
         <div className="flex gap-3">
           <button onClick={() => onNavigate('todo')} className="flex-1 bg-muted rounded-xl p-3 text-center active:scale-[0.97] transition-all">
             <p className="text-2xl font-bold text-foreground">{todoCount}</p>
