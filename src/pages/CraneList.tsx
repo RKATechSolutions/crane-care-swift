@@ -918,59 +918,124 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
               <p className="font-medium">No inspection reports found</p>
             </div>
           ) : (
-            clientReports.map(r => (
-              <div key={r.id} className="px-4 py-3 border-b border-border">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm">{r.asset_name || 'Site Inspection'}</p>
-                    <p className="text-xs text-muted-foreground">{r.technician_name} • {new Date(r.inspection_date).toLocaleDateString()}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {r.crane_status && (
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        r.crane_status === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
-                        r.crane_status === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
-                        'bg-rka-orange-light text-rka-orange'
-                      }`}>{r.crane_status}</span>
-                    )}
-                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                      r.status === 'Completed' ? 'bg-rka-green-light text-rka-green-dark' : 'bg-muted text-muted-foreground'
-                    }`}>{r.status}</span>
+            <>
+              {/* Select all toggle */}
+              <button
+                onClick={() => {
+                  if (selectedReportIds.size === clientReports.length) {
+                    setSelectedReportIds(new Set());
+                  } else {
+                    setSelectedReportIds(new Set(clientReports.map(r => r.id)));
+                  }
+                }}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedReportIds.size === clientReports.length}
+                  readOnly
+                  className="h-4 w-4 rounded border-primary accent-primary"
+                />
+                <span>{selectedReportIds.size === clientReports.length ? 'Deselect all' : 'Select all'}</span>
+              </button>
+
+              {clientReports.map(r => (
+                <div key={r.id} className={`px-4 py-3 border-b border-border transition-colors ${selectedReportIds.has(r.id) ? 'bg-primary/5' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedReportIds.has(r.id)}
+                      onChange={() => {
+                        setSelectedReportIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(r.id)) next.delete(r.id);
+                          else next.add(r.id);
+                          return next;
+                        });
+                      }}
+                      className="h-4 w-4 rounded border-primary accent-primary flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-sm">{r.asset_name || 'Site Inspection'}</p>
+                          <p className="text-xs text-muted-foreground">{r.technician_name} • {new Date(r.inspection_date).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {r.crane_status && (
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              r.crane_status === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
+                              r.crane_status === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
+                              'bg-rka-orange-light text-rka-orange'
+                            }`}>{r.crane_status}</span>
+                          )}
+                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                            r.status === 'Completed' ? 'bg-rka-green-light text-rka-green-dark' : 'bg-muted text-muted-foreground'
+                          }`}>{r.status}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => {
+                            const crane: Crane = {
+                              id: `report-${r.id}`,
+                              siteId: site.id,
+                              name: r.asset_name || 'Site Inspection',
+                              type: 'Single Girder Overhead',
+                              serialNumber: 'N/A',
+                              capacity: 'N/A',
+                              manufacturer: 'N/A',
+                              yearInstalled: 0,
+                            };
+                            setActiveDbForm({ formId: r.form_id, crane, assetId: r.asset_id || undefined });
+                            setEditingReportId(r.id);
+                          }}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setDeletingReportId(r.id)}
+                          className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-bold"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={() => {
-                      // Open the inspection form in edit mode
-                      const crane: Crane = {
-                        id: `report-${r.id}`,
-                        siteId: site.id,
-                        name: r.asset_name || 'Site Inspection',
-                        type: 'Single Girder Overhead',
-                        serialNumber: 'N/A',
-                        capacity: 'N/A',
-                        manufacturer: 'N/A',
-                        yearInstalled: 0,
-                      };
-                      setActiveDbForm({ formId: r.form_id, crane, assetId: r.asset_id || undefined });
-                      // Set existing inspection ID by storing it for the form
-                      setEditingReportId(r.id);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => setDeletingReportId(r.id)}
-                    className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-bold"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    Delete
-                  </button>
-                </div>
+              ))}
+
+              {/* Action buttons */}
+              <div className="p-4 space-y-2">
+                <button
+                  onClick={() => {
+                    if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
+                    toast({ title: `Job Site Summary started with ${selectedReportIds.size} report(s)` });
+                    // TODO: Navigate to Job Site Summary with selected report IDs
+                  }}
+                  disabled={selectedReportIds.size === 0}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40"
+                >
+                  <ClipboardCheck className="w-4 h-4" />
+                  Complete Job Site Summary with these reports
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
+                    toast({ title: `Downloading ${selectedReportIds.size} report(s)…` });
+                    // TODO: Trigger individual PDF downloads for each selected report
+                  }}
+                  disabled={selectedReportIds.size === 0}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-border text-foreground font-bold text-sm disabled:opacity-40"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Selected
+                </button>
               </div>
-            ))
+            </>
           )}
         </div>
       )}
