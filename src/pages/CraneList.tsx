@@ -369,8 +369,8 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
     setDeleting(false);
     setDeletingReportId(null);
   };
-
-
+                    const zip = new JSZip();
+                    
   const groupedAssets = displayAssets.reduce((acc, asset) => {
     const key = asset.class_name;
     if (!acc[key]) acc[key] = [];
