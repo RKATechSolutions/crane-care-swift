@@ -8,9 +8,10 @@ interface AppHeaderProps {
   onNoteToAdmin?: () => void;
   unsafeBanner?: boolean;
   logoOnly?: boolean;
+  children?: React.ReactNode;
 }
 
-export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner, logoOnly }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner, logoOnly, children }: AppHeaderProps) {
   return (
     <div className="sticky top-0 z-50">
       {unsafeBanner && (
@@ -49,6 +50,7 @@ export function AppHeader({ title, subtitle, onBack, onNoteToAdmin, unsafeBanner
           </button>
         )}
       </header>
+      {children}
     </div>
   );
 }

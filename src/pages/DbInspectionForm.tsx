@@ -65,6 +65,7 @@ export default function DbInspectionForm({
   const [inspectionDate, setInspectionDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [craneStatus, setCraneStatus] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string>('');
+  const [lastSaved, setLastSaved] = useState<string | null>(null);
 
 
   // Load questions for this form
@@ -199,7 +200,7 @@ export default function DbInspectionForm({
               pass_fail_status: sr.pass_fail_status,
               severity: sr.severity,
               comment: sr.comment,
-              photo_urls: sr.photo_urls || [],
+              photo_urls: Array.isArray(sr.photo_urls) ? sr.photo_urls : [],
               defect_flag: sr.defect_flag,
               urgency: (sr as any).urgency || null,
               defect_types: (sr as any).defect_types || [],
@@ -561,6 +562,7 @@ export default function DbInspectionForm({
         }
       }
 
+      setLastSaved(new Date().toLocaleTimeString());
       toast.success(status === 'Submitted' ? 'Inspection submitted!' : 'Progress saved');
     } catch (err: any) {
       console.error('Save error:', err);
@@ -600,7 +602,17 @@ export default function DbInspectionForm({
         subtitle={`${formName} • ${totalAnswered}/${totalQuestions}`}
         onBack={onBack}
         onNoteToAdmin={() => setNoteOpen(true)}
-      />
+      >
+        {lastSaved && (
+          <div className="px-4 py-1 bg-muted/30 border-b border-border flex items-center justify-between">
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <Check className="w-3 h-3 text-rka-green" />
+              Autosaved
+            </span>
+            <span className="text-[10px] text-muted-foreground">{lastSaved}</span>
+          </div>
+        )}
+      </AppHeader>
 
       <ProgressBar
         currentSection={currentSectionIdx}
@@ -745,22 +757,39 @@ export default function DbInspectionForm({
       )}
 
 
-      <div className="px-4 py-2 border-t border-border flex gap-2">
+      <div className="px-4 py-2 border-t border-border flex gap-2 bg-background sticky bottom-0 z-30">
+        <button
+          onClick={() => saveInspection('Draft')}
+          disabled={saving}
+          className="w-12 h-12 flex items-center justify-center rounded-xl bg-muted text-muted-foreground active:bg-muted-foreground active:text-background transition-all"
+        >
+          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+        </button>
+
         {currentSectionIdx > 0 && (
           <button
             onClick={() => handleSectionChange(currentSectionIdx - 1)}
             className="flex-1 tap-target bg-muted rounded-xl font-semibold text-sm"
           >
-            ← {sections[currentSectionIdx - 1].name}
+            ← Back
           </button>
         )}
-        {currentSectionIdx < sections.length - 1 && (
+        {currentSectionIdx < sections.length - 1 ? (
           <button
             onClick={() => handleSectionChange(currentSectionIdx + 1)}
             className="flex-1 tap-target bg-foreground text-background rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
           >
             <Check className="w-5 h-5 text-rka-green" />
-            Next — {sections[currentSectionIdx + 1].name}
+            Next
+          </button>
+        ) : (
+          <button
+            onClick={() => saveInspection('Submitted')}
+            disabled={saving || totalAnswered < totalQuestions}
+            className="flex-1 tap-target bg-rka-green text-primary-foreground rounded-xl font-black text-sm flex items-center justify-center gap-2"
+          >
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+            Submit Report
           </button>
         )}
       </div>

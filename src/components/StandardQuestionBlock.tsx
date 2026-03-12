@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
-import { CheckCircle, XCircle, MinusCircle, Camera, X, ChevronDown, ChevronUp, AlertTriangle, ImagePlus } from 'lucide-react';
-import { compressImage } from '@/utils/uploadHelper';
+import React, { useState, useRef, useEffect } from 'react';
+import { CheckCircle, XCircle, MinusCircle, Camera, X, ChevronDown, ChevronUp, AlertTriangle, ImagePlus, Loader2 } from 'lucide-react';
+import { compressImage, uploadCompressedFile } from '@/utils/uploadHelper';
+import { toast } from 'sonner';
 
 export interface QuestionConfig {
   question_id: string;
@@ -59,11 +60,18 @@ const URGENCY_LEVELS = [
 ];
 
 export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
-  const [showComment, setShowComment] = useState(!!response.comment);
-  const [showPhotos, setShowPhotos] = useState(response.photo_urls.length > 0);
+  const [showComment, setShowComment] = useState(false);
+  const [showPhotos, setShowPhotos] = useState(false);
   const [defectExpanded, setDefectExpanded] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+
+  // Sync internal state with props when they change (important for resuming drafts)
+  useEffect(() => {
+    if (response.comment) setShowComment(true);
+    const urls = Array.isArray(response.photo_urls) ? response.photo_urls : [];
+    if (urls.length > 0) setShowPhotos(true);
+  }, [response.comment, response.photo_urls]);
 
   // Safely coerce any field that should be string[] but may come from DB as a JSON string
   const safeArray = (val: any): string[] => {
@@ -75,6 +83,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
 
   const safeOptions = safeArray(question.options);
   const safeAdvancedOptions = safeArray(question.advanced_defect_options);
+  const photoUrls = safeArray(response.photo_urls);
 
   const failTriggers = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
   const isFail = failTriggers.includes(response.pass_fail_status || '') || failTriggers.includes(response.answer_value || '');
@@ -133,25 +142,28 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
     }
   };
 
+  const [uploading, setUploading] = useState(false);
+
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploading(true);
     try {
-      const compressedBlob = await compressImage(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        const urls = [...response.photo_urls, reader.result as string];
-        update({ photo_urls: urls });
-      };
-      reader.readAsDataURL(compressedBlob);
-    } catch (err) {
-      console.error('Photo compression failed:', err);
+      const publicUrl = await uploadCompressedFile(file, 'job-documents', `inspections/${question.question_id}`);
+      const urls = [...photoUrls, publicUrl];
+      update({ photo_urls: urls });
+      toast.success('Photo uploaded');
+    } catch (err: any) {
+      console.error('Photo upload failed:', err);
+      toast.error('Failed to upload photo: ' + (err.message || 'Unknown error'));
+    } finally {
+      setUploading(false);
     }
     e.target.value = '';
   };
 
   const removePhoto = (idx: number) => {
-    update({ photo_urls: response.photo_urls.filter((_, i) => i !== idx) });
+    update({ photo_urls: photoUrls.filter((_, i) => i !== idx) });
   };
 
   const toggleDefectType = (type: string) => {
@@ -174,9 +186,9 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
 
   const renderPhotosSection = (required: boolean) => (
     <div className="space-y-2">
-      {response.photo_urls.length > 0 && (
+      {photoUrls.length > 0 && (
         <div className="flex gap-2 flex-wrap">
-          {response.photo_urls.map((p, i) => (
+          {photoUrls.map((p, i) => (
             <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
               <img src={p} alt="" className="w-full h-full object-cover" />
               <button onClick={() => removePhoto(i)} className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center">
@@ -191,19 +203,21 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
         <input ref={galleryRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
         <button
           onClick={() => fileRef.current?.click()}
-          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
+          disabled={uploading}
+          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${uploading ? 'bg-muted text-muted-foreground' : required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
             }`}
         >
-          <Camera className="w-4 h-4" />
-          Take Photo
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+          {uploading ? 'Uploading...' : 'Take Photo'}
         </button>
         <button
           onClick={() => galleryRef.current?.click()}
-          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
+          disabled={uploading}
+          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${uploading ? 'bg-muted text-muted-foreground' : required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
             }`}
         >
-          <ImagePlus className="w-4 h-4" />
-          Upload
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+          {uploading ? 'Uploading...' : 'Upload'}
         </button>
       </div>
     </div>
@@ -455,8 +469,8 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 <div className="pt-2">
                   <button
                     onClick={() => setDefectExpanded(false)}
-                    disabled={!response.urgency || !response.comment || (response.photo_urls.length === 0)}
-                    className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${response.urgency && response.comment && response.photo_urls.length > 0
+                    disabled={!response.urgency || !response.comment || (photoUrls.length === 0)}
+                    className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${response.urgency && response.comment && photoUrls.length > 0
                       ? 'bg-rka-green text-white shadow-lg shadow-rka-green/20'
                       : 'bg-muted text-muted-foreground opacity-50'
                       }`}
@@ -464,7 +478,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                     <CheckCircle className="w-5 h-5" />
                     Save Defect Detail
                   </button>
-                  {(!response.urgency || !response.comment || response.photo_urls.length === 0) && (
+                  {(!response.urgency || !response.comment || photoUrls.length === 0) && (
                     <p className="text-[10px] text-center text-rka-red mt-2 font-bold uppercase tracking-tight">
                       {!response.urgency ? 'Select Urgency' : !response.comment ? 'Add Comment' : 'Photo Required'} to Save
                     </p>
