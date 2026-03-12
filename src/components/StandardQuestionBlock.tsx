@@ -51,9 +51,9 @@ const ALL_DEFECT_CATEGORIES = [
 ];
 
 const URGENCY_LEVELS = [
-  { value: 'Monitor', label: 'Monitor', color: 'bg-green-600 text-white' },
+  { value: 'Monitor', label: 'Monitor', color: 'bg-[#fff3cd] text-[#856404]' },
   { value: 'Schedule Repair Before Next Service', label: 'Schedule Repair Before Next Service', color: 'bg-yellow-500 text-foreground' },
-  { value: 'Urgent Repair Before Next Use', label: 'Urgent Repair Before Next Use', color: 'bg-rka-orange text-destructive-foreground' },
+  { value: 'Urgent Repair Within 7 Days', label: 'Urgent Repair Within 7 Days', color: 'bg-rka-orange text-destructive-foreground' },
   { value: 'Immediate - Remove From Service and Repair Immediately', label: 'Immediate - Remove From Service', color: 'bg-rka-red text-destructive-foreground' },
 ];
 
@@ -439,9 +439,30 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 {/* Photo Upload */}
                 <div>
                   <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1.5">
-                    Photo {response.urgency === 'Immediate - Remove From Service and Repair Immediately' || question.requires_photo_on_fail ? '(Required)' : '(Optional)'}
+                    Photo (Required)
                   </p>
-                  {renderPhotosSection(response.urgency === 'Immediate - Remove From Service and Repair Immediately' || question.requires_photo_on_fail)}
+                  {renderPhotosSection(true)}
+                </div>
+
+                {/* Save Defect Button */}
+                <div className="pt-2">
+                  <button
+                    onClick={() => setDefectExpanded(false)}
+                    disabled={!response.urgency || !response.comment || (response.photo_urls.length === 0)}
+                    className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+                      response.urgency && response.comment && response.photo_urls.length > 0
+                        ? 'bg-rka-green text-white shadow-lg shadow-rka-green/20'
+                        : 'bg-muted text-muted-foreground opacity-50'
+                    }`}
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Save Defect Detail
+                  </button>
+                  {(!response.urgency || !response.comment || response.photo_urls.length === 0) && (
+                    <p className="text-[10px] text-center text-rka-red mt-2 font-bold uppercase tracking-tight">
+                      {!response.urgency ? 'Select Urgency' : !response.comment ? 'Add Comment' : 'Photo Required'} to Save
+                    </p>
+                  )}
                 </div>
 
                 {/* Technician Internal / Quoting Notes */}

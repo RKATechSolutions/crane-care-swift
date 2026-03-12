@@ -21,13 +21,14 @@ interface AppState {
   adminNotes: AdminNote[];
   sentReports: SentReport[];
   adminConfig: AdminFormConfig;
+  selectedReportIdsForSummary: string[];
 }
 
 type Action =
   | { type: 'LOGIN'; payload: User }
   | { type: 'LOGOUT' }
   | { type: 'SELECT_SITE'; payload: Site }
-  | { type: 'SELECT_CRANE'; payload: Crane }
+  | { type: 'SELECT_CRANE'; payload: { crane: Crane; selectedReportIds?: string[] } }
   | { type: 'START_INSPECTION'; payload: Inspection }
   | { type: 'UPDATE_INSPECTION_ITEM'; payload: { itemId: string; result: InspectionItemResult } }
   | { type: 'SET_CRANE_STATUS'; payload: { status: CraneOperationalStatus; overridden?: boolean } }
@@ -73,6 +74,7 @@ const initialState: AppState = {
   adminNotes: [],
   sentReports: [],
   adminConfig: loadSavedAdminConfig(),
+  selectedReportIdsForSummary: [],
 };
 
 function computeCraneStatus(items: InspectionItemResult[]): CraneOperationalStatus | undefined {
@@ -103,7 +105,11 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SELECT_SITE':
       return { ...state, selectedSite: action.payload, selectedCrane: null, currentInspection: null };
     case 'SELECT_CRANE':
-      return { ...state, selectedCrane: action.payload };
+      return {
+        ...state,
+        selectedCrane: action.payload.crane,
+        selectedReportIdsForSummary: action.payload.selectedReportIds || []
+      };
     case 'START_INSPECTION':
       return { ...state, currentInspection: action.payload };
     case 'UPDATE_INSPECTION_ITEM': {
@@ -310,48 +316,100 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Listen for Supabase auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    let mounted = true;
+    let authCheckTimeout: ReturnType<typeof setTimeout>;
+
+    const processSession = async (session: any, source: string) => {
+      if (!mounted) return;
+      console.log(`AppContext: Processing session from ${source}`, session?.user?.id);
+      
       if (session?.user) {
         const email = session.user.email || '';
         const meta = session.user.user_metadata || {};
         const displayName = meta.display_name || meta.full_name || email.split('@')[0];
         
-        // Check if user has admin role in user_roles table
         let role: 'technician' | 'admin' = 'technician';
         try {
-          const { data: roleData } = await (supabase as any)
+          // Fetch role with a timeout to prevent hanging
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000);
+          
+          const { data: roleData, error: roleError } = await (supabase as any)
             .from('user_roles')
             .select('role')
             .eq('user_id', session.user.id)
             .eq('role', 'admin')
             .maybeSingle();
-          if (roleData) role = 'admin';
-        } catch {
-          // user_roles table may not exist yet during migration
+          
+          clearTimeout(timeoutId);
+          
+          if (roleError) console.error("AppContext: Error fetching role:", roleError);
+          if (roleData) {
+            console.log("AppContext: User is admin");
+            role = 'admin';
+          }
+        } catch (err) {
+          console.error("AppContext: Exception fetching role:", err);
         }
 
-        dispatch({
-          type: 'LOGIN',
-          payload: {
-            id: session.user.id,
-            name: displayName,
-            email,
-            role,
-          },
-        });
-      } else if (event === 'SIGNED_OUT') {
-        dispatch({ type: 'LOGOUT' });
+        if (mounted) {
+          dispatch({
+            type: 'LOGIN',
+            payload: { id: session.user.id, name: displayName, email, role },
+          });
+        }
+      } else {
+        if (mounted) dispatch({ type: 'LOGOUT' });
       }
+
+      if (mounted) {
+        console.log(`AppContext: Setting authLoading to false (from ${source})`);
+        setAuthLoading(false);
+        if (authCheckTimeout) clearTimeout(authCheckTimeout);
+      }
+    };
+
+    // 1. Initialize auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("AppContext: auth state change event:", event, "session:", !!session);
+      if (event === 'SIGNED_OUT') {
+        dispatch({ type: 'LOGOUT' });
+        setAuthLoading(false);
+      } else if (session) {
+        processSession(session, `onAuthStateChange(${event})`);
+      } else {
+        setAuthLoading(false);
+      }
+    });
+
+    // 2. Immediate check for existing session as well
+    // This handles the case where onAuthStateChange might fire late or not at all on mount
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) console.error("AppContext: Error getting session:", error);
+      if (session) {
+        processSession(session, 'getSession');
+      } else {
+        console.log("AppContext: No session from getSession, setting authLoading to false");
+        setAuthLoading(false);
+      }
+    }).catch(err => {
+      console.error("AppContext: getSession exception:", err);
       setAuthLoading(false);
     });
 
-    // Check existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setAuthLoading(false);
-      // onAuthStateChange will handle the LOGIN dispatch
-    });
+    // 3. Failsafe timeout: If we're still loading after 10 seconds, something is wrong
+    authCheckTimeout = setTimeout(() => {
+      if (mounted && authLoading) {
+        console.warn("AppContext: Auth check timed out. Forcing authLoading to false.");
+        setAuthLoading(false);
+      }
+    }, 10000);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      if (authCheckTimeout) clearTimeout(authCheckTimeout);
+    };
   }, []);
 
   // Load admin config from database on mount

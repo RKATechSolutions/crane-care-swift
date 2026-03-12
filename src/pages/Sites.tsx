@@ -47,7 +47,38 @@ export default function Sites({ onBack }: { onBack?: () => void }) {
         .eq('status', 'Active')
         .order('client_name');
       if (clientsErr) throw new Error(clientsErr.message);
-      if (clients) setDbClients(clients);
+
+      // Fetch recent clients from inspections to determine "Top 3 Recent"
+      const { data: recentInspections } = await supabase
+        .from('db_inspections')
+        .select('site_name')
+        .order('inspection_date', { ascending: false })
+        .limit(100);
+
+      const recentClientNames: string[] = [];
+      if (recentInspections) {
+        for (const insp of recentInspections) {
+          if (insp.site_name && !recentClientNames.includes(insp.site_name)) {
+            recentClientNames.push(insp.site_name);
+            if (recentClientNames.length >= 3) break;
+          }
+        }
+      }
+
+      if (clients) {
+        // Sort: Recent 3 first, then alphabetical
+        const sortedClients = [...clients].sort((a, b) => {
+          const aIndex = recentClientNames.indexOf(a.client_name);
+          const bIndex = recentClientNames.indexOf(b.client_name);
+          
+          if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+          if (aIndex !== -1) return -1;
+          if (bIndex !== -1) return 1;
+          
+          return a.client_name.localeCompare(b.client_name);
+        });
+        setDbClients(sortedClients);
+      }
 
       // Fetch asset counts grouped by client_id and account_name
       const { data: assets, error: assetsErr } = await supabase
@@ -78,7 +109,8 @@ export default function Sites({ onBack }: { onBack?: () => void }) {
     fetchData();
   }, []);
 
-  // Combine mock sites with DB clients (deduped by name)
+  // Combine mock sites with DB clients
+  // Since dbClients is already sorted with top 3 recent + alphabetical, we just need to preserve that
   const mockSiteNames = new Set(state.sites.map(s => s.name.toLowerCase()));
   const dbSitesAsSites = dbClients
     .filter(c => !mockSiteNames.has(c.client_name.toLowerCase()))
@@ -92,6 +124,20 @@ export default function Sites({ onBack }: { onBack?: () => void }) {
     }));
 
   const allSites = [...state.sites, ...dbSitesAsSites];
+  // Note: state.sites are typically few/mock, dbSitesAsSites is the bulk.
+  // To strictly follow "Top 3 recent then alphabetical" for ALL sites:
+  const recentNamesFromDb = dbClients.slice(0, 3).map(c => c.client_name.toLowerCase());
+  
+  const finalSortedSites = allSites.sort((a, b) => {
+    const aRecentIndex = recentNamesFromDb.indexOf(a.name.toLowerCase());
+    const bRecentIndex = recentNamesFromDb.indexOf(b.name.toLowerCase());
+
+    if (aRecentIndex !== -1 && bRecentIndex !== -1) return aRecentIndex - bRecentIndex;
+    if (aRecentIndex !== -1) return -1;
+    if (bRecentIndex !== -1) return 1;
+
+    return a.name.localeCompare(b.name);
+  });
 
   const getAssetCount = (siteId: string, siteName: string): number => {
     // 1. Try client_id lookup for DB sites
@@ -116,7 +162,7 @@ export default function Sites({ onBack }: { onBack?: () => void }) {
     return 0;
   };
 
-  const filtered = allSites.filter(s =>
+  const filtered = finalSortedSites.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
     s.address.toLowerCase().includes(search.toLowerCase())
   );

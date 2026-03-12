@@ -1,4 +1,5 @@
 import { useApp } from '@/contexts/AppContext';
+import { sortAssetsNumerically } from '@/utils/sorting';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
@@ -196,7 +197,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
           .order('class_name');
 
         if (data && data.length > 0) {
-          setDbAssets(data);
+          setDbAssets(sortAssetsNumerically(data, 'class_name'));
           setLoading(false);
           return;
         }
@@ -226,7 +227,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
             .order('class_name');
 
           if (data && data.length > 0) {
-            setDbAssets(data);
+            setDbAssets(sortAssetsNumerically(data, 'class_name'));
             setLoading(false);
             return;
           }
@@ -293,7 +294,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
       i => i.craneId === crane.id && i.status !== 'completed'
     );
     if (existing) {
-      dispatch({ type: 'SELECT_CRANE', payload: crane });
+      dispatch({ type: 'SELECT_CRANE', payload: { crane } });
       dispatch({ type: 'START_INSPECTION', payload: existing });
       return;
     }
@@ -302,7 +303,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
   };
 
   const startInspectionWithTemplate = (crane: Crane, template: InspectionTemplate) => {
-    dispatch({ type: 'SELECT_CRANE', payload: crane });
+    dispatch({ type: 'SELECT_CRANE', payload: { crane } });
     setTemplatePickerCrane(null);
 
     const items: InspectionItemResult[] = template.sections.flatMap(section =>
@@ -636,7 +637,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
             </button>
             <button
               onClick={() => {
-                dispatch({ type: 'SELECT_CRANE', payload: { id: '__site_summary__' } as any });
+                dispatch({ type: 'SELECT_CRANE', payload: { crane: { id: '__site_summary__' } as any } });
               }}
               className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all"
             >
@@ -768,6 +769,20 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 {assets.map(asset => {
                   const crane = assetToCrane(asset);
                   const existing = getInspectionStatus(crane.id);
+                  const existingDbDraft = clientReports.find(r => r.asset_id === asset.id && r.status === 'Draft');
+                  const isCompleted = existing?.status === 'completed';
+                  const isInProgress = existing?.status === 'in_progress' || !!existingDbDraft;
+
+                  const handleContinueOrStart = () => {
+                    if (existingDbDraft) {
+                      // Open the existing draft directly
+                      const rawId = asset.id;
+                      setEditingReportId(existingDbDraft.id);
+                      setActiveDbForm({ formId: existingDbDraft.form_id, crane, assetId: rawId });
+                      return;
+                    }
+                    handleStartInspection(crane);
+                  };
 
                   return (
                     <div key={asset.id} className="border-b border-border">
@@ -808,17 +823,17 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                         </div>
 
                         <button
-                          onClick={() => handleStartInspection(crane)}
+                          onClick={handleContinueOrStart}
                           className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                            existing?.status === 'completed'
+                            isCompleted
                               ? 'bg-muted text-foreground'
-                              : existing?.status === 'in_progress'
+                              : isInProgress
                               ? 'bg-rka-orange text-destructive-foreground'
                               : 'bg-primary text-primary-foreground shadow-lg'
                           }`}
                         >
                           <PlayCircle className="w-5 h-5" />
-                          {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
+                          {isCompleted ? 'View / Re-open' : isInProgress ? 'Continue form' : 'Start Inspection'}
                         </button>
                       </div>
                     </div>
@@ -830,6 +845,9 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
             {/* Fallback to mock cranes if no DB assets */}
             {!loading && !hasDbAssets && mockCranes.map(crane => {
               const existing = getInspectionStatus(crane.id);
+              const existingDbDraft = clientReports.find(r => r.asset_name === crane.name && r.status === 'Draft');
+              const isCompleted = existing?.status === 'completed';
+              const isInProgress = existing?.status === 'in_progress' || !!existingDbDraft;
 
               return (
                 <div key={crane.id} className="border-b border-border">
@@ -856,15 +874,15 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                     <button
                       onClick={() => handleStartInspection(crane)}
                       className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                        existing?.status === 'completed'
+                        isCompleted
                           ? 'bg-muted text-foreground'
-                          : existing?.status === 'in_progress'
+                          : isInProgress
                           ? 'bg-rka-orange text-destructive-foreground'
                           : 'bg-primary text-primary-foreground shadow-lg'
                       }`}
                     >
                       <PlayCircle className="w-5 h-5" />
-                      {existing?.status === 'completed' ? 'View / Re-open' : existing?.status === 'in_progress' ? 'Continue Inspection' : 'Start Inspection'}
+                      {isCompleted ? 'View / Re-open' : isInProgress ? 'Continue form' : 'Start Inspection'}
                     </button>
                   </div>
                 </div>
@@ -1016,8 +1034,14 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 <button
                   onClick={() => {
                     if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
+                    dispatch({
+                      type: 'SELECT_CRANE',
+                      payload: {
+                        crane: { id: '__site_summary__' } as any,
+                        selectedReportIds: Array.from(selectedReportIds)
+                      }
+                    });
                     toast({ title: `Job Site Summary started with ${selectedReportIds.size} report(s)` });
-                    // TODO: Navigate to Job Site Summary with selected report IDs
                   }}
                   disabled={selectedReportIds.size === 0}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40"

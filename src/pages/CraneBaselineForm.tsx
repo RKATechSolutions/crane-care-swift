@@ -3,7 +3,8 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronRight, ChevronLeft, CheckCircle, Loader2, Save, FileText, Sparkles, Send } from 'lucide-react';
+import { format } from 'date-fns';
+import { ChevronRight, ChevronLeft, CheckCircle, Loader2, Save, FileText, Sparkles, Send, Download, Eye } from 'lucide-react';
 import { generateBaselinePdf } from '@/utils/generateBaselinePdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import type jsPDF from 'jspdf';
@@ -258,10 +259,22 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
         aiSummary: aiSummary || undefined,
       });
       setPreviewPdfDoc(doc);
+      return doc;
     } catch {
       toast({ title: 'Error', description: 'Failed to generate PDF.', variant: 'destructive' });
+      return null;
     }
     setGeneratingPdf(false);
+  };
+
+  const handleDownloadPdf = async () => {
+    let doc = previewPdfDoc;
+    if (!doc) doc = await handleExportPdf();
+    if (doc) {
+      const dateStr = format(new Date(), 'dd-MM-yyyy');
+      const filename = `${str('company_name') || site.name} Baseline Report ${dateStr}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
+      doc.save(filename);
+    }
   };
 
   const isTechField = (key: string) => !CUSTOMER_FIELDS.has(key);
@@ -576,25 +589,45 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
               </div>
             )}
 
-            {/* Tech mode: PDF + Complete */}
+            {/* Tech mode: PDF + Save + Complete */}
             {!isCustomer && (
-              <div className="flex gap-2">
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleExportPdf}
+                    disabled={generatingPdf}
+                    className="h-12 bg-muted rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                  >
+                    {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                    Preview PDF
+                  </button>
+                  <button
+                    onClick={save}
+                    disabled={saving}
+                    className="h-12 bg-muted rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save Draft
+                  </button>
+                </div>
+
                 <button
-                  onClick={handleExportPdf}
+                  onClick={handleDownloadPdf}
                   disabled={generatingPdf}
-                  className="flex-1 h-12 bg-foreground text-background rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                  className="w-full h-12 bg-muted rounded-xl font-bold text-sm flex items-center justify-center gap-2"
                 >
-                  {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                  Export PDF
+                  <Download className="w-4 h-4" />
+                  Download PDF
                 </button>
+
                 {status !== 'completed' && (
                   <button
                     onClick={complete}
                     disabled={saving}
-                    className="flex-1 h-12 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                    className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2"
                   >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                    Complete
+                    Complete Baseline
                   </button>
                 )}
               </div>
@@ -663,18 +696,9 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
         <button
           onClick={() => setSectionIdx(Math.max(0, sectionIdx - 1))}
           disabled={sectionIdx === 0}
-          className="h-11 px-4 rounded-xl font-bold text-sm bg-muted text-foreground disabled:opacity-30 flex items-center gap-1"
+          className="h-11 px-6 rounded-xl font-bold text-sm bg-muted text-foreground disabled:opacity-30 flex items-center gap-1"
         >
           <ChevronLeft className="w-4 h-4" /> Back
-        </button>
-
-        <button
-          onClick={save}
-          disabled={saving}
-          className="h-11 px-4 rounded-xl font-bold text-sm bg-accent text-accent-foreground flex items-center gap-1"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          Save
         </button>
 
         <div className="flex-1" />
@@ -682,7 +706,7 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
         <button
           onClick={() => setSectionIdx(Math.min(SECTIONS.length - 1, sectionIdx + 1))}
           disabled={sectionIdx === SECTIONS.length - 1}
-          className="h-11 px-4 rounded-xl font-bold text-sm bg-primary text-primary-foreground disabled:opacity-30 flex items-center gap-1"
+          className="h-11 px-6 rounded-xl font-bold text-sm bg-primary text-primary-foreground disabled:opacity-30 flex items-center gap-1"
         >
           Next <ChevronRight className="w-4 h-4" />
         </button>

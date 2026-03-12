@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Camera, Check, Pencil, AlertTriangle, Loader2, ScanLine, X, ImagePlus, Sparkles } from 'lucide-react';
+import { uploadBase64Image } from '@/utils/uploadHelper';
 
 const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
@@ -262,6 +263,26 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
     if (!state.currentUser) return;
     setSaving(true);
     try {
+      // Upload photos to storage first if they are base64
+      let tagUrl = tagPhoto;
+      let overallUrl = overallPhoto;
+      let stampUrl = stampPhoto;
+
+      try {
+        if (tagPhoto && tagPhoto.startsWith('data:')) {
+          tagUrl = await uploadBase64Image(tagPhoto, 'job-documents', 'lifting-register');
+        }
+        if (overallPhoto && overallPhoto.startsWith('data:')) {
+          overallUrl = await uploadBase64Image(overallPhoto, 'job-documents', 'lifting-register');
+        }
+        if (stampPhoto && stampPhoto.startsWith('data:')) {
+          stampUrl = await uploadBase64Image(stampPhoto, 'job-documents', 'lifting-register');
+        }
+      } catch (uploadErr) {
+        console.error('Photo upload failed, proceeding with original data:', uploadErr);
+        // Fallback to original data (might be slow but doesn't block save)
+      }
+
       const record: any = {
         equipment_type: form.equipment_type,
         manufacturer: form.manufacturer || null,
@@ -281,9 +302,9 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
         notes: form.notes || null,
         site_name: form.site_name || null,
         client_id: clientId || null,
-        tag_photo_url: tagPhoto || null,
-        overall_photo_url: overallPhoto || null,
-        stamp_photo_url: stampPhoto || null,
+        tag_photo_url: tagUrl || null,
+        overall_photo_url: overallUrl || null,
+        stamp_photo_url: stampUrl || null,
         ai_scan_used: !!aiResult,
         ai_scan_timestamp: aiResult ? new Date().toISOString() : null,
         ai_confidence_summary: aiResult ? {
@@ -312,7 +333,7 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
           register_id: inserted.id,
           technician_id: state.currentUser.id,
           technician_name: state.currentUser.name,
-          photos: [tagPhoto, overallPhoto, stampPhoto].filter(Boolean) as any,
+          photos: [tagUrl, overallUrl, stampUrl].filter(Boolean) as any,
           ai_raw_response: aiResult as any,
           fields_accepted: Object.entries(fieldStatuses)
             .filter(([, st]) => st.accepted && !st.edited)

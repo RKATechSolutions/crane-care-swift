@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AppHeader } from '@/components/AppHeader';
 import { Badge } from '@/components/ui/badge';
@@ -142,47 +142,68 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       const sorted = allItems.sort(naturalSort);
       setItems(sorted);
 
-      // Load latest inspections for tick display
+      // Load latest inspections AND photos in parallel batches
       if (sorted.length > 0) {
         const ids = sorted.map(i => i.id);
-        const batchSize = 50;
+        
+        // 1. Load inspections in parallel batches
+        const inspBatchSize = 100;
+        const inspBatches = [];
+        for (let i = 0; i < ids.length; i += inspBatchSize) {
+          inspBatches.push(ids.slice(i, i + inspBatchSize));
+        }
+
         const allInspections: Record<string, { technician_name: string; inspection_date: string }> = {};
-        for (let i = 0; i < ids.length; i += batchSize) {
-          const batch = ids.slice(i, i + batchSize);
-          const { data: inspData } = await supabase
+        await Promise.all(inspBatches.map(async (batch) => {
+          const { data } = await supabase
             .from('lifting_register_inspections')
             .select('register_item_id, technician_name, inspection_date')
             .in('register_item_id', batch)
             .order('inspection_date', { ascending: false });
-          if (inspData) {
-            (inspData as any[]).forEach(row => {
+          
+          if (data) {
+            data.forEach(row => {
               if (!allInspections[row.register_item_id]) {
-                allInspections[row.register_item_id] = { technician_name: row.technician_name, inspection_date: row.inspection_date };
+                allInspections[row.register_item_id] = { 
+                  technician_name: row.technician_name, 
+                  inspection_date: row.inspection_date 
+                };
               }
             });
           }
-        }
+        }));
         setLastInspections(allInspections);
-      }
 
-      // Lazy-load photos in background (separate query to avoid TOAST bloat timeout)
-      if (sorted.length > 0) {
-        const ids = sorted.map(i => i.id);
-        const batchSize = 20;
-        for (let i = 0; i < ids.length; i += batchSize) {
-          const batch = ids.slice(i, i + batchSize);
-          const { data: photoData } = await supabase
+        // 2. Load photos in parallel batches (smaller batches to avoid payload size issues)
+        const photoBatchSize = 25;
+        const photoBatches = [];
+        for (let i = 0; i < ids.length; i += photoBatchSize) {
+          photoBatches.push(ids.slice(i, i + photoBatchSize));
+        }
+
+        // Parallelize photo loading
+        await Promise.all(photoBatches.map(async (batch) => {
+          const { data } = await supabase
             .from('lifting_register')
             .select('id, overall_photo_url')
             .in('id', batch);
-          if (photoData) {
-            const photoMap = new Map(photoData.map(p => [p.id, p.overall_photo_url]));
-            setItems(prev => prev.map(item => {
-              const url = photoMap.get(item.id);
-              return url ? { ...item, overall_photo_url: url } : item;
-            }));
+          
+          if (data && data.length > 0) {
+            const photoMap = new Map(data.map(p => [p.id, p.overall_photo_url]));
+            setItems(prev => {
+              const updated = [...prev];
+              let hasChanges = false;
+              for (let i = 0; i < updated.length; i++) {
+                const url = photoMap.get(updated[i].id);
+                if (url && updated[i].overall_photo_url !== url) {
+                  updated[i] = { ...updated[i], overall_photo_url: url };
+                  hasChanges = true;
+                }
+              }
+              return hasChanges ? updated : prev;
+            });
           }
-        }
+        }));
       }
     } catch (err) {
       console.error('Failed loading lifting register:', err);
@@ -564,58 +585,62 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     setDeleteConfirm(null);
   };
 
-  // Filter items by search query
-  const filteredItems = searchQuery.trim()
-    ? items.filter(item => {
-        const q = searchQuery.toLowerCase();
-        return (
-          item.equipment_type.toLowerCase().includes(q) ||
-          (item.serial_number || '').toLowerCase().includes(q) ||
-          (item.asset_tag || '').toLowerCase().includes(q) ||
-          (item.manufacturer || '').toLowerCase().includes(q) ||
-          (item.model || '').toLowerCase().includes(q) ||
-          (item.notes || '').toLowerCase().includes(q)
-        );
-      })
-    : items;
+  // Filter and Group items using useMemo to avoid lag during background loading
+  const { filteredItems, grouped } = useMemo<{ filteredItems: RegisterItem[], grouped: Record<string, RegisterItem[]> }>(() => {
+    const filtered = searchQuery.trim()
+      ? items.filter(item => {
+          const q = searchQuery.toLowerCase();
+          return (
+            item.equipment_type.toLowerCase().includes(q) ||
+            (item.serial_number || '').toLowerCase().includes(q) ||
+            (item.asset_tag || '').toLowerCase().includes(q) ||
+            (item.manufacturer || '').toLowerCase().includes(q) ||
+            (item.model || '').toLowerCase().includes(q) ||
+            (item.notes || '').toLowerCase().includes(q)
+          );
+        })
+      : items;
+
+    const groupedMap = filtered.reduce((acc, item) => {
+      let groupName = 'Other';
+      if (categoryGroups.length > 0) {
+        // Exact match first
+        let match = categoryGroups.find(g => g.types.includes(item.equipment_type));
+        // Fuzzy fallback: match if item type contains a group type word or vice versa
+        if (!match) {
+          const itemLower = item.equipment_type.toLowerCase();
+          match = categoryGroups.find(g =>
+            g.types.some(t => {
+              const tLower = t.toLowerCase();
+              return itemLower.includes(tLower) || tLower.includes(itemLower);
+            }) ||
+            g.name.toLowerCase().includes(itemLower) ||
+            itemLower.includes(g.name.toLowerCase().split(' ')[0])
+          );
+        }
+        if (match) groupName = match.name;
+      } else {
+        groupName = item.equipment_type;
+      }
+      if (!acc[groupName]) acc[groupName] = [];
+      acc[groupName].push(item);
+      return acc;
+    }, {} as Record<string, RegisterItem[]>);
+
+    return { filteredItems: filtered, grouped: groupedMap };
+  }, [items, searchQuery, categoryGroups]);
 
   // Sequential numbering across all items
   let globalIndex = 0;
 
-  // Group by category group (not equipment type)
-  const grouped = filteredItems.reduce((acc, item) => {
-    let groupName = 'Other';
-    if (categoryGroups.length > 0) {
-      // Exact match first
-      let match = categoryGroups.find(g => g.types.includes(item.equipment_type));
-      // Fuzzy fallback: match if item type contains a group type word or vice versa
-      if (!match) {
-        const itemLower = item.equipment_type.toLowerCase();
-        match = categoryGroups.find(g =>
-          g.types.some(t => {
-            const tLower = t.toLowerCase();
-            return itemLower.includes(tLower) || tLower.includes(itemLower);
-          }) ||
-          g.name.toLowerCase().includes(itemLower) ||
-          itemLower.includes(g.name.toLowerCase().split(' ')[0])
-        );
-      }
-      if (match) groupName = match.name;
-    } else {
-      groupName = item.equipment_type;
-    }
-    if (!acc[groupName]) acc[groupName] = [];
-    acc[groupName].push(item);
-    return acc;
-  }, {} as Record<string, RegisterItem[]>);
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <AppHeader title="Lifting Equipment Register" subtitle={`${siteName} • ${items.length} items`} onBack={onBack} />
+      {/* Sticky header + toolbar */}
+      <div className="sticky top-0 z-30 bg-background">
+        <AppHeader title="Lifting Equipment Register" subtitle={`${siteName} • ${items.length} items`} onBack={onBack} />
 
-      <div className="flex-1 overflow-auto">
-        {/* Sticky toolbar inside the scroll container */}
-        <div className="sticky top-0 z-20 bg-background px-4 py-2 border-b border-border space-y-2 shadow-sm">
+        {/* Toolbar */}
+        <div className="bg-background px-4 py-2 border-b border-border space-y-2 shadow-sm">
           <div className="flex gap-2">
             <Button onClick={handleShare} variant="outline" className="flex-1 gap-1 text-xs">
               <Share2 className="w-3.5 h-3.5" /> Share
@@ -650,6 +675,9 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="flex-1 overflow-auto">
 
         {/* Hidden photo input */}
         <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
@@ -917,6 +945,18 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                 </div>
               ) : null;
             })()}
+            {/* Thread Size — Eye Bolt / Eye Nut only */}
+            {(editForm.equipment_type || '').toLowerCase().match(/eye[ -]?bolt|eye[ -]?nut/) && (
+              <div>
+                <Label className="text-xs">Thread Size</Label>
+                <Input
+                  placeholder="e.g. M12, M16, 1/2"
+                  value={editForm.grade || ''}
+                  onChange={e => setEditForm(f => ({ ...f, grade: e.target.value }))}
+                />
+                <p className="text-[10px] text-muted-foreground mt-0.5">Stored in Grade field</p>
+              </div>
+            )}
             <div><Label className="text-xs">Notes / Comments</Label><Input value={editForm.notes || ''} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
             {/* Photo in edit dialog */}
             <div>

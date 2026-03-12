@@ -4,7 +4,23 @@ import { format } from 'date-fns';
 import {
   Inspection, InspectionTemplate, Site, SiteJobSummary, Crane,
 } from '@/types/inspection';
+import { sortAssetsNumerically } from '@/utils/sorting';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
+
+const safeFormat = (date: any, formatStr: string) => {
+  if (!date) return '—';
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) {
+      // Try parsing common string formats if raw date fails
+      return '—';
+    }
+    return format(d, formatStr);
+  } catch (err) {
+    console.warn('PDF Date formatting error:', err);
+    return '—';
+  }
+};
 
 interface DbInspectionPdf {
   id: string;
@@ -62,9 +78,10 @@ interface JobPdfData {
   }[];
   dbInspections?: DbInspectionPdf[];
   dbDefects?: DbDefectPdf[];
+  servicePackage?: string;
 }
 
-// RKA brand colours (from Brand Guidelines)
+// RKA brand colours
 const RKA_GREEN: [number, number, number] = [96, 179, 76];
 const RKA_RED: [number, number, number] = [204, 41, 41];
 const RKA_ORANGE: [number, number, number] = [230, 126, 13];
@@ -93,21 +110,27 @@ function statusColor(status: string): [number, number, number] {
 function addHeader(doc: jsPDF, pageTitle: string, imgs: PdfImages) {
   const pageW = doc.internal.pageSize.getWidth();
 
-  if (imgs.logoImg) {
-    const logoH = 16;
-    const logoW = logoH * (imgs.logoImg.width / imgs.logoImg.height);
-    doc.addImage(imgs.logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(...DARK);
-    doc.text(pageTitle, pageW - 14, 16, { align: 'right' });
-    doc.setDrawColor(...BORDER_GRAY);
-    doc.setLineWidth(0.3);
-    doc.line(14, 22, pageW - 14, 22);
-    return 26;
+  try {
+    if (imgs.logoImg && imgs.logoImg.complete && imgs.logoImg.naturalWidth > 0) {
+      const logoH = 16;
+      const aspect = imgs.logoImg.naturalWidth / imgs.logoImg.naturalHeight;
+      const logoW = logoH * aspect;
+      doc.addImage(imgs.logoImg, 'PNG', (pageW - logoW) / 2, 4, logoW, logoH);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(...DARK);
+      doc.text(pageTitle, pageW - 14, 16, { align: 'right' });
+      doc.setDrawColor(...BORDER_GRAY);
+      doc.setLineWidth(0.3);
+      doc.line(14, 22, pageW - 14, 22);
+      return 26;
+    }
+  } catch (err) {
+    console.error('Header Logo Error:', err);
   }
 
-  // Fallback
+  // Fallback Header
   doc.setFillColor(...DARK);
   doc.rect(0, 0, pageW, 28, 'F');
   doc.setFontSize(11);
@@ -128,11 +151,16 @@ function addFooter(doc: jsPDF, pageNum: number, totalPages: number) {
   doc.setTextColor(150, 150, 150);
   doc.text(`Page ${pageNum} of ${totalPages}`, pageW / 2, pageH - 6, { align: 'center' });
   doc.text(`Generated ${format(new Date(), 'dd MMM yyyy HH:mm')}`, 14, pageH - 6);
+
+  if (pageNum === 1) {
+    doc.setFont('helvetica', 'italic');
+    doc.text('Australian Standards Reference: AS 2550 – Safe Use of Cranes | AS 1418 – Cranes, Hoists & Winches | AS 4991 – Lifting Devices', 14, pageH - 12);
+  }
 }
 
-function addSectionTitle(doc: jsPDF, y: number, title: string): number {
+function addSectionTitle(doc: jsPDF, y: number, title: string, color: [number, number, number] = RKA_GREEN): number {
   const pageW = doc.internal.pageSize.getWidth();
-  doc.setFillColor(...RKA_GREEN);
+  doc.setFillColor(...color);
   doc.rect(14, y, pageW - 28, 8, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
@@ -162,725 +190,262 @@ function addInfoRow(doc: jsPDF, y: number, label: string, value: string, maxWidt
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    img.crossOrigin = 'anonymous'; 
     img.onload = () => resolve(img);
-    img.onerror = reject;
+    img.onerror = () => {
+      console.warn('Failed to load image:', src);
+      reject(new Error('Image load failed'));
+    };
     img.src = src;
   });
 }
 
 export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
-  const { site, clientInfo, technicianName, jobType, inspections, template, summary, customerDefectComments, liftingDefects, dbInspections, dbDefects } = data;
+  console.log('PDF Generation Started');
+  const { site, clientInfo, technicianName, jobType, inspections, template, summary, liftingDefects, dbInspections, dbDefects, servicePackage } = data;
   
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const contentW = pageW - 28;
 
-  // Load header & footer images
+  // Load logo
   const imgs: PdfImages = {};
-  try { imgs.logoImg = await loadImage(rkaLogoUrl); } catch { /* fallback */ }
+  try { 
+    imgs.logoImg = await loadImage(rkaLogoUrl); 
+  } catch (err) { 
+    console.warn('Logo load skipped'); 
+  }
   
-  // ═══════════════════════════════════════════
   // PAGE 1: CLIENT INFO & SERVICE DETAILS
-  // ═══════════════════════════════════════════
   let y = addHeader(doc, 'Service Report', imgs);
   
-  // Client Information
   y = addSectionTitle(doc, y, 'Client Information');
-  y = addInfoRow(doc, y, 'Client Name', clientInfo?.client_name || site.name);
-  y = addInfoRow(doc, y, 'Site Address', clientInfo?.location_address || site.address);
-  y = addInfoRow(doc, y, 'Primary Contact', clientInfo?.primary_contact_name || site.contactName);
-  if (clientInfo?.primary_contact_email) {
-    y = addInfoRow(doc, y, 'Email', clientInfo.primary_contact_email);
-  }
-  if (clientInfo?.primary_contact_mobile) {
-    y = addInfoRow(doc, y, 'Mobile', clientInfo.primary_contact_mobile);
+  y = addInfoRow(doc, y, 'Business Name', clientInfo?.client_name || site.name);
+  y = addInfoRow(doc, y, 'Address', clientInfo?.location_address || site.address);
+  if (servicePackage) {
+    y = addInfoRow(doc, y, 'Service Package', servicePackage);
   }
   y += 4;
   
-  // Service Details
   y = addSectionTitle(doc, y, 'Service Details');
   y = addInfoRow(doc, y, 'Job Type', jobType);
   y = addInfoRow(doc, y, 'Technician', technicianName);
   y = addInfoRow(doc, y, 'Service Date', format(new Date(), 'dd MMM yyyy'));
-  y = addInfoRow(doc, y, 'Next Service Due', format(new Date(summary.nextInspectionDate), 'dd MMM yyyy'));
+  y = addInfoRow(doc, y, 'Next Inspection Due', `${safeFormat(summary.nextInspectionDate, 'dd MMM yyyy')} at ${summary.nextInspectionTime || '09:00'}`);
   y = addInfoRow(doc, y, 'Booking Confirmed', summary.bookingConfirmed ? 'Yes ✓' : 'No');
   y += 4;
   
-  // Assets Inspected
   y = addSectionTitle(doc, y, 'Assets Inspected');
   
-  // Use DB inspections if available, otherwise legacy
   const useDbInspections = dbInspections && dbInspections.length > 0;
-  const useDbDefectsData = dbDefects && dbDefects.length > 0;
+  let assetRows: string[][] = [];
   
-  let assetRows: string[][];
-  if (useDbInspections) {
-    assetRows = dbInspections!.map(insp => {
-      const defectCount = dbDefects ? dbDefects.filter(d => d.inspectionId === insp.id).length : 0;
-      return [
-        insp.asset_name || 'Unknown',
-        insp.form_id || '',
-        format(new Date(insp.inspection_date), 'dd MMM yyyy'),
-        defectCount > 0 ? `${defectCount}` : '0',
-        insp.crane_status || '—',
-      ];
+  try {
+    if (useDbInspections) {
+      assetRows = sortAssetsNumerically(dbInspections!, 'asset_name').map(insp => {
+        const defectCount = dbDefects ? dbDefects.filter(d => d.inspectionId === insp.id).length : 0;
+        return [
+          insp.asset_name || 'Unknown',
+          template?.craneType || 'Overhead Crane',
+          safeFormat(insp.inspection_date, 'dd MMM yyyy'),
+          defectCount > 0 ? `${defectCount}` : '0',
+          insp.crane_status || '—',
+        ];
+      });
+    } else {
+      assetRows = sortAssetsNumerically(inspections.map(i => ({ ...i, craneName: site.cranes.find(c => c.id === i.craneId)?.name })), 'craneName').map(insp => {
+        const crane = site.cranes.find(c => c.id === insp.craneId);
+        const defectCount = insp.items.filter(i => i.result === 'defect').length;
+        return [
+          crane?.name || 'Unknown',
+          crane?.type || '',
+          safeFormat(insp.completedAt || new Date(), 'dd MMM yyyy'),
+          defectCount > 0 ? `${defectCount}` : '0',
+          insp.craneStatus || '—',
+        ];
+      });
+    }
+
+    autoTable(doc, {
+      startY: y,
+      head: [useDbInspections ? ['Asset Name', 'Form', 'Date', 'Defects', 'Status'] : ['Asset Name', 'Type', 'Date', 'Defects', 'Status']],
+      body: assetRows,
+      margin: { left: 14, right: 14 },
+      styles: { fontSize: 7.5, cellPadding: 2 },
+      headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
+      didParseCell(cellData) {
+        if (cellData.section === 'body' && cellData.column.index === 4) {
+          const val = cellData.cell.raw as string;
+          if (val === 'Crane is Operational') cellData.cell.styles.textColor = RKA_GREEN;
+          else if (val === 'Unsafe to Operate') cellData.cell.styles.textColor = RKA_RED;
+        }
+      }
     });
-  } else {
-    assetRows = inspections.map(insp => {
-      const crane = site.cranes.find(c => c.id === insp.craneId);
-      const defectCount = insp.items.filter(i => i.result === 'defect').length;
-      return [
-        crane?.name || 'Unknown',
-        crane?.type || '',
-        format(new Date(insp.completedAt || new Date()), 'dd MMM yyyy'),
-        defectCount > 0 ? `${defectCount}` : '0',
-        insp.craneStatus || '—',
-      ];
-    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+  } catch (err) {
+    console.error('Assets Table Error:', err);
+    y += 10;
   }
   
-  const assetHeaders = useDbInspections
-    ? [['Asset Name', 'Form', 'Date', 'Defects', 'Status']]
-    : [['Asset Name', 'Type', 'Date', 'Defects', 'Status']];
-  
-  autoTable(doc, {
-    startY: y,
-    head: assetHeaders,
-    body: assetRows,
-    margin: { left: 14, right: 14 },
-    styles: { fontSize: 7.5, cellPadding: 2 },
-    headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
-    columnStyles: {
-      3: { halign: 'center' },
-    },
-    didParseCell(data) {
-      if (data.section === 'body' && data.column.index === 4) {
-        const val = data.cell.raw as string;
-        if (val === 'Crane is Operational') data.cell.styles.textColor = RKA_GREEN;
-        else if (val === 'Unsafe to Operate') data.cell.styles.textColor = RKA_RED;
-        else if (val.includes('Limitations')) data.cell.styles.textColor = RKA_ORANGE;
-      }
-      if (data.section === 'body' && data.column.index === 3) {
-        const val = parseInt(data.cell.raw as string);
-        if (val > 0) {
-          data.cell.styles.textColor = RKA_RED;
-          data.cell.styles.fontStyle = 'bold';
-        }
-      }
-    },
-  });
-  
-  y = (doc as any).lastAutoTable.finalY + 8;
-  
-  // Australian Standards reference
-  doc.setFillColor(...LIGHT_GRAY);
-  doc.roundedRect(14, y, contentW, 12, 2, 2, 'F');
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(7);
-  doc.setTextColor(100, 100, 100);
-  doc.text('Australian Standards Reference: AS 2550 – Safe Use of Cranes | AS 1418 – Cranes, Hoists & Winches | AS 4991 – Lifting Devices', 18, y + 5);
-  doc.text('This report has been prepared in accordance with applicable Australian Standards for crane inspection and lifting operations.', 18, y + 9);
-  
-  // ═══════════════════════════════════════════
-  // PAGE 2: JOB SITE SUMMARY (DEFECTS + SIGN-OFF)
-  // ═══════════════════════════════════════════
+  // PAGE 2: JOB SITE SUMMARY (DEFECTS)
   doc.addPage();
-  y = addHeader(doc, 'Job Summary — Defects & Sign-off', imgs);
+  y = addHeader(doc, 'Job Summary — Defects', imgs);
   
-  // Gather all defects - prefer DB defects, fallback to legacy
-  const allDefects = inspections.flatMap(insp => {
-    const crane = site.cranes.find(c => c.id === insp.craneId);
-    return insp.items
-      .filter(i => (i.result === 'defect') && i.defect)
-      .map(item => {
-        let itemLabel = '';
-        for (const sec of template.sections) {
-          const found = sec.items.find(ti => ti.id === item.templateItemId);
-          if (found) { itemLabel = found.label; break; }
-        }
-        return { crane, item, itemLabel };
-      });
-  });
-
-  const hasDbDefectsForPdf = useDbDefectsData && dbDefects!.length > 0;
-  const totalDefectsForPdf = hasDbDefectsForPdf ? dbDefects!.length : allDefects.length;
+  const hasDbDefectsData = dbDefects && dbDefects.length > 0;
   
-  if (hasDbDefectsForPdf) {
-    // Group DB defects by quote status
+  if (hasDbDefectsData) {
     const quoteNowDb = dbDefects!.filter(d => d.quoteStatus === 'Quote Now');
     const quoteLaterDb = dbDefects!.filter(d => d.quoteStatus === 'Quote Later');
     const uncategorizedDb = dbDefects!.filter(d => !d.quoteStatus);
 
-    y = addSectionTitle(doc, y, `Defects Found (${totalDefectsForPdf})`);
-    
-    const defectRows = dbDefects!.map(d => [
-      d.assetName,
-      d.questionText,
-      d.severity || d.urgency || '—',
-      d.defectTypes.join(', ') || '—',
-      d.comment || '—',
-      d.quoteStatus === 'Quote Now' ? 'Fix Now' : d.quoteStatus === 'Quote Later' ? 'Quote Later' : '—',
-    ]);
-    
-    autoTable(doc, {
-      startY: y,
-      head: [['Asset', 'Item', 'Severity', 'Type', 'Notes', 'Decision']],
-      body: defectRows,
-      margin: { left: 14, right: 14 },
-      styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-      headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
-      columnStyles: {
-        0: { cellWidth: 28 },
-        1: { cellWidth: 40 },
-        4: { cellWidth: 30 },
-      },
-      didParseCell(data) {
-        if (data.section === 'body' && data.column.index === 2) {
-          const val = (data.cell.raw as string) || '';
-          if (val === 'Critical' || val === 'Immediate') data.cell.styles.textColor = RKA_RED;
-          else if (val === 'Major' || val === 'Urgent') data.cell.styles.textColor = RKA_ORANGE;
-          data.cell.styles.fontStyle = 'bold';
-        }
-        if (data.section === 'body' && data.column.index === 5) {
-          const val = data.cell.raw as string;
-          if (val === 'Fix Now') {
-            data.cell.styles.textColor = RKA_GREEN;
-            data.cell.styles.fontStyle = 'bold';
+    const mappedLifting = (liftingDefects || []).map(ld => ({
+      assetName: ld.equipment_type,
+      questionText: `Serial/Tag: ${ld.serial_number || ld.asset_tag || '—'}`,
+      severity: ld.equipment_status === 'Failed' ? 'Critical' : 'Major',
+      defectTypes: [],
+      comment: ld.notes || '',
+      photoUrls: [],
+      quoteStatus: ld.quoteStatus as any
+    }));
+
+    const finalFixNow = (quoteNowDb as any[]).concat(uncategorizedDb).concat(mappedLifting.filter(l => l.quoteStatus === 'Quote Now' || !l.quoteStatus));
+    const finalQuoteLater = (quoteLaterDb as any[]).concat(mappedLifting.filter(l => l.quoteStatus === 'Quote Later'));
+
+    const renderDefectTable = (defects: any[], title: string, bannerColor: [number, number, number], decisionText: string) => {
+      if (defects.length === 0) return;
+      if (y > 230) { doc.addPage(); y = addHeader(doc, title, imgs); }
+      y = addSectionTitle(doc, y, title, bannerColor);
+      
+      try {
+        autoTable(doc, {
+          startY: y,
+          head: [['Asset', 'Defect Description & Notes', 'Severity', 'Decision', 'Photos']],
+          body: defects.map(d => [d.assetName, `${d.questionText}\n${d.comment || ''}`, d.severity || 'Minor', decisionText, '']),
+          margin: { left: 14, right: 14 },
+          styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+          headStyles: { fillColor: bannerColor, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
+          columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 65 }, 2: { cellWidth: 15 }, 3: { cellWidth: 20 }, 4: { cellWidth: 50} },
+          didParseCell: (cellData) => {
+            if (cellData.section === 'body' && cellData.column.index === 3) {
+              cellData.cell.styles.fontStyle = 'bold';
+              if (decisionText === 'Fix Now') {
+                cellData.cell.styles.textColor = RKA_GREEN;
+              } else if (decisionText === 'Quote Later') {
+                cellData.cell.styles.textColor = [0, 0, 0];
+              }
+            }
+          },
+          didDrawCell: (cellData) => {
+            if (cellData.section === 'body' && cellData.column.index === 4) {
+              const defect = defects[cellData.row.index];
+              if (defect.photoUrls?.length > 0) {
+                let px = cellData.cell.x + 2;
+                let py = cellData.cell.y + 2;
+                defect.photoUrls.slice(0, 3).forEach((url: string) => {
+                  try { if (url) doc.addImage(url, 'JPEG', px, py, 15, 15, undefined, 'FAST'); px += 17; } catch {}
+                });
+              }
+            }
           }
-        }
-      },
-    });
-    
-    y = (doc as any).lastAutoTable.finalY + 4;
-    
-    // Customer comments on defects
-    if (customerDefectComments) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text('CUSTOMER COMMENTS ON DEFECTS:', 18, y);
-      y += 4;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(...DARK);
-      const lines = doc.splitTextToSize(customerDefectComments, contentW - 8);
-      doc.text(lines, 18, y);
-      y += lines.length * 4 + 4;
-    }
+        });
+        y = (doc as any).lastAutoTable.finalY + 8;
+      } catch (err) { console.error('Defect Table Error:', err); y += 10; }
+    };
 
-    // Lifting Equipment Defects section
-    if (liftingDefects && liftingDefects.length > 0) {
-      if (y > 220) { doc.addPage(); y = addHeader(doc, 'Lifting Equipment Defects', imgs); }
-      y = addSectionTitle(doc, y, `Lifting Equipment — Failed / Flagged (${liftingDefects.length})`);
-      const liftingRows = liftingDefects.map(item => {
-        const issues: string[] = [];
-        if (item.equipment_status === 'Failed') issues.push('FAILED');
-        if (item.equipment_status === 'Removed From Service') issues.push('Removed');
-        if (item.tag_present === 'false') issues.push('Tag Missing');
-        if (item.tag_present === 'illegible') issues.push('Tag Illegible');
-        return [
-          item.equipment_type, item.serial_number || item.asset_tag || '—',
-          item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
-          item.manufacturer || '—', issues.join(', ') || item.equipment_status || '—',
-          item.quoteStatus || '—', item.notes || '—',
-        ];
-      });
-      autoTable(doc, {
-        startY: y, head: [['Type', 'Serial/Tag', 'WLL', 'Manufacturer', 'Issue', 'Quote', 'Notes']],
-        body: liftingRows, margin: { left: 14, right: 14 },
-        styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-        headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
-        columnStyles: { 0: { cellWidth: 28 }, 6: { cellWidth: 35 } },
-        didParseCell(data) {
-          if (data.section === 'body' && data.column.index === 4) {
-            const val = data.cell.raw as string;
-            if (val.includes('FAILED')) { data.cell.styles.textColor = RKA_RED; data.cell.styles.fontStyle = 'bold'; }
-            else if (val.includes('Tag')) { data.cell.styles.textColor = RKA_ORANGE; data.cell.styles.fontStyle = 'bold'; }
-          }
-        },
-      });
-      y = (doc as any).lastAutoTable.finalY + 4;
-    }
-
-    // Recommendations using DB defects
-    y = addSectionTitle(doc, y, 'Recommendations');
-    
-    const criticalDb = dbDefects!.filter(d => d.severity === 'Critical' || d.urgency === 'Immediate');
-    if (criticalDb.length > 0) {
-      doc.setFillColor(255, 240, 240);
-      doc.roundedRect(14, y, contentW, 10, 2, 2, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_RED);
-      doc.text(`⚠ ${criticalDb.length} CRITICAL defect${criticalDb.length > 1 ? 's' : ''} requiring immediate attention`, 18, y + 6);
-      y += 14;
-    }
-    
-    if (quoteNowDb.length > 0) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_GREEN);
-      doc.text(`✓ ${quoteNowDb.length} item${quoteNowDb.length > 1 ? 's' : ''} approved for quotation (Fix Now)`, 18, y);
-      y += 5;
-      quoteNowDb.forEach(d => {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
-        doc.text(`• ${d.assetName} — ${d.questionText}`, 22, y);
-        y += 4;
-      });
-      y += 2;
-    }
-    
-    if (quoteLaterDb.length > 0) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
-      doc.text(`${quoteLaterDb.length} item${quoteLaterDb.length > 1 ? 's' : ''} flagged for future quotation`, 18, y);
-      y += 5;
-      quoteLaterDb.forEach(d => {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
-        doc.text(`• ${d.assetName} — ${d.questionText}`, 22, y);
-        y += 4;
-      });
-      y += 2;
-    }
-    
-    if (uncategorizedDb.length > 0) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_ORANGE);
-      doc.text(`${uncategorizedDb.length} item${uncategorizedDb.length > 1 ? 's' : ''} pending customer decision`, 18, y);
-      y += 5;
-      uncategorizedDb.forEach(d => {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
-        doc.text(`• ${d.assetName} — ${d.questionText}`, 22, y);
-        y += 4;
-      });
-      y += 2;
-    }
-    
-    if (totalDefectsForPdf === 0) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
-      doc.text('All assets are in satisfactory condition. Continue regular scheduled inspections.', 18, y);
-      y += 8;
-    }
-
-  } else if (allDefects.length > 0) {
-    y = addSectionTitle(doc, y, `Defects Found (${allDefects.length})`);
-    
-    const defectRows = allDefects.map(({ crane, item, itemLabel }) => [
-      crane?.name || '',
-      itemLabel,
-      item.defect!.severity,
-      item.defect!.defectType,
-      item.defect!.rectificationTimeframe,
-      item.defect!.notes || '—',
-      item.defect!.quoteStatus || '—',
-    ]);
-    
-    autoTable(doc, {
-      startY: y,
-      head: [['Asset', 'Item', 'Severity', 'Type', 'Timeframe', 'Notes', 'Quote']],
-      body: defectRows,
-      margin: { left: 14, right: 14 },
-      styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-      headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
-      columnStyles: { 0: { cellWidth: 28 }, 1: { cellWidth: 35 }, 5: { cellWidth: 35 } },
-      didParseCell(data) {
-        if (data.section === 'body' && data.column.index === 2) {
-          data.cell.styles.textColor = severityColor(data.cell.raw as string);
-          data.cell.styles.fontStyle = 'bold';
-        }
-      },
-    });
-    
-    y = (doc as any).lastAutoTable.finalY + 4;
-    
-    if (customerDefectComments) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
-      doc.text('CUSTOMER COMMENTS ON DEFECTS:', 18, y); y += 4;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
-      const lines = doc.splitTextToSize(customerDefectComments, contentW - 8);
-      doc.text(lines, 18, y); y += lines.length * 4 + 4;
-    }
-
-    // Lifting Equipment Defects section (legacy path)
-    if (liftingDefects && liftingDefects.length > 0) {
-      if (y > 220) { doc.addPage(); y = addHeader(doc, 'Lifting Equipment Defects', imgs); }
-      y = addSectionTitle(doc, y, `Lifting Equipment — Failed / Flagged (${liftingDefects.length})`);
-      const liftingRows = liftingDefects.map(item => {
-        const issues: string[] = [];
-        if (item.equipment_status === 'Failed') issues.push('FAILED');
-        if (item.equipment_status === 'Removed From Service') issues.push('Removed');
-        if (item.tag_present === 'false') issues.push('Tag Missing');
-        if (item.tag_present === 'illegible') issues.push('Tag Illegible');
-        return [
-          item.equipment_type, item.serial_number || item.asset_tag || '—',
-          item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
-          item.manufacturer || '—', issues.join(', ') || item.equipment_status || '—',
-          item.quoteStatus || '—', item.notes || '—',
-        ];
-      });
-      autoTable(doc, {
-        startY: y, head: [['Type', 'Serial/Tag', 'WLL', 'Manufacturer', 'Issue', 'Quote', 'Notes']],
-        body: liftingRows, margin: { left: 14, right: 14 },
-        styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-        headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
-        columnStyles: { 0: { cellWidth: 28 }, 6: { cellWidth: 35 } },
-        didParseCell(data) {
-          if (data.section === 'body' && data.column.index === 4) {
-            const val = data.cell.raw as string;
-            if (val.includes('FAILED')) { data.cell.styles.textColor = RKA_RED; data.cell.styles.fontStyle = 'bold'; }
-            else if (val.includes('Tag')) { data.cell.styles.textColor = RKA_ORANGE; data.cell.styles.fontStyle = 'bold'; }
-          }
-        },
-      });
-      y = (doc as any).lastAutoTable.finalY + 4;
-    }
-
-    // Recommendations (legacy path)
-    y = addSectionTitle(doc, y, 'Recommendations');
-    const quoteNowItems = allDefects.filter(d => d.item.defect?.quoteStatus === 'Quote Now');
-    const quoteLaterItems = allDefects.filter(d => d.item.defect?.quoteStatus === 'Quote Later');
-    const criticalItems = allDefects.filter(d => d.item.defect?.severity === 'Critical');
-    
-    if (criticalItems.length > 0) {
-      doc.setFillColor(255, 240, 240);
-      doc.roundedRect(14, y, contentW, 10, 2, 2, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_RED);
-      doc.text(`⚠ ${criticalItems.length} CRITICAL defect${criticalItems.length > 1 ? 's' : ''} requiring immediate attention`, 18, y + 6);
-      y += 14;
-    }
-    if (quoteNowItems.length > 0) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...RKA_GREEN);
-      doc.text(`✓ ${quoteNowItems.length} item${quoteNowItems.length > 1 ? 's' : ''} approved for quotation`, 18, y); y += 5;
-      quoteNowItems.forEach(d => {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
-        doc.text(`• ${d.crane?.name} — ${d.itemLabel}`, 22, y); y += 4;
-      }); y += 2;
-    }
-    if (quoteLaterItems.length > 0) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(100, 100, 100);
-      doc.text(`${quoteLaterItems.length} item${quoteLaterItems.length > 1 ? 's' : ''} flagged for future quotation`, 18, y); y += 5;
-      quoteLaterItems.forEach(d => {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...DARK);
-        doc.text(`• ${d.crane?.name} — ${d.itemLabel}`, 22, y); y += 4;
-      }); y += 2;
-    }
-    if (allDefects.length === 0) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
-      doc.text('All assets are in satisfactory condition. Continue regular scheduled inspections.', 18, y); y += 8;
-    }
+    renderDefectTable(finalFixNow, `Fix Now Defects (${finalFixNow.length})`, RKA_GREEN, 'Fix Now');
+    renderDefectTable(finalQuoteLater, `Quote Later Defects (${finalQuoteLater.length})`, DARK, 'Quote Later');
   } else {
     y = addSectionTitle(doc, y, 'Defects Found');
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...DARK);
-    doc.text('No defects found — all assets passed inspection.', 18, y + 4);
-    y += 12;
+    doc.text('No critical crane defects reported.', 18, y + 4);
+    y += 10;
+  }
 
-    // Lifting Equipment Defects section (no defects path)
-    if (liftingDefects && liftingDefects.length > 0) {
-      y = addSectionTitle(doc, y, `Lifting Equipment — Failed / Flagged (${liftingDefects.length})`);
-      const liftingRows = liftingDefects.map(item => {
-        const issues: string[] = [];
-        if (item.equipment_status === 'Failed') issues.push('FAILED');
-        if (item.equipment_status === 'Removed From Service') issues.push('Removed');
-        if (item.tag_present === 'false') issues.push('Tag Missing');
-        if (item.tag_present === 'illegible') issues.push('Tag Illegible');
-        return [
-          item.equipment_type, item.serial_number || item.asset_tag || '—',
-          item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
-          item.manufacturer || '—', issues.join(', ') || item.equipment_status || '—',
-          item.quoteStatus || '—', item.notes || '—',
-        ];
-      });
-      autoTable(doc, {
-        startY: y, head: [['Type', 'Serial/Tag', 'WLL', 'Manufacturer', 'Issue', 'Quote', 'Notes']],
-        body: liftingRows, margin: { left: 14, right: 14 },
-        styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
-        headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
-        columnStyles: { 0: { cellWidth: 28 }, 6: { cellWidth: 35 } },
-      });
-      y = (doc as any).lastAutoTable.finalY + 4;
-    }
-
-    y = addSectionTitle(doc, y, 'Recommendations');
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...DARK);
-    doc.text('All assets are in satisfactory condition. Continue regular scheduled inspections.', 18, y); y += 8;
-  }
-  
-  // Next Service
-  y += 4;
-  y = addSectionTitle(doc, y, 'Next Service');
-  y = addInfoRow(doc, y, 'Next Inspection Date', format(new Date(summary.nextInspectionDate), 'dd MMM yyyy'));
-  y = addInfoRow(doc, y, 'Scheduled Time', summary.nextInspectionTime);
-  y = addInfoRow(doc, y, 'Booking Confirmed', summary.bookingConfirmed ? 'Yes ✓' : 'Pending');
-  y += 4;
-  
-  // Customer feedback
-  if (summary.rating || summary.feedback) {
-    y = addSectionTitle(doc, y, 'Customer Feedback');
-    if (summary.rating) {
-      const stars = '★'.repeat(summary.rating) + '☆'.repeat(5 - summary.rating);
-      y = addInfoRow(doc, y, 'Rating', `${stars} (${summary.rating}/5)`);
-    }
-    if (summary.feedback) {
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(8);
-      doc.setTextColor(80, 80, 80);
-      const fbLines = doc.splitTextToSize(`"${summary.feedback}"`, contentW - 8);
-      doc.text(fbLines, 18, y);
-      y += fbLines.length * 4 + 4;
-    }
-    y += 4;
-  }
-  
-  // Sign-off section
-  y = addSectionTitle(doc, y, 'Sign-off');
-  
-  if (y > 230) {
-    doc.addPage();
-    y = addHeader(doc, 'Sign-off', imgs);
-    y += 4;
-  }
-  
-  // Signature boxes
-  const sigBoxW = (contentW - 8) / 2;
-  
-  // Customer signature
-  doc.setDrawColor(...BORDER_GRAY);
-  doc.setLineWidth(0.3);
-  doc.rect(14, y, sigBoxW, 30);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(100, 100, 100);
-  doc.text('CUSTOMER SIGNATURE', 16, y + 4);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...DARK);
-  doc.text(summary.customerName || '—', 16, y + 9);
-  
-  if (summary.customerSignature) {
-    try {
-      doc.addImage(summary.customerSignature, 'PNG', 16, y + 11, sigBoxW - 4, 16, undefined, 'FAST');
-    } catch {
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7);
-      doc.text('[Signed electronically]', 16, y + 20);
-    }
-  }
-  
-  // Technician signature
-  doc.rect(14 + sigBoxW + 8, y, sigBoxW, 30);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7);
-  doc.setTextColor(100, 100, 100);
-  doc.text('TECHNICIAN SIGNATURE', 14 + sigBoxW + 10, y + 4);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...DARK);
-  doc.text(technicianName, 14 + sigBoxW + 10, y + 9);
-  
-  if (summary.technicianSignature) {
-    try {
-      doc.addImage(summary.technicianSignature, 'PNG', 14 + sigBoxW + 10, y + 11, sigBoxW - 4, 16, undefined, 'FAST');
-    } catch {
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7);
-      doc.text('[Signed electronically]', 14 + sigBoxW + 10, y + 20);
-    }
-  }
-  
-  y += 36;
-  
-  // Completion timestamp
-  if (summary.completedAt) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Report completed: ${format(new Date(summary.completedAt), 'dd MMM yyyy HH:mm')}`, 14, y);
-  }
-  
-  // ═══════════════════════════════════════════
-  // PAGES 3+: INDIVIDUAL ASSET REPORTS
-  // ═══════════════════════════════════════════
-  inspections.forEach(insp => {
+  // INDIVIDUAL ASSET REPORTS
+  for (const insp of inspections) {
     doc.addPage();
     const crane = site.cranes.find(c => c.id === insp.craneId);
     y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'}`, imgs);
     
-    // Asset info
     y = addSectionTitle(doc, y, 'Asset Details');
     y = addInfoRow(doc, y, 'Asset Name', crane?.name || '—');
-    y = addInfoRow(doc, y, 'Type', crane?.type || '—');
-    y = addInfoRow(doc, y, 'Serial Number', crane?.serialNumber || '—');
-    y = addInfoRow(doc, y, 'Capacity', crane?.capacity || '—');
-    y = addInfoRow(doc, y, 'Manufacturer', crane?.manufacturer || '—');
-    y = addInfoRow(doc, y, 'Year Installed', String(crane?.yearInstalled || '—'));
-    y += 2;
-    
-    // Operational status
+    y = addInfoRow(doc, y, 'Form Type', template?.craneType || 'Overhead Crane');
+    y += 6;
+
     if (insp.craneStatus) {
       const sColor = statusColor(insp.craneStatus);
       doc.setFillColor(...sColor);
-      doc.roundedRect(14, y, contentW, 10, 2, 2, 'F');
+      doc.rect(14, y, contentW, 8, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(...WHITE);
-      doc.text(insp.craneStatus.toUpperCase(), pageW / 2, y + 7, { align: 'center' });
+      doc.setTextColor(255, 255, 255);
+      doc.text(insp.craneStatus.toUpperCase(), pageW / 2, y + 5.5, { align: 'center' });
       y += 14;
     }
-    
-    // Inspection results by section
+
     template.sections.forEach(section => {
       const sectionResults = insp.items.filter(i => i.sectionId === section.id);
       if (sectionResults.length === 0) return;
-      
-      if (y > 250) {
-        doc.addPage();
-        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (cont.)`, imgs);
-      }
-      
+      if (y > 250) { doc.addPage(); y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'}`, imgs); }
       y = addSectionTitle(doc, y, section.name);
       
-      const rows = sectionResults.map(item => {
-        const tmplItem = section.items.find(ti => ti.id === item.templateItemId);
-        const itemType = tmplItem?.type || 'checklist';
-        
-        let resultText = '—';
-        if (itemType === 'single_select') {
-          resultText = item.selectedValue || '—';
-        } else if (itemType === 'numeric') {
-          resultText = item.numericValue !== undefined ? String(item.numericValue) : '—';
-        } else {
-          if (item.result === 'pass') resultText = 'Pass ✓';
-          else if (item.result === 'defect') resultText = 'DEFECT';
-          else if (item.result === 'unresolved') resultText = 'Unresolved';
-        }
-        
-        let notes = '';
-        if (item.comment) notes = item.comment;
-        if (item.conditionalComment) notes = item.conditionalComment;
-        if (item.defect?.notes) notes = item.defect.notes;
-        
-        return [
-          tmplItem?.label || '—',
-          resultText,
-          notes,
-        ];
-      });
-      
-      autoTable(doc, {
-        startY: y,
-        head: [['Inspection Item', 'Result', 'Notes']],
-        body: rows,
-        margin: { left: 14, right: 14 },
-        styles: { fontSize: 7.5, cellPadding: 2, overflow: 'linebreak' },
-        headStyles: { fillColor: [60, 60, 60], textColor: WHITE, fontStyle: 'bold', fontSize: 7 },
-        columnStyles: {
-          0: { cellWidth: 70 },
-          1: { cellWidth: 25, halign: 'center' },
-          2: { cellWidth: contentW - 95 - 4 },
-        },
-        didParseCell(data) {
-          if (data.section === 'body' && data.column.index === 1) {
-            const val = data.cell.raw as string;
-            if (val.includes('Pass')) {
-              data.cell.styles.textColor = RKA_GREEN;
-              data.cell.styles.fontStyle = 'bold';
-            } else if (val === 'DEFECT') {
-              data.cell.styles.textColor = RKA_RED;
-              data.cell.styles.fontStyle = 'bold';
-            } else if (val === 'Unresolved') {
-              data.cell.styles.textColor = RKA_ORANGE;
-              data.cell.styles.fontStyle = 'bold';
-            }
-          }
-          if (data.section === 'body' && data.row.index % 2 === 0) {
-            data.cell.styles.fillColor = LIGHT_GRAY;
-          }
-        },
-      });
-      
-      y = (doc as any).lastAutoTable.finalY + 4;
+      try {
+        autoTable(doc, {
+          startY: y,
+          head: [['Item', 'Result', 'Notes']],
+          body: sectionResults.map(item => {
+            const tmplItem = section.items.find(ti => ti.id === item.templateItemId);
+            return [tmplItem?.label || '—', item.selectedValue || (item.result === 'pass' ? 'Pass' : 'Defect'), item.comment || ''];
+          }),
+          margin: { left: 14, right: 14 },
+          styles: { fontSize: 7, cellPadding: 2 },
+          headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 7 }
+        });
+        y = (doc as any).lastAutoTable.finalY + 4;
+      } catch {}
     });
-    
-    // Defect details for this asset
-    const assetDefects = insp.items.filter(i => i.result === 'defect' && i.defect);
-    if (assetDefects.length > 0) {
-      if (y > 220) {
-        doc.addPage();
-        y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects)`, imgs);
-      }
-      
-      y = addSectionTitle(doc, y, `Defect Details (${assetDefects.length})`);
-      
-      assetDefects.forEach(item => {
-        if (y > 250) {
-          doc.addPage();
-          y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'} (Defects cont.)`, imgs);
-        }
-        
-        let itemLabel = '';
-        for (const sec of template.sections) {
-          const found = sec.items.find(ti => ti.id === item.templateItemId);
-          if (found) { itemLabel = found.label; break; }
-        }
-        
-        // Defect card
-        const sColor = severityColor(item.defect!.severity);
-        doc.setDrawColor(...sColor);
-        doc.setLineWidth(0.8);
-        doc.rect(14, y, contentW, 1, 'F');
-        doc.setFillColor(...sColor);
-        y += 2;
-        
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(...DARK);
-        doc.text(itemLabel, 18, y + 3);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(100, 100, 100);
-        const detailText = `${item.defect!.severity} | ${item.defect!.defectType} | ${item.defect!.rectificationTimeframe}`;
-        doc.text(detailText, 18, y + 7);
-        
-        if (item.defect!.notes) {
-          doc.setFont('helvetica', 'italic');
-          doc.setFontSize(7.5);
-          doc.setTextColor(80, 80, 80);
-          const noteLines = doc.splitTextToSize(item.defect!.notes, contentW - 8);
-          doc.text(noteLines, 18, y + 11);
-          y += 11 + noteLines.length * 3.5;
-        } else {
-          y += 10;
-        }
-        
-        // Photos
-        const photos = item.defect?.photos || [];
-        if (photos.length > 0) {
-          let photoX = 18;
-          const photoSize = 25;
-          photos.slice(0, 3).forEach((photoUrl, idx) => {
-            try {
-              doc.addImage(photoUrl, 'JPEG', photoX, y, photoSize, photoSize, undefined, 'FAST');
-              photoX += photoSize + 3;
-            } catch {
-              doc.setDrawColor(...BORDER_GRAY);
-              doc.setFillColor(...LIGHT_GRAY);
-              doc.roundedRect(photoX, y, photoSize, photoSize, 1, 1, 'FD');
-              doc.setFont('helvetica', 'normal');
-              doc.setFontSize(6);
-              doc.setTextColor(150, 150, 150);
-              doc.text(`Photo ${idx + 1}`, photoX + 5, y + 13);
-              photoX += photoSize + 3;
-            }
-          });
-          y += photoSize + 4;
-        }
-        
-        y += 4;
-      });
-    }
-  });
+  }
+
+  // FINAL PAGE: SIGN-OFF
+  if (y > 210) {
+    doc.addPage();
+    y = addHeader(doc, 'Signatures', imgs);
+  } else {
+    y += 10;
+  }
+
+
+
+  y = addSectionTitle(doc, y, 'Signatures');
+  const sigY = y + 4;
   
-  // Add page numbers to all pages
+  try {
+    const boxW = (contentW - 10) / 2;
+    doc.setDrawColor(...BORDER_GRAY);
+    
+    // Customer Box
+    doc.rect(14, sigY, boxW, 35);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...DARK);
+    doc.text('CUSTOMER SIGNATURE', 16, sigY + 6);
+    if (summary.customerSignature) doc.addImage(summary.customerSignature, 'PNG', 16, sigY + 8, boxW-4, 18);
+    doc.setFont('helvetica', 'normal');
+    doc.text(summary.customerName || '—', 16, sigY + 32);
+
+    // Technician Box
+    doc.rect(pageW - 14 - boxW, sigY, boxW, 35);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TECHNICIAN SIGNATURE', pageW - boxW - 12, sigY + 6);
+    if (summary.technicianSignature) doc.addImage(summary.technicianSignature, 'PNG', pageW - boxW - 12, sigY + 8, boxW-4, 18);
+    doc.setFont('helvetica', 'normal');
+    doc.text(technicianName, pageW - boxW - 12, sigY + 32);
+  } catch (err) { console.warn('Sign-off render error'); }
+
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     addFooter(doc, i, totalPages);
   }
-  
+
+  console.log('PDF Generation Complete');
   return doc;
 }
