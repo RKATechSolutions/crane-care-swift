@@ -187,7 +187,7 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
     y += 7;
 
     const head = [
-      'Photo', 'Type', 'Tag/ID', 'Serial No.', 'WLL', 'Manufacturer', 'Model', 'Tag?', 'Status', 'Details', 'Notes', 'Date',
+      'Photo', 'Type', 'Serial No.', 'WLL', 'Manufacturer', 'Model', 'Status', 'Details', 'Notes', 'Date',
     ];
 
     const rows = groupItems.map(item => {
@@ -196,12 +196,10 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
       return [
         photoCache[itemKey] ? '' : '—', // placeholder; actual image drawn in didDrawCell
         item.equipment_type,
-        item.asset_tag || '—',
         item.serial_number || '—',
         item.wll_value ? `${item.wll_value} ${item.wll_unit || 'kg'}` : '—',
         item.manufacturer || '—',
         item.model || '—',
-        item.tag_present === 'true' ? 'Yes' : item.tag_present === 'false' ? 'NO' : item.tag_present || '—',
         item.equipment_status || '—',
         dynamicDetails || '—',
         item.notes || '',
@@ -209,20 +207,21 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
       ];
     });
 
-    const statusColIdx = 8;
-    const tagColIdx = 7;
+    const statusColIdx = 6; // Updated index for 'Status'
+    const tagColIdx = -1; // 'Tag?' column removed
 
     autoTable(doc, {
       startY: y,
       head: [head],
       body: rows,
       margin: { left: 10, right: 10 },
-      styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak', minCellHeight: 12 },
+      styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak', minCellHeight: 22 },
       headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 6 },
       columnStyles: {
-        0: { cellWidth: 14 }, // Photo column
-        9: { cellWidth: 36 }, // Details column
-        10: { cellWidth: 26 }, // Notes column
+        0: { cellWidth: 20 }, // Photo column
+        1: { cellWidth: 25 }, // Type column
+        7: { cellWidth: 40 }, // Details column
+        8: { cellWidth: 65 }, // Notes column (widest for wrapping)
       },
       didParseCell(data) {
         if (data.section === 'body' && data.column.index === statusColIdx) {
@@ -256,7 +255,7 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
             try {
               const cellX = data.cell.x + 0.5;
               const cellY = data.cell.y + 0.5;
-              const imgSize = Math.min(data.cell.width - 1, data.cell.height - 1, 11);
+              const imgSize = Math.min(data.cell.width - 1, data.cell.height - 1, 20);
               const imgFormat = photoUrl.includes('image/png') ? 'PNG' : 'JPEG';
               doc.addImage(photoUrl, imgFormat, cellX, cellY, imgSize, imgSize);
             } catch { /* skip failed image */ }

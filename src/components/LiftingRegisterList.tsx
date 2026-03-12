@@ -293,7 +293,8 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const handleDownloadPdf = async () => {
     if (items.length === 0) { toast.error('No items to export'); return; }
     try {
-      const pdf = await generateLiftingRegisterPdf({ siteName, clientName: clientName || siteName, technicianName: 'Technician', items, categoryGroups });
+      const techName = localStorage.getItem('technicianName') || 'Technician';
+      const pdf = await generateLiftingRegisterPdf({ siteName, clientName: clientName || siteName, technicianName: techName, items, categoryGroups });
       pdf.save(`${(clientName || siteName).replace(/[^a-zA-Z0-9]/g, '_')}_LiftingRegister_${format(new Date(), 'yyyyMMdd')}.pdf`);
       toast.success('PDF downloaded');
     } catch (err) { console.error('PDF error:', err); toast.error('Failed to generate PDF'); }
