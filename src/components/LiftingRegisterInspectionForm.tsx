@@ -11,6 +11,7 @@ import { DualPhotoButton } from '@/components/DualPhotoButton';
 import { CheckCircle, XCircle, AlertTriangle, Loader2, X, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { useApp } from '@/contexts/AppContext';
+import { compressImage } from '@/utils/uploadHelper';
 
 interface RegisterItem {
   id: string;
@@ -114,19 +115,24 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
     setResults(prev => ({ ...prev, [itemId]: { ...prev[itemId], comment } }));
   };
 
-  const handlePhoto = (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setResults(prev => ({
-          ...prev,
-          [itemId]: { ...prev[itemId], photos: [...prev[itemId].photos, reader.result as string] },
-        }));
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of Array.from(files)) {
+      try {
+        const compressedBlob = await compressImage(file);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setResults(prev => ({
+            ...prev,
+            [itemId]: { ...prev[itemId], photos: [...prev[itemId].photos, reader.result as string] },
+          }));
+        };
+        reader.readAsDataURL(compressedBlob);
+      } catch (err) {
+        console.error('Photo compression failed:', err);
+      }
+    }
   };
 
   const removePhoto = (itemId: string, idx: number) => {
@@ -169,28 +175,38 @@ export function LiftingRegisterInspectionForm({ clientId, siteName, onBack }: Li
     toast.success('Item updated');
   };
 
-  const handleEditPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      setEditDraft(prev => ({ ...prev, overall_photo_url: reader.result as string }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedBlob = await compressImage(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setEditDraft(prev => ({ ...prev, overall_photo_url: reader.result as string }));
+      };
+      reader.readAsDataURL(compressedBlob);
+    } catch (err) {
+      console.error('Photo compression failed:', err);
+    }
   };
 
   const handleUpdateMainPhoto = async (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const dataUrl = reader.result as string;
-      const { error } = await supabase.from('lifting_register').update({ overall_photo_url: dataUrl }).eq('id', itemId);
-      if (error) { toast.error('Failed to update photo'); return; }
-      setItems(prev => prev.map(i => i.id === itemId ? { ...i, overall_photo_url: dataUrl } : i));
-      toast.success('Item photo updated');
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedBlob = await compressImage(file);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        const { error } = await supabase.from('lifting_register').update({ overall_photo_url: dataUrl }).eq('id', itemId);
+        if (error) { toast.error('Failed to update photo'); return; }
+        setItems(prev => prev.map(i => i.id === itemId ? { ...i, overall_photo_url: dataUrl } : i));
+        toast.success('Item photo updated');
+      };
+      reader.readAsDataURL(compressedBlob);
+    } catch (err) {
+      console.error('Photo compression failed:', err);
+    }
   };
 
   const isFailedItem = (item: RegisterItem) => {

@@ -4,6 +4,7 @@ import { RepairButtonGroup } from './RepairButtonGroup';
 import { supabase } from '@/integrations/supabase/client';
 import { Camera, X, Plus, ImagePlus } from 'lucide-react';
 import { toast } from 'sonner';
+import { uploadCompressedFile } from '@/utils/uploadHelper';
 
 interface Props {
   formData: RepairFormData;
@@ -28,11 +29,8 @@ export function RepairSectionD({ formData, updateForm }: Props) {
     try {
       const newPhotos: string[] = [];
       for (const file of Array.from(files)) {
-        const fileName = `repair-rts-${Date.now()}-${Math.random().toString(36).slice(2)}.${file.name.split('.').pop()}`;
-        const { error } = await supabase.storage.from('job-documents').upload(fileName, file);
-        if (error) throw error;
-        const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(fileName);
-        newPhotos.push(urlData.publicUrl);
+        const publicUrl = await uploadCompressedFile(file, 'job-documents', 'repairs');
+        newPhotos.push(publicUrl);
       }
       updateForm({ return_to_service_photos: [...(formData.return_to_service_photos || []), ...newPhotos] });
     } catch (err: any) {
@@ -42,6 +40,7 @@ export function RepairSectionD({ formData, updateForm }: Props) {
       e.target.value = '';
     }
   };
+
 
   const removePhoto = (idx: number) => {
     updateForm({ return_to_service_photos: (formData.return_to_service_photos || []).filter((_, i) => i !== idx) });

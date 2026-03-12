@@ -11,6 +11,7 @@ import {
   Send, Calendar, User, Wrench, Package, ClipboardCheck
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
+import { uploadCompressedFile } from '@/utils/uploadHelper';
 
 interface JobDetailPageProps {
   jobId: string;
@@ -195,23 +196,22 @@ export default function JobDetailPage({ jobId, onBack, onStartInspection }: JobD
   };
 
   const uploadMaterialDoc = async (file: File, costId: string) => {
-    setUploading(true);
-    const ext = file.name.split('.').pop();
-    const path = `${jobId}/material-${costId}-${Date.now()}.${ext}`;
-    const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
-    if (uploadErr) { toast.error('Upload failed'); setUploading(false); return; }
-    const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
-    const { data, error } = await supabase.from('job_documents').insert({
-      task_id: jobId,
-      file_name: `Supplier Doc: ${file.name}`,
-      file_url: urlData.publicUrl,
-      file_type: file.type || null,
-      uploaded_by: 'You',
-    }).select().single();
-    if (error) { toast.error('Failed to save'); setUploading(false); return; }
-    setDocs(prev => [data as DocItem, ...prev]);
-    setUploading(false);
-    toast.success('Supplier document uploaded');
+    try {
+      const publicUrl = await uploadCompressedFile(file, 'job-documents', jobId);
+      const { data, error } = await supabase.from('job_documents').insert({
+        task_id: jobId,
+        file_name: `Supplier Doc: ${file.name}`,
+        file_url: publicUrl,
+        file_type: file.type || null,
+        uploaded_by: 'You',
+      }).select().single();
+      if (error) { toast.error('Failed to save'); setUploading(false); return; }
+      setDocs(prev => [data as DocItem, ...prev]);
+    } catch (err: any) {
+      toast.error('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const removeCost = async (id: string) => {
@@ -239,23 +239,23 @@ export default function JobDetailPage({ jobId, onBack, onStartInspection }: JobD
   };
 
   const uploadDocument = async (file: File) => {
-    setUploading(true);
-    const ext = file.name.split('.').pop();
-    const path = `${jobId}/${Date.now()}.${ext}`;
-    const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
-    if (uploadErr) { toast.error('Upload failed'); setUploading(false); return; }
-    const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
-    const { data, error } = await supabase.from('job_documents').insert({
-      task_id: jobId,
-      file_name: file.name,
-      file_url: urlData.publicUrl,
-      file_type: file.type || null,
-      uploaded_by: 'You',
-    }).select().single();
-    if (error) { toast.error('Failed to save document record'); setUploading(false); return; }
-    setDocs(prev => [data as DocItem, ...prev]);
-    setUploading(false);
-    toast.success('Document uploaded');
+    try {
+      const publicUrl = await uploadCompressedFile(file, 'job-documents', jobId);
+      const { data, error } = await supabase.from('job_documents').insert({
+        task_id: jobId,
+        file_name: file.name,
+        file_url: publicUrl,
+        file_type: file.type || null,
+        uploaded_by: 'You',
+      }).select().single();
+      if (error) { toast.error('Failed to save document record'); setUploading(false); return; }
+      setDocs(prev => [data as DocItem, ...prev]);
+      toast.success('Document uploaded');
+    } catch (err: any) {
+      toast.error('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const deleteDoc = async (doc: DocItem) => {
@@ -333,9 +333,8 @@ export default function JobDetailPage({ jobId, onBack, onStartInspection }: JobD
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-              tab === t.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${tab === t.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+              }`}
           >
             {t.icon}
             {t.label}
@@ -498,8 +497,8 @@ export default function JobDetailPage({ jobId, onBack, onStartInspection }: JobD
                   <Input placeholder="Supplier" value={costSupplier} onChange={e => setCostSupplier(e.target.value)} />
                   {costUnitCost && costSellPrice && (
                     <p className="text-[10px] text-muted-foreground">
-                      Cost: ${((parseFloat(costQty) || 1) * (parseFloat(costUnitCost) || 0)).toFixed(2)} · 
-                      Sell: ${((parseFloat(costQty) || 1) * (parseFloat(costSellPrice) || 0)).toFixed(2)} · 
+                      Cost: ${((parseFloat(costQty) || 1) * (parseFloat(costUnitCost) || 0)).toFixed(2)} ·
+                      Sell: ${((parseFloat(costQty) || 1) * (parseFloat(costSellPrice) || 0)).toFixed(2)} ·
                       Margin: ${(((parseFloat(costQty) || 1) * (parseFloat(costSellPrice) || 0)) - ((parseFloat(costQty) || 1) * (parseFloat(costUnitCost) || 0))).toFixed(2)}
                     </p>
                   )}

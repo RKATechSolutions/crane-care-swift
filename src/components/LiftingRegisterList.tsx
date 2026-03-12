@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Share2, Package, AlertTriangle, CheckCircle, XCircle, Loader2, FileText, Download, Upload, Pencil, Trash2, Camera, X, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { uploadCompressedFile } from '@/utils/uploadHelper';
 import { generateLiftingRegisterPdf } from '@/utils/generateLiftingRegisterPdf';
 import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -145,7 +146,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       // Load latest inspections AND photos in parallel batches
       if (sorted.length > 0) {
         const ids = sorted.map(i => i.id);
-        
+
         // 1. Load inspections in parallel batches
         const inspBatchSize = 100;
         const inspBatches = [];
@@ -160,13 +161,13 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
             .select('register_item_id, technician_name, inspection_date')
             .in('register_item_id', batch)
             .order('inspection_date', { ascending: false });
-          
+
           if (data) {
             data.forEach(row => {
               if (!allInspections[row.register_item_id]) {
-                allInspections[row.register_item_id] = { 
-                  technician_name: row.technician_name, 
-                  inspection_date: row.inspection_date 
+                allInspections[row.register_item_id] = {
+                  technician_name: row.technician_name,
+                  inspection_date: row.inspection_date
                 };
               }
             });
@@ -187,7 +188,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
             .from('lifting_register')
             .select('id, overall_photo_url')
             .in('id', batch);
-          
+
           if (data && data.length > 0) {
             const photoMap = new Map(data.map(p => [p.id, p.overall_photo_url]));
             setItems(prev => {
@@ -409,7 +410,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       console.log(`Using sheet "${bestSheetName}" with ${bestSheet.length} rows`);
       console.log('Raw first row:', JSON.stringify(bestSheet[0]));
       if (bestSheet.length < 2) { toast.error('No sheet found with header and data'); setImporting(false); return; }
-      
+
       // Find the actual header row - scan up to 20 rows for the real headers
       // The XLSX may have title/metadata rows before the actual data headers
       let headerRowIdx = -1;
@@ -422,18 +423,18 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
         const hasType = row.some((h: string) => h.includes('type') || h.includes('equipment'));
         const hasTag = row.some((h: string) => h.includes('tag') || h.includes('asset'));
         const hasWll = row.some((h: string) => h.includes('wll') || h.includes('swl') || h.includes('capacity'));
-        
+
         const matchScore = [hasSerial, hasUnit, hasComment, hasType, hasTag, hasWll].filter(Boolean).length;
         if (matchScore >= 2) { headerRowIdx = i; break; }
       }
-      
+
       // Fallback: use first row
       if (headerRowIdx === -1) headerRowIdx = 0;
-      
+
       console.log(`Header row index: ${headerRowIdx}, headers:`, bestSheet[headerRowIdx]);
       const headers = bestSheet[headerRowIdx].map((h: any) => String(h || ''));
       const dataRows = bestSheet.slice(headerRowIdx + 1);
-      
+
       // Filter out rows that look like metadata/sub-headers (e.g. contain "FolderID", address info, etc.)
       const filteredDataRows = dataRows.filter(row => {
         const firstCell = String(row[0] || '').toLowerCase().trim();
@@ -443,7 +444,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
         if (firstCell.includes('general') || firstCell === 'comment') return false;
         return true;
       });
-      
+
       const rows = parseRowsToInsert(headers, filteredDataRows);
       console.log('Parsed rows sample:', JSON.stringify(rows.slice(0, 3)));
       if (rows.length === 0) { toast.error('No valid rows found'); setImporting(false); return; }
@@ -451,7 +452,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
       if (error) { console.error('Import error:', error); toast.error('Import failed: ' + error.message); }
       else {
         toast.success(`Imported ${rows.length} items`);
-        
+
         // AI categorize items that have Unknown equipment_type
         const unknownItems = (insertedData || []).filter((item: any) => item.equipment_type === 'Unknown');
         if (unknownItems.length > 0) {
@@ -477,7 +478,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
             toast.warning('AI categorization failed — items left as Unknown');
           }
         }
-        
+
         // Add imported items locally instead of full reload
         if (insertedData) {
           const newItems = insertedData.map((item: any) => ({
@@ -508,12 +509,7 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
     if (!file || !targetId) return;
     setUploadingPhotoId(targetId);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const filePath = `lifting-register/${targetId}_${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('job-documents').upload(filePath, file);
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(filePath);
-      const photoUrl = urlData.publicUrl;
+      const photoUrl = await uploadCompressedFile(file, 'job-documents', 'lifting-register');
       const { error: updateError } = await supabase.from('lifting_register').update({ overall_photo_url: photoUrl }).eq('id', targetId);
       if (updateError) throw updateError;
       setItems(prev => prev.map(i => i.id === targetId ? { ...i, overall_photo_url: photoUrl } : i));
@@ -590,16 +586,16 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
   const { filteredItems, grouped } = useMemo<{ filteredItems: RegisterItem[], grouped: Record<string, RegisterItem[]> }>(() => {
     const filtered = searchQuery.trim()
       ? items.filter(item => {
-          const q = searchQuery.toLowerCase();
-          return (
-            item.equipment_type.toLowerCase().includes(q) ||
-            (item.serial_number || '').toLowerCase().includes(q) ||
-            (item.asset_tag || '').toLowerCase().includes(q) ||
-            (item.manufacturer || '').toLowerCase().includes(q) ||
-            (item.model || '').toLowerCase().includes(q) ||
-            (item.notes || '').toLowerCase().includes(q)
-          );
-        })
+        const q = searchQuery.toLowerCase();
+        return (
+          item.equipment_type.toLowerCase().includes(q) ||
+          (item.serial_number || '').toLowerCase().includes(q) ||
+          (item.asset_tag || '').toLowerCase().includes(q) ||
+          (item.manufacturer || '').toLowerCase().includes(q) ||
+          (item.model || '').toLowerCase().includes(q) ||
+          (item.notes || '').toLowerCase().includes(q)
+        );
+      })
       : items;
 
     const groupedMap = filtered.reduce((acc, item) => {
@@ -832,11 +828,10 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                       key={g.name}
                       type="button"
                       onClick={() => setEditSelectedGroup(editSelectedGroup === g.name ? null : g.name)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                        editSelectedGroup === g.name
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
-                      }`}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${editSelectedGroup === g.name
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                        }`}
                     >
                       {g.name}
                     </button>
@@ -854,11 +849,10 @@ export function LiftingRegisterList({ clientId, siteName, clientName, onBack, on
                             key={t}
                             type="button"
                             onClick={() => setEditForm(f => ({ ...f, equipment_type: f.equipment_type === t ? '' : t }))}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                              editForm.equipment_type === t
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background text-foreground border-border hover:border-primary/50'
-                            }`}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${editForm.equipment_type === t
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background text-foreground border-border hover:border-primary/50'
+                              }`}
                           >
                             {t}
                           </button>

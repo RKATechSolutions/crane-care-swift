@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { TemplateItem, InspectionItemResult } from '@/types/inspection';
 import { Camera, X, CheckCircle, ImagePlus } from 'lucide-react';
+import { compressImage } from '@/utils/uploadHelper';
 
 interface PhotoRequiredItemProps {
   item: TemplateItem;
@@ -13,21 +14,26 @@ export function PhotoRequiredItem({ item, result, onUpdate }: PhotoRequiredItemP
   const fileRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
-  const handleCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const updated = [...photos, dataUrl];
-      setPhotos(updated);
-      onUpdate({
-        ...result,
-        photos: updated,
-        result: 'pass',
-      });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedBlob = await compressImage(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        const updated = [...photos, dataUrl];
+        setPhotos(updated);
+        onUpdate({
+          ...result,
+          photos: updated,
+          result: 'pass',
+        });
+      };
+      reader.readAsDataURL(compressedBlob);
+    } catch (err) {
+      console.error('Photo compression failed:', err);
+    }
     e.target.value = '';
   };
 

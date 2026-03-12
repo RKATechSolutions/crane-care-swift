@@ -212,11 +212,11 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
         const siteLower = site.name.toLowerCase();
         const matchedClient = clients.find(c => {
           const cl = c.client_name.toLowerCase();
-          return cl === siteLower || 
-                 cl.includes(siteLower) || 
-                 siteLower.includes(cl) ||
-                 cl.startsWith(siteLower.split(' - ')[0].toLowerCase()) ||
-                 siteLower.startsWith(cl.split(' ')[0]);
+          return cl === siteLower ||
+            cl.includes(siteLower) ||
+            siteLower.includes(cl) ||
+            cl.startsWith(siteLower.split(' - ')[0].toLowerCase()) ||
+            siteLower.startsWith(cl.split(' ')[0]);
         });
 
         if (matchedClient) {
@@ -439,6 +439,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
 
     return (
       <DbInspectionForm
+        key={`${activeDbForm.formId}-${editingReportId ?? 'new'}`}
         formId={activeDbForm.formId}
         assetName={activeDbForm.crane.name}
         assetId={activeDbForm.assetId}
@@ -535,11 +536,10 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2.5 px-1 text-[11px] font-medium transition-colors relative ${
-              activeTab === tab.key
+            className={`flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2.5 px-1 text-[11px] font-medium transition-colors relative ${activeTab === tab.key
                 ? 'text-primary'
                 : 'text-muted-foreground'
-            }`}
+              }`}
           >
             {tab.icon}
             <span className="truncate">{tab.label}</span>
@@ -776,6 +776,10 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                   const handleContinueOrStart = () => {
                     if (existingDbDraft) {
                       // Open the existing draft directly
+                      if (!existingDbDraft.form_id) {
+                        toast({ title: 'Cannot open draft', description: 'This draft has no form template linked. Please contact your admin.', variant: 'destructive' });
+                        return;
+                      }
                       const rawId = asset.id;
                       setEditingReportId(existingDbDraft.id);
                       setActiveDbForm({ formId: existingDbDraft.form_id, crane, assetId: rawId });
@@ -812,11 +816,10 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                             )}
                           </div>
                           {existing?.status === 'completed' && (
-                            <span className={`text-xs font-bold px-2 py-1 rounded ${
-                              existing.craneStatus === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
-                              existing.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
-                              'bg-rka-orange-light text-rka-orange'
-                            }`}>
+                            <span className={`text-xs font-bold px-2 py-1 rounded ${existing.craneStatus === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
+                                existing.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
+                                  'bg-rka-orange-light text-rka-orange'
+                              }`}>
                               {existing.craneStatus}
                             </span>
                           )}
@@ -824,13 +827,12 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
 
                         <button
                           onClick={handleContinueOrStart}
-                          className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                            isCompleted
+                          className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${isCompleted
                               ? 'bg-muted text-foreground'
                               : isInProgress
-                              ? 'bg-rka-orange text-destructive-foreground'
-                              : 'bg-primary text-primary-foreground shadow-lg'
-                          }`}
+                                ? 'bg-rka-orange text-destructive-foreground'
+                                : 'bg-primary text-primary-foreground shadow-lg'
+                            }`}
                         >
                           <PlayCircle className="w-5 h-5" />
                           {isCompleted ? 'View / Re-open' : isInProgress ? 'Continue form' : 'Start Inspection'}
@@ -861,11 +863,10 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                         </p>
                       </div>
                       {existing?.status === 'completed' && (
-                        <span className={`text-xs font-bold px-2 py-1 rounded ${
-                          existing.craneStatus === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
-                          existing.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
-                          'bg-rka-orange-light text-rka-orange'
-                        }`}>
+                        <span className={`text-xs font-bold px-2 py-1 rounded ${existing.craneStatus === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
+                            existing.craneStatus === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
+                              'bg-rka-orange-light text-rka-orange'
+                          }`}>
                           {existing.craneStatus}
                         </span>
                       )}
@@ -873,13 +874,12 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
 
                     <button
                       onClick={() => handleStartInspection(crane)}
-                      className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                        isCompleted
+                      className={`mt-3 w-full tap-target rounded-xl font-bold text-base flex items-center justify-center gap-2 transition-all ${isCompleted
                           ? 'bg-muted text-foreground'
                           : isInProgress
-                          ? 'bg-rka-orange text-destructive-foreground'
-                          : 'bg-primary text-primary-foreground shadow-lg'
-                      }`}
+                            ? 'bg-rka-orange text-destructive-foreground'
+                            : 'bg-primary text-primary-foreground shadow-lg'
+                        }`}
                     >
                       <PlayCircle className="w-5 h-5" />
                       {isCompleted ? 'View / Re-open' : isInProgress ? 'Continue form' : 'Start Inspection'}
@@ -917,11 +917,10 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="font-bold text-sm">${Number(q.total || 0).toLocaleString()}</p>
-                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                      q.status === 'accepted' ? 'bg-rka-green-light text-rka-green-dark' :
-                      q.status === 'sent' ? 'bg-blue-100 text-blue-700' :
-                      'bg-muted text-muted-foreground'
-                    }`}>{q.status}</span>
+                    <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${q.status === 'accepted' ? 'bg-rka-green-light text-rka-green-dark' :
+                        q.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                          'bg-muted text-muted-foreground'
+                      }`}>{q.status}</span>
                   </div>
                 </div>
               </div>
@@ -984,20 +983,22 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                         </div>
                         <div className="flex items-center gap-2">
                           {r.crane_status && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                              r.crane_status === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
-                              r.crane_status === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
-                              'bg-rka-orange-light text-rka-orange'
-                            }`}>{r.crane_status}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${r.crane_status === 'Crane is Operational' ? 'bg-rka-green-light text-rka-green-dark' :
+                                r.crane_status === 'Unsafe to Operate' ? 'bg-rka-red-light text-rka-red' :
+                                  'bg-rka-orange-light text-rka-orange'
+                              }`}>{r.crane_status}</span>
                           )}
-                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                            r.status === 'Completed' ? 'bg-rka-green-light text-rka-green-dark' : 'bg-muted text-muted-foreground'
-                          }`}>{r.status}</span>
+                          <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${r.status === 'Completed' ? 'bg-rka-green-light text-rka-green-dark' : 'bg-muted text-muted-foreground'
+                            }`}>{r.status}</span>
                         </div>
                       </div>
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={() => {
+                            if (!r.form_id) {
+                              toast({ title: 'Cannot edit report', description: 'This report has no form template linked. Please contact your admin.', variant: 'destructive' });
+                              return;
+                            }
                             const crane: Crane = {
                               id: `report-${r.id}`,
                               siteId: site.id,
@@ -1008,8 +1009,8 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                               manufacturer: 'N/A',
                               yearInstalled: 0,
                             };
-                            setActiveDbForm({ formId: r.form_id, crane, assetId: r.asset_id || undefined });
                             setEditingReportId(r.id);
+                            setActiveDbForm({ formId: r.form_id, crane, assetId: r.asset_id || undefined });
                           }}
                           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
                         >
@@ -1066,7 +1067,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                           .order('override_sort_order', { ascending: true });
 
                         const questionIds = (ftqs || []).map(q => q.question_id);
-                        
+
                         // Fetch questions
                         const { data: questions } = await supabase
                           .from('question_library')
@@ -1184,11 +1185,10 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                     <p className="font-bold text-sm truncate">{j.title}</p>
                     <p className="text-xs text-muted-foreground">{j.job_type || 'General'} • {j.scheduled_date ? new Date(j.scheduled_date).toLocaleDateString() : 'No date'}</p>
                   </div>
-                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${
-                    j.status === 'completed' ? 'bg-rka-green-light text-rka-green-dark' :
-                    j.status === 'in_progress' ? 'bg-rka-orange-light text-rka-orange' :
-                    'bg-muted text-muted-foreground'
-                  }`}>{j.status}</span>
+                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${j.status === 'completed' ? 'bg-rka-green-light text-rka-green-dark' :
+                      j.status === 'in_progress' ? 'bg-rka-orange-light text-rka-orange' :
+                        'bg-muted text-muted-foreground'
+                    }`}>{j.status}</span>
                 </div>
               </div>
             ))
@@ -1343,11 +1343,10 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                         setPendingFormAction(null);
                       }
                     }}
-                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-3 ${
-                      activeJobId === j.id
+                    className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-3 ${activeJobId === j.id
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:border-primary hover:bg-primary/5'
-                    }`}
+                      }`}
                   >
                     <Briefcase className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">

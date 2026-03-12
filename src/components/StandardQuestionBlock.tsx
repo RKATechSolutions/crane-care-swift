@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { CheckCircle, XCircle, MinusCircle, Camera, X, ChevronDown, ChevronUp, AlertTriangle, ImagePlus } from 'lucide-react';
+import { compressImage } from '@/utils/uploadHelper';
 
 export interface QuestionConfig {
   question_id: string;
@@ -64,10 +65,21 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
+  // Safely coerce any field that should be string[] but may come from DB as a JSON string
+  const safeArray = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') { try { return JSON.parse(val); } catch { return []; } }
+    return [];
+  };
+
+  const safeOptions = safeArray(question.options);
+  const safeAdvancedOptions = safeArray(question.advanced_defect_options);
+
   const failTriggers = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
   const isFail = failTriggers.includes(response.pass_fail_status || '') || failTriggers.includes(response.answer_value || '');
   const isAnswered = !!response.answer_value || !!response.pass_fail_status;
-  const isPassed = response.pass_fail_status === 'Pass' || 
+  const isPassed = response.pass_fail_status === 'Pass' ||
     (['Yes', 'Current', 'Compliant', 'Not Required'].includes(response.answer_value || '') && !isFail);
 
   const update = (partial: Partial<ResponseData>) => {
@@ -121,15 +133,20 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
     }
   };
 
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const urls = [...response.photo_urls, reader.result as string];
-      update({ photo_urls: urls });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedBlob = await compressImage(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const urls = [...response.photo_urls, reader.result as string];
+        update({ photo_urls: urls });
+      };
+      reader.readAsDataURL(compressedBlob);
+    } catch (err) {
+      console.error('Photo compression failed:', err);
+    }
     e.target.value = '';
   };
 
@@ -174,18 +191,16 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
         <input ref={galleryRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
         <button
           onClick={() => fileRef.current?.click()}
-          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${
-            required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
-          }`}
+          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
+            }`}
         >
           <Camera className="w-4 h-4" />
           Take Photo
         </button>
         <button
           onClick={() => galleryRef.current?.click()}
-          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${
-            required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
-          }`}
+          className={`flex-1 h-10 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-dashed ${required ? 'bg-rka-red/10 text-rka-red border-rka-red/30' : 'bg-primary/10 text-primary border-primary/30'
+            }`}
         >
           <ImagePlus className="w-4 h-4" />
           Upload
@@ -216,13 +231,12 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
               <button
                 key={opt}
                 onClick={() => handlePassFail(opt)}
-                className={`flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${
-                  response.pass_fail_status === opt
-                    ? opt === 'Pass' ? 'bg-rka-green text-primary-foreground'
+                className={`flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${response.pass_fail_status === opt
+                  ? opt === 'Pass' ? 'bg-rka-green text-primary-foreground'
                     : opt === 'Fail' ? 'bg-rka-red text-destructive-foreground'
-                    : 'bg-muted-foreground text-background'
-                    : 'bg-muted text-muted-foreground'
-                }`}
+                      : 'bg-muted-foreground text-background'
+                  : 'bg-muted text-muted-foreground'
+                  }`}
               >
                 {opt === 'Pass' ? <CheckCircle className="w-4 h-4" /> : opt === 'Fail' ? <XCircle className="w-4 h-4" /> : <MinusCircle className="w-4 h-4" />}
                 {opt === 'NA' ? 'N/A' : opt === 'Fail' ? 'Defect Noted' : opt}
@@ -236,11 +250,10 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
           <div className="flex gap-2">
             {['Yes', 'No'].map(opt => (
               <button key={opt} onClick={() => handleSelectValue(opt)}
-                className={`flex-1 h-11 rounded-xl font-bold text-sm transition-all ${
-                  response.answer_value === opt
-                    ? opt === 'Yes' ? 'bg-rka-green text-primary-foreground' : 'bg-rka-red text-destructive-foreground'
-                    : 'bg-muted text-muted-foreground'
-                }`}>{opt}</button>
+                className={`flex-1 h-11 rounded-xl font-bold text-sm transition-all ${response.answer_value === opt
+                  ? opt === 'Yes' ? 'bg-rka-green text-primary-foreground' : 'bg-rka-red text-destructive-foreground'
+                  : 'bg-muted text-muted-foreground'
+                  }`}>{opt}</button>
             ))}
           </div>
         )}
@@ -250,13 +263,12 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
           <div className="flex gap-2">
             {['Yes', 'No', 'N/A'].map(opt => (
               <button key={opt} onClick={() => opt === 'N/A' ? handlePassFail('NA') : handleSelectValue(opt)}
-                className={`flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${
-                  (opt === 'N/A' && response.pass_fail_status === 'NA') || response.answer_value === opt
-                    ? opt === 'Yes' ? 'bg-rka-green text-primary-foreground'
+                className={`flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${(opt === 'N/A' && response.pass_fail_status === 'NA') || response.answer_value === opt
+                  ? opt === 'Yes' ? 'bg-rka-green text-primary-foreground'
                     : opt === 'No' ? 'bg-rka-red text-destructive-foreground'
-                    : 'bg-muted-foreground text-background'
-                    : 'bg-muted text-muted-foreground'
-                }`}>{opt}</button>
+                      : 'bg-muted-foreground text-background'
+                  : 'bg-muted text-muted-foreground'
+                  }`}>{opt}</button>
             ))}
           </div>
         )}
@@ -266,39 +278,37 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
           <div className="flex gap-2">
             {['Yes', 'Partial', 'No'].map(opt => (
               <button key={opt} onClick={() => handleSelectValue(opt)}
-                className={`flex-1 h-11 rounded-xl font-bold text-sm transition-all ${
-                  response.answer_value === opt
-                    ? opt === 'Yes' ? 'bg-rka-green text-primary-foreground'
+                className={`flex-1 h-11 rounded-xl font-bold text-sm transition-all ${response.answer_value === opt
+                  ? opt === 'Yes' ? 'bg-rka-green text-primary-foreground'
                     : opt === 'No' ? 'bg-rka-red text-destructive-foreground'
-                    : 'bg-rka-orange text-destructive-foreground'
-                    : 'bg-muted text-muted-foreground'
-                }`}>{opt}</button>
+                      : 'bg-rka-orange text-destructive-foreground'
+                  : 'bg-muted text-muted-foreground'
+                  }`}>{opt}</button>
             ))}
           </div>
         )}
 
         {/* SingleSelect */}
-        {question.answer_type === 'SingleSelect' && question.options && (
+        {question.answer_type === 'SingleSelect' && safeOptions.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {question.options.map((opt, optIdx) => {
+            {safeOptions.map((opt, optIdx) => {
               const isSelected = response.answer_value === opt;
               // For 3-option selects, color positionally: first=green, second=amber, third=red
-              const is3Opt = question.options!.length === 3;
+              const is3Opt = safeOptions.length === 3;
               let selectedClass = '';
               if (isSelected) {
                 if (is3Opt) {
                   selectedClass = optIdx === 0 ? 'bg-rka-green text-primary-foreground'
                     : optIdx === 1 ? 'bg-rka-orange text-destructive-foreground'
-                    : 'bg-rka-red text-destructive-foreground';
+                      : 'bg-rka-red text-destructive-foreground';
                 } else {
                   selectedClass = failTriggers.includes(opt) ? 'bg-rka-red text-destructive-foreground' : 'bg-primary text-primary-foreground';
                 }
               }
               return (
                 <button key={opt} onClick={() => handleSelectValue(opt)}
-                  className={`px-3 h-10 rounded-xl font-semibold text-sm transition-all flex-1 min-w-0 ${
-                    isSelected ? selectedClass : 'bg-muted text-muted-foreground'
-                  }`}>{opt}</button>
+                  className={`px-3 h-10 rounded-xl font-semibold text-sm transition-all flex-1 min-w-0 ${isSelected ? selectedClass : 'bg-muted text-muted-foreground'
+                    }`}>{opt}</button>
               );
             })}
           </div>
@@ -366,9 +376,8 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                       <button
                         key={u.value}
                         onClick={() => update({ urgency: u.value })}
-                        className={`w-full h-10 rounded-lg font-semibold text-sm transition-all ${
-                          response.urgency === u.value ? u.color : 'bg-muted text-muted-foreground'
-                        }`}
+                        className={`w-full h-10 rounded-lg font-semibold text-sm transition-all ${response.urgency === u.value ? u.color : 'bg-muted text-muted-foreground'
+                          }`}
                       >
                         {u.label}
                       </button>
@@ -390,11 +399,10 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                       <button
                         key={cat}
                         onClick={() => toggleDefectType(cat)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                          (response.defect_types || []).includes(cat)
-                            ? 'bg-rka-red text-destructive-foreground'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${(response.defect_types || []).includes(cat)
+                          ? 'bg-rka-red text-destructive-foreground'
+                          : 'bg-muted text-muted-foreground'
+                          }`}
                       >
                         {cat}
                       </button>
@@ -403,19 +411,18 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 </div>
 
                 {/* Advanced Defect Detail (question-specific) */}
-                {question.advanced_defect_options && question.advanced_defect_options.length > 0 && (
+                {safeAdvancedOptions.length > 0 && (
                   <div>
                     <p className="text-xs font-bold text-foreground uppercase tracking-wide mb-1.5">Detail (Optional)</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {question.advanced_defect_options.map(opt => (
+                      {safeAdvancedOptions.map(opt => (
                         <button
                           key={opt}
                           onClick={() => toggleAdvancedDetail(opt)}
-                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                            (response.advanced_defect_detail || []).includes(opt)
-                              ? 'bg-rka-orange text-destructive-foreground'
-                              : 'bg-muted text-muted-foreground'
-                          }`}
+                          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${(response.advanced_defect_detail || []).includes(opt)
+                            ? 'bg-rka-orange text-destructive-foreground'
+                            : 'bg-muted text-muted-foreground'
+                            }`}
                         >
                           {opt}
                         </button>
@@ -449,11 +456,10 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                   <button
                     onClick={() => setDefectExpanded(false)}
                     disabled={!response.urgency || !response.comment || (response.photo_urls.length === 0)}
-                    className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
-                      response.urgency && response.comment && response.photo_urls.length > 0
-                        ? 'bg-rka-green text-white shadow-lg shadow-rka-green/20'
-                        : 'bg-muted text-muted-foreground opacity-50'
-                    }`}
+                    className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${response.urgency && response.comment && response.photo_urls.length > 0
+                      ? 'bg-rka-green text-white shadow-lg shadow-rka-green/20'
+                      : 'bg-muted text-muted-foreground opacity-50'
+                      }`}
                   >
                     <CheckCircle className="w-5 h-5" />
                     Save Defect Detail

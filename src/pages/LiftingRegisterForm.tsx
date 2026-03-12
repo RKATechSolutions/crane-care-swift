@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Camera, Check, Pencil, AlertTriangle, Loader2, ScanLine, X, ImagePlus, Sparkles } from 'lucide-react';
-import { uploadBase64Image } from '@/utils/uploadHelper';
+import { uploadBase64Image, compressImage } from '@/utils/uploadHelper';
 
 const DEFAULT_EQUIPMENT_TYPES = [
   'Chain Sling', 'Wire Rope Sling', 'Web Sling', 'Shackle', 'Hook',
@@ -145,14 +145,20 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result as string;
-        if (slot === 'tag') setTagPhoto(base64);
-        else if (slot === 'overall') setOverallPhoto(base64);
-        else setStampPhoto(base64);
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressedBlob = await compressImage(file);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result as string;
+          if (slot === 'tag') setTagPhoto(base64);
+          else if (slot === 'overall') setOverallPhoto(base64);
+          else setStampPhoto(base64);
+        };
+        reader.readAsDataURL(compressedBlob);
+      } catch (err) {
+        console.error('Photo compression failed:', err);
+        toast.error('Failed to process image');
+      }
     };
     input.click();
   }, []);
@@ -530,11 +536,10 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
                     key={g.name}
                     type="button"
                     onClick={() => setSelectedGroup(selectedGroup === g.name ? null : g.name)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      selectedGroup === g.name
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${selectedGroup === g.name
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                      }`}
                   >
                     {g.name}
                   </button>
@@ -552,11 +557,10 @@ export default function LiftingRegisterForm({ onBack, clientId, siteName }: Lift
                           key={t}
                           type="button"
                           onClick={() => updateField('equipment_type', form.equipment_type === t ? '' : t)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                            form.equipment_type === t
-                              ? 'bg-primary text-primary-foreground border-primary'
-                              : 'bg-background text-foreground border-border hover:border-primary/50'
-                          }`}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${form.equipment_type === t
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-border hover:border-primary/50'
+                            }`}
                         >
                           {t}
                         </button>

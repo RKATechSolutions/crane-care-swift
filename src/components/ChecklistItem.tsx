@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Check, AlertTriangle, MessageCircle, Camera, X, ZoomIn, RotateCcw, ImagePlus } from 'lucide-react';
 import { InspectionItemResult, DefectType, DefectSeverity, RectificationTimeframe, TemplateItem } from '@/types/inspection';
+import { compressImage } from '@/utils/uploadHelper';
 
 interface ChecklistItemProps {
   item: TemplateItem;
@@ -41,7 +42,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
   const isDefect = result.result === 'defect';
   const isUnresolved = result.result === 'unresolved';
 
-  const handlePhotoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>, target: 'pass' | 'defect' | 'unresolved') => {
+  const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>, target: 'pass' | 'defect' | 'unresolved') => {
     try {
       const files = e.target.files;
       if (!files || files.length === 0) return;
@@ -57,19 +58,18 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
       }
 
       const validFiles = Array.from(files).slice(0, remaining);
+      setUploadError(null);
 
       for (const file of validFiles) {
         if (!ALLOWED_TYPES.includes(file.type)) {
           setUploadError('Invalid file type. Use JPG, PNG, or WebP');
           continue;
         }
-        if (file.size > MAX_FILE_SIZE) {
-          setUploadError('File too large (max 10MB)');
-          continue;
-        }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          try {
+
+        try {
+          const compressedBlob = await compressImage(file);
+          const reader = new FileReader();
+          reader.onload = (ev) => {
             const dataUrl = ev.target?.result as string;
             if (target === 'defect') {
               setDefectPhotos(prev => [...prev, dataUrl]);
@@ -78,13 +78,12 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
             } else {
               setPhotos(prev => [...prev, dataUrl]);
             }
-          } catch (err) {
-            console.error('Error processing photo:', err);
-            setUploadError('Failed to process photo');
-          }
-        };
-        reader.onerror = () => setUploadError('Failed to read photo file');
-        reader.readAsDataURL(file);
+          };
+          reader.readAsDataURL(compressedBlob);
+        } catch (err) {
+          console.error('Photo compression failed:', err);
+          setUploadError('Failed to process image');
+        }
       }
       e.target.value = '';
     } catch (err) {
@@ -158,14 +157,12 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
 
   return (
     <div
-      className={`border-b border-border transition-all duration-200 ${
-        isPass ? 'pass-row animate-flash-green' : isDefect ? 'defect-row' : isUnresolved ? 'bg-rka-orange/10' : ''
-      }`}
+      className={`border-b border-border transition-all duration-200 ${isPass ? 'pass-row animate-flash-green' : isDefect ? 'defect-row' : isUnresolved ? 'bg-rka-orange/10' : ''
+        }`}
     >
       <div className="px-4 py-3">
-        <p className={`text-sm font-medium mb-3 leading-snug ${
-          isPass ? 'text-rka-green-dark' : isDefect ? 'text-rka-red' : isUnresolved ? 'text-rka-orange' : 'text-foreground'
-        }`}>
+        <p className={`text-sm font-medium mb-3 leading-snug ${isPass ? 'text-rka-green-dark' : isDefect ? 'text-rka-red' : isUnresolved ? 'text-rka-orange' : 'text-foreground'
+          }`}>
           {item.label}
           {hasPreviousDefect && !isPass && !isDefect && !isUnresolved && (
             <span className="ml-2 text-xs bg-rka-orange/20 text-rka-orange px-2 py-0.5 rounded-full font-semibold">
@@ -177,11 +174,10 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
         <div className="flex gap-2">
           <button
             onClick={onPass}
-            className={`flex-1 tap-target rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              isPass
-                ? 'bg-rka-green text-primary-foreground shadow-md'
-                : 'bg-rka-green/10 text-rka-green border-2 border-rka-green active:bg-rka-green active:text-primary-foreground'
-            }`}
+            className={`flex-1 tap-target rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${isPass
+              ? 'bg-rka-green text-primary-foreground shadow-md'
+              : 'bg-rka-green/10 text-rka-green border-2 border-rka-green active:bg-rka-green active:text-primary-foreground'
+              }`}
           >
             <Check className="w-5 h-5" />
             PASS
@@ -195,11 +191,10 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 onDefect({ ...result, result: 'defect', defect: { defectType: 'Mechanical', severity: 'Minor', rectificationTimeframe: 'Within 7 Days', recommendedAction: '', notes: '', photos: [] } });
               }
             }}
-            className={`flex-1 tap-target rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              isDefect
-                ? 'bg-rka-red text-destructive-foreground shadow-md'
-                : 'bg-rka-red/10 text-rka-red border-2 border-rka-red active:bg-rka-red active:text-destructive-foreground'
-            }`}
+            className={`flex-1 tap-target rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${isDefect
+              ? 'bg-rka-red text-destructive-foreground shadow-md'
+              : 'bg-rka-red/10 text-rka-red border-2 border-rka-red active:bg-rka-red active:text-destructive-foreground'
+              }`}
           >
             <AlertTriangle className="w-5 h-5" />
             DEFECT
@@ -208,11 +203,10 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
           {hasPreviousDefect && (
             <button
               onClick={handleUnresolvedClick}
-              className={`flex-1 tap-target rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all ${
-                isUnresolved
-                  ? 'bg-rka-orange text-destructive-foreground shadow-md'
-                  : 'bg-rka-orange/10 text-rka-orange border-2 border-rka-orange active:bg-rka-orange active:text-destructive-foreground'
-              }`}
+              className={`flex-1 tap-target rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all ${isUnresolved
+                ? 'bg-rka-orange text-destructive-foreground shadow-md'
+                : 'bg-rka-orange/10 text-rka-orange border-2 border-rka-orange active:bg-rka-orange active:text-destructive-foreground'
+                }`}
             >
               <RotateCcw className="w-4 h-4" />
               UNRESOLVED
@@ -222,9 +216,8 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
           {(isPass || isDefect) && (
             <button
               onClick={() => setShowExtras(!showExtras)}
-              className={`tap-target w-12 rounded-lg flex items-center justify-center transition-all ${
-                showExtras ? 'bg-foreground/10' : 'bg-muted'
-              }`}
+              className={`tap-target w-12 rounded-lg flex items-center justify-center transition-all ${showExtras ? 'bg-foreground/10' : 'bg-muted'
+                }`}
             >
               <MessageCircle className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -238,7 +231,7 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
 
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Add Photo (optional)</label>
-               <input
+              <input
                 ref={unresolvedFileInputRef}
                 type="file"
                 accept="image/*"
@@ -368,11 +361,10 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                   <button
                     key={dt}
                     onClick={() => setDefectType(dt)}
-                    className={`tap-target rounded-lg text-sm font-medium px-3 transition-all ${
-                      defectType === dt
-                        ? 'bg-foreground text-background'
-                        : 'bg-muted text-foreground active:bg-foreground/20'
-                    }`}
+                    className={`tap-target rounded-lg text-sm font-medium px-3 transition-all ${defectType === dt
+                      ? 'bg-foreground text-background'
+                      : 'bg-muted text-foreground active:bg-foreground/20'
+                      }`}
                   >
                     {dt}
                   </button>
@@ -387,11 +379,10 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                   <button
                     key={s}
                     onClick={() => setSeverity(s)}
-                    className={`tap-target rounded-lg text-sm font-bold transition-all ${
-                      severity === s
-                        ? s === 'Critical' ? 'bg-rka-red text-destructive-foreground' : s === 'Major' ? 'bg-rka-orange text-destructive-foreground' : 'bg-rka-yellow text-foreground'
-                        : 'bg-muted text-foreground active:bg-foreground/20'
-                    }`}
+                    className={`tap-target rounded-lg text-sm font-bold transition-all ${severity === s
+                      ? s === 'Critical' ? 'bg-rka-red text-destructive-foreground' : s === 'Major' ? 'bg-rka-orange text-destructive-foreground' : 'bg-rka-yellow text-foreground'
+                      : 'bg-muted text-foreground active:bg-foreground/20'
+                      }`}
                   >
                     {s}
                   </button>
@@ -406,11 +397,10 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                   <button
                     key={tf}
                     onClick={() => setTimeframe(tf)}
-                    className={`tap-target rounded-lg text-sm font-medium px-2 transition-all ${
-                      timeframe === tf
-                        ? tf === 'Immediately' ? 'bg-rka-red text-destructive-foreground' : 'bg-foreground text-background'
-                        : 'bg-muted text-foreground active:bg-foreground/20'
-                    }`}
+                    className={`tap-target rounded-lg text-sm font-medium px-2 transition-all ${timeframe === tf
+                      ? tf === 'Immediately' ? 'bg-rka-red text-destructive-foreground' : 'bg-foreground text-background'
+                      : 'bg-muted text-foreground active:bg-foreground/20'
+                      }`}
                   >
                     {tf}
                   </button>
@@ -443,9 +433,8 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 <button
                   onClick={() => { if (defectFileInputRef.current) { defectFileInputRef.current.capture = 'environment'; defectFileInputRef.current.click(); } }}
                   disabled={defectPhotos.length >= MAX_PHOTOS}
-                  className={`flex-1 tap-target rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm font-semibold active:bg-muted disabled:opacity-40 ${
-                    defectPhotos.length === 0 ? 'border-rka-red/50 text-rka-red' : 'border-border text-muted-foreground'
-                  }`}
+                  className={`flex-1 tap-target rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm font-semibold active:bg-muted disabled:opacity-40 ${defectPhotos.length === 0 ? 'border-rka-red/50 text-rka-red' : 'border-border text-muted-foreground'
+                    }`}
                 >
                   <Camera className="w-4 h-4" />
                   Take Photo
@@ -453,9 +442,8 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
                 <button
                   onClick={() => { if (defectFileInputRef.current) { defectFileInputRef.current.removeAttribute('capture'); defectFileInputRef.current.click(); } }}
                   disabled={defectPhotos.length >= MAX_PHOTOS}
-                  className={`flex-1 tap-target rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm font-semibold active:bg-muted disabled:opacity-40 ${
-                    defectPhotos.length === 0 ? 'border-rka-red/50 text-rka-red' : 'border-border text-muted-foreground'
-                  }`}
+                  className={`flex-1 tap-target rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-sm font-semibold active:bg-muted disabled:opacity-40 ${defectPhotos.length === 0 ? 'border-rka-red/50 text-rka-red' : 'border-border text-muted-foreground'
+                    }`}
                 >
                   <ImagePlus className="w-4 h-4" />
                   Upload
@@ -482,9 +470,8 @@ export function ChecklistItem({ item, result, onPass, onDefect, isActive, hasPre
             <button
               onClick={handleDefectSave}
               disabled={!canSaveDefect}
-              className={`w-full tap-target rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-                defectSaved ? 'bg-rka-green text-primary-foreground' : canSaveDefect ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'
-              }`}
+              className={`w-full tap-target rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all ${defectSaved ? 'bg-rka-green text-primary-foreground' : canSaveDefect ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground'
+                }`}
             >
               {defectSaved ? (
                 <><Check className="w-5 h-5" /> Saved ✓</>

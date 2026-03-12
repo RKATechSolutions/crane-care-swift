@@ -35,6 +35,16 @@ interface FormQuestion extends QuestionConfig {
 export default function DbInspectionForm({
   formId, assetName, assetId, clientId, siteName, existingInspectionId, taskId, onBack, onSubmitComplete
 }: DbInspectionFormProps) {
+
+  // Safely parse a DB field that may be a JSON string or already an array
+  const parseJsonArray = (val: any): string[] => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try { return JSON.parse(val); } catch { return []; }
+    }
+    return [];
+  };
   const { state } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
   const [questions, setQuestions] = useState<FormQuestion[]>([]);
@@ -44,7 +54,7 @@ export default function DbInspectionForm({
   const [saving, setSaving] = useState(false);
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0);
   const [formName, setFormName] = useState('');
-  
+
   const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
@@ -55,12 +65,18 @@ export default function DbInspectionForm({
   const [inspectionDate, setInspectionDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [craneStatus, setCraneStatus] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string>('');
-  
+
 
   // Load questions for this form
   useEffect(() => {
     const loadForm = async () => {
       setLoading(true);
+
+      // Guard: bail out if formId is missing
+      if (!formId) {
+        setLoading(false);
+        return;
+      }
 
       // Get form name
       const { data: formData } = await supabase
@@ -79,7 +95,7 @@ export default function DbInspectionForm({
           .single();
         if (assetData?.main_photo_url) setAssetPhotoUrl(assetData.main_photo_url);
       }
-      
+
       if (clientId) {
         const { data: clientData } = await supabase
           .from('clients')
@@ -117,20 +133,26 @@ export default function DbInspectionForm({
       const merged: FormQuestion[] = bridgeData.map(bridge => {
         const q = questionData.find(qd => qd.question_id === bridge.question_id);
         if (!q) return null;
+
+        // Parse any JSON-string fields that may come from text-typed DB columns
+        const parsedOptions = parseJsonArray(q.options);
+        const parsedAutoDefects = parseJsonArray((q as any).auto_defect_types);
+        const parsedAdvancedOptions = parseJsonArray((q as any).advanced_defect_options);
+
         return {
           question_id: q.question_id,
           question_text: q.question_text,
           help_text: bridge.override_help_text || q.help_text,
           standard_ref: bridge.override_standard_ref || q.standard_ref,
           answer_type: q.answer_type,
-          options: q.options,
+          options: parsedOptions.length > 0 ? parsedOptions : null,
           requires_photo_on_fail: q.requires_photo_on_fail,
           requires_comment_on_fail: q.requires_comment_on_fail,
           severity_required_on_fail: q.severity_required_on_fail,
           optional_photo: (q as any).optional_photo ?? false,
           optional_comment: (q as any).optional_comment ?? false,
-          auto_defect_types: (q as any).auto_defect_types ?? [],
-          advanced_defect_options: (q as any).advanced_defect_options ?? [],
+          auto_defect_types: parsedAutoDefects,
+          advanced_defect_options: parsedAdvancedOptions,
           required: bridge.required,
           section: bridge.section_override || q.section,
           override_sort_order: bridge.override_sort_order,
@@ -303,7 +325,7 @@ export default function DbInspectionForm({
     currentSection.questions.forEach(q => {
       const existing = updates[q.question_id];
       if (existing?.pass_fail_status === 'Fail' || existing?.defect_flag) return; // Don't override defects
-      
+
       if ((q.answer_type === 'PassFailNA' || q.answer_type === 'YesNoNA') && !existing?.pass_fail_status) {
         updates[q.question_id] = {
           ...updates[q.question_id],
@@ -443,18 +465,18 @@ export default function DbInspectionForm({
       if (!currentInspId) {
         // Create inspection record
         const insertPayload: any = {
-            form_id: formId,
-            client_id: clientId || null,
-            site_name: siteName || null,
-            asset_id: assetId || null,
-            asset_name: assetName,
-            technician_id: state.currentUser?.id || 'unknown',
-            technician_name: state.currentUser?.name || 'Unknown',
-            status,
-            inspection_date: dateToUse,
-            crane_status: craneStatus || null,
-            ai_summary: aiSummary || null,
-          };
+          form_id: formId,
+          client_id: clientId || null,
+          site_name: siteName || null,
+          asset_id: assetId || null,
+          asset_name: assetName,
+          technician_id: state.currentUser?.id || 'unknown',
+          technician_name: state.currentUser?.name || 'Unknown',
+          status,
+          inspection_date: dateToUse,
+          crane_status: craneStatus || null,
+          ai_summary: aiSummary || null,
+        };
         if (taskId) insertPayload.task_id = taskId;
 
         const { data: newInsp, error } = await supabase
@@ -469,11 +491,11 @@ export default function DbInspectionForm({
       } else {
         await supabase
           .from('db_inspections')
-          .update({ 
-            status, 
-            updated_at: new Date().toISOString(), 
-            other_notes: otherNotes || null, 
-            inspection_date: dateToUse, 
+          .update({
+            status,
+            updated_at: new Date().toISOString(),
+            other_notes: otherNotes || null,
+            inspection_date: dateToUse,
             crane_status: craneStatus || null,
             ai_summary: aiSummary || null
           } as any)
@@ -559,9 +581,13 @@ export default function DbInspectionForm({
   if (questions.length === 0) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <AppHeader title={formName} subtitle="No questions found" onBack={onBack} />
+        <AppHeader title={formName || 'Form'} subtitle="Unable to load" onBack={onBack} />
         <div className="flex-1 flex items-center justify-center p-8 text-center text-muted-foreground">
-          <p>No questions configured for this form template.</p>
+          <div className="space-y-2">
+            <p className="font-semibold text-foreground">Form could not be loaded</p>
+            <p className="text-sm">No questions found for this form template{formId ? ` (${formId})` : ''}.</p>
+            <p className="text-xs">This may be a configuration issue — please contact your admin.</p>
+          </div>
         </div>
       </div>
     );
@@ -590,13 +616,12 @@ export default function DbInspectionForm({
             <button
               key={sec.name}
               onClick={() => handleSectionChange(idx)}
-              className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
-                idx === currentSectionIdx
-                  ? 'bg-foreground text-background'
-                  : secAnswered === sec.questions.length && sec.questions.length > 0
+              className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${idx === currentSectionIdx
+                ? 'bg-foreground text-background'
+                : secAnswered === sec.questions.length && sec.questions.length > 0
                   ? 'bg-rka-green-light text-rka-green-dark'
                   : 'text-muted-foreground active:bg-muted'
-              }`}
+                }`}
             >
               {sec.name}
               <span className="ml-1 text-xs opacity-70">{secAnswered}/{sec.questions.length}</span>
@@ -611,11 +636,10 @@ export default function DbInspectionForm({
           <button
             onClick={handlePassAll}
             disabled={allChecklistPassed}
-            className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
-              allChecklistPassed
-                ? 'bg-rka-green/20 text-rka-green-dark'
-                : 'bg-rka-green text-primary-foreground'
-            }`}
+            className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${allChecklistPassed
+              ? 'bg-rka-green/20 text-rka-green-dark'
+              : 'bg-rka-green text-primary-foreground'
+              }`}
           >
             <Check className="w-5 h-5" />
             {allChecklistPassed ? 'All Passed ✓' : `Pass All — ${currentSection.name}`}
@@ -802,7 +826,7 @@ export default function DbInspectionForm({
             Save
           </button>
         </div>
-        
+
         <button
           onClick={handleDownloadPdf}
           disabled={generatingPreview || totalAnswered === 0}

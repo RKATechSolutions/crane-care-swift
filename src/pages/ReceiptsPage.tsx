@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Camera, Send, Loader2, X, Receipt, CheckCircle, Clock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { uploadCompressedFile } from '@/utils/uploadHelper';
 
 interface ReceiptEntry {
   id: string;
@@ -110,11 +111,7 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
     }
     setSubmitting(true);
     try {
-      const fileName = `${techId}/${Date.now()}-${photoFile.name}`;
-      const { error: uploadError } = await supabase.storage.from('receipts').upload(fileName, photoFile);
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('receipts').getPublicUrl(fileName);
+      const publicUrl = await uploadCompressedFile(photoFile, 'receipts', techId);
 
       const { error: insertError } = await supabase.from('receipts').insert({
         technician_id: techId,
@@ -232,11 +229,10 @@ export default function ReceiptsPage({ onBack }: ReceiptsPageProps) {
                   <button
                     key={cat}
                     onClick={() => setCategory(cat)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      category === cat
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-background border border-border text-muted-foreground'
-                    }`}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${category === cat
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background border border-border text-muted-foreground'
+                      }`}
                   >
                     {cat}
                   </button>

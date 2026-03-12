@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X, Save, ChevronDown, ChevronUp, Camera, Plus, Trash2 } from 'lucide-react';
 import { useAssetGroups } from '@/hooks/useAssetGroups';
+import { uploadCompressedFile } from '@/utils/uploadHelper';
 
 interface AssetDetailModalProps {
   asset: {
@@ -32,7 +33,7 @@ const inputClass = "w-full h-10 px-3 border border-border rounded-lg bg-backgrou
 const selectClass = "w-full h-10 px-3 border border-border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 const labelClass = "text-xs font-medium text-muted-foreground";
 
-const FALLBACK_CATEGORY_OPTIONS = ['Overhead Crane','Hoist','Chain Sling','Wire Rope Sling','Synthetic Sling','Below the Hook','Jib Crane','Gantry Crane','Monorail','Monorail WRH','Monorail CH','Portal DGWRH','Portal SGWRH','Portal Balancer','Air Jib CH','Jib Balancer','Manual','KBK'];
+const FALLBACK_CATEGORY_OPTIONS = ['Overhead Crane', 'Hoist', 'Chain Sling', 'Wire Rope Sling', 'Synthetic Sling', 'Below the Hook', 'Jib Crane', 'Gantry Crane', 'Monorail', 'Monorail WRH', 'Monorail CH', 'Portal DGWRH', 'Portal SGWRH', 'Portal Balancer', 'Air Jib CH', 'Jib Balancer', 'Manual', 'KBK'];
 
 
 function SectionHeader({ title, open, onToggle }: { title: string; open: boolean; onToggle: () => void }) {
@@ -94,12 +95,7 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
     if (!file) return;
     setUploadingPhoto(true);
     try {
-      const ext = file.name.split('.').pop();
-      const path = `asset-photos/${asset.id}_${Date.now()}.${ext}`;
-      const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
-      if (uploadErr) throw uploadErr;
-      const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
-      const url = urlData.publicUrl;
+      const url = await uploadCompressedFile(file, 'job-documents', `asset-photos/${asset.id}`);
       setMainPhotoUrl(url);
       await supabase.from('assets').update({ main_photo_url: url } as any).eq('id', asset.id);
       toast.success('Asset photo uploaded');
@@ -129,14 +125,10 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
     setUploadingGallery(true);
     try {
       for (const file of Array.from(files)) {
-        const ext = file.name.split('.').pop();
-        const path = `asset-photos/${asset.id}_gallery_${Date.now()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from('job-documents').upload(path, file);
-        if (uploadErr) throw uploadErr;
-        const { data: urlData } = supabase.storage.from('job-documents').getPublicUrl(path);
+        const publicUrl = await uploadCompressedFile(file, 'job-documents', `asset-photos/${asset.id}`);
         await supabase.from('asset_photos').insert({
           asset_id: asset.id,
-          photo_url: urlData.publicUrl,
+          photo_url: publicUrl,
           uploaded_by: 'technician',
         } as any);
       }
@@ -241,11 +233,10 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
                     key={g.name}
                     type="button"
                     onClick={() => { setSelectedGroup(g.name === selectedGroup ? null : g.name); }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      selectedGroup === g.name
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${selectedGroup === g.name
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                      }`}
                   >
                     {g.name}
                   </button>
@@ -261,11 +252,10 @@ export function AssetDetailModal({ asset, onClose, onSaved }: AssetDetailModalPr
                         key={t}
                         type="button"
                         onClick={() => setClassName(className === t ? '' : t)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                          className === t
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-background text-foreground border-border hover:border-primary/50'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${className === t
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-foreground border-border hover:border-primary/50'
+                          }`}
                       >
                         {t}
                       </button>

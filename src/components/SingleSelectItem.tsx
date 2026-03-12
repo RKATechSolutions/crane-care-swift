@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { TemplateItem, InspectionItemResult } from '@/types/inspection';
 import { Check, Camera, X, Lightbulb, ImagePlus } from 'lucide-react';
+import { compressImage } from '@/utils/uploadHelper';
 
 interface SingleSelectItemProps {
   item: TemplateItem;
@@ -67,16 +68,21 @@ export function SingleSelectItem({ item, result, onUpdate }: SingleSelectItemPro
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      const newPhotos = [...photos, dataUrl].slice(0, 5);
-      onUpdate({ ...result, photos: newPhotos });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedBlob = await compressImage(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const newPhotos = [...photos, dataUrl].slice(0, 5);
+        onUpdate({ ...result, photos: newPhotos });
+      };
+      reader.readAsDataURL(compressedBlob);
+    } catch (err) {
+      console.error('Photo compression failed:', err);
+    }
     e.target.value = '';
   };
 
