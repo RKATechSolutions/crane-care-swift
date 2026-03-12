@@ -95,7 +95,7 @@ export function RepairSectionA({ formData, updateForm, assetId }: Props) {
     .filter(d => !defectFilter || d.urgency === defectFilter)
     .filter(d => !defectSearch || d.question_text.toLowerCase().includes(defectSearch.toLowerCase()) || d.comment?.toLowerCase().includes(defectSearch.toLowerCase()))
     .sort((a, b) => {
-      const order: Record<string, number> = { 'Immediate - Remove From Service and Repair Immediately': 0, 'Urgent Repair Before Next Use': 1, 'Schedule Repair Before Next Service': 2, 'Monitor': 3 };
+      const order: Record<string, number> = { 'Immediate - Remove From Service and Repair Immediately': 0, 'Urgent Repair Within 7 Days': 1, 'Schedule Repair Before Next Service': 2, 'Monitor': 3 };
       return (order[a.urgency as string] ?? 4) - (order[b.urgency as string] ?? 4);
     });
 
@@ -140,7 +140,7 @@ export function RepairSectionA({ formData, updateForm, assetId }: Props) {
 
           {/* Filter chips */}
           <div className="flex gap-1.5 flex-wrap">
-            {['Immediate - Remove From Service and Repair Immediately', 'Urgent Repair Before Next Use', 'Schedule Repair Before Next Service', 'Monitor'].map(f => (
+            {['Immediate - Remove From Service and Repair Immediately', 'Urgent Repair Within 7 Days', 'Schedule Repair Before Next Service', 'Monitor'].map(f => (
               <button
                 key={f}
                 onClick={() => setDefectFilter(defectFilter === f ? null : f)}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Building2, Pencil, Save, ExternalLink } from 'lucide-react';
+import { Building2, Pencil, Save, ExternalLink, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AdminFormConfig, ClientInfoField } from '@/types/adminConfig';
 
@@ -13,6 +13,8 @@ interface Props {
 export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConfig, onUpdateClientInfo }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [draftContacts, setDraftContacts] = useState<any[]>([]);
+  const [deletedContactIds, setDeletedContactIds] = useState<string[]>([]);
 
   const fields = [...(adminConfig.clientInfoFields || [])]
     .filter(f => f.visible)
@@ -29,12 +31,14 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
   };
 
   const startEditing = () => {
-    if (editableFieldCount === 0) return;
+    if (editableFieldCount === 0 && clientContacts.length === 0) return;
     const d: Record<string, string> = {};
     fields.forEach(f => {
       d[f.fieldKey] = String(getFieldValue(f) || '');
     });
     setDraft(d);
+    setDraftContacts([...clientContacts]);
+    setDeletedContactIds([]);
     setEditing(true);
   };
 
@@ -54,8 +58,31 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
     onUpdateClientInfo({
       ...standardUpdates,
       __custom_fields: customFieldUpdates,
+      __contacts: draftContacts,
+      __deleted_contact_ids: deletedContactIds,
     });
     setEditing(false);
+  };
+
+  const updateContact = (index: number, updates: any) => {
+    setDraftContacts(prev => prev.map((c, i) => i === index ? { ...c, ...updates } : c));
+  };
+
+  const deleteContact = (index: number) => {
+    const contact = draftContacts[index];
+    if (contact.id) {
+      setDeletedContactIds(prev => [...prev, contact.id]);
+    }
+    setDraftContacts(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const makeMain = (index: number) => {
+    const contact = draftContacts[index];
+    setDraft(prev => ({
+      ...prev,
+      primary_contact_name: contact.contact_name || '',
+      primary_contact_email: contact.contact_email || '',
+    }));
   };
 
   const isLink = (v: string) => v?.startsWith('http');
@@ -69,7 +96,7 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
         </div>
         <button
           onClick={editing ? handleSave : startEditing}
-          disabled={!editing && editableFieldCount === 0}
+          disabled={!editing && editableFieldCount === 0 && clientContacts.length === 0}
           className="flex items-center gap-1 text-xs font-medium text-primary px-2 py-1 rounded-lg bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {editing ? <><Save className="w-3 h-3" /> Save</> : <><Pencil className="w-3 h-3" /> Edit</>}
@@ -95,9 +122,9 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
                 // Special highlight for site induction
                 if (f.fieldKey === 'site_induction_details' && val && !editing) {
                   return (
-                    <div key={f.fieldKey} className="p-2 rounded-lg bg-rka-orange-light">
-                      <label className="text-xs font-semibold text-rka-orange uppercase tracking-wide">⚠️ {f.label}</label>
-                      <p className="text-sm font-medium mt-0.5">{val}</p>
+                    <div key={f.fieldKey} className="p-2 rounded-lg bg-primary/5 border border-primary/20">
+                      <label className="text-xs font-semibold text-primary uppercase tracking-wide">{f.label}</label>
+                      <p className="text-sm font-medium mt-0.5 whitespace-pre-wrap">{val}</p>
                     </div>
                   );
                 }
@@ -164,20 +191,68 @@ export function ClientInfoSummarySection({ clientInfo, clientContacts, adminConf
       })}
 
       {/* Other contacts */}
-      {clientContacts.length > 0 && (
+      {(editing ? draftContacts : clientContacts).length > 0 && (
         <div className="mt-1">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Other Contacts</p>
-          <div className="space-y-1 mt-1">
-            {clientContacts.slice(0, 3).map((c, i) => (
-              <div key={i} className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">{c.contact_name}</span>
-                {c.contact_position && <span className="ml-1">({c.contact_position})</span>}
-                {c.contact_email && <span className="ml-1">• {c.contact_email}</span>}
-              </div>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Other Contacts</p>
+          <div className="space-y-2 mt-1">
+            {(editing ? draftContacts : clientContacts).map((c, i) => (
+              editing ? (
+                <div key={i} className="p-2 border border-border/50 rounded-lg space-y-1.5 bg-background/50 relative group">
+                  <div className="flex items-center gap-2">
+                    <input
+                      placeholder="Name"
+                      value={c.contact_name || ''}
+                      onChange={e => updateContact(i, { contact_name: e.target.value })}
+                      className="flex-1 h-7 px-2 border border-border rounded bg-background text-xs"
+                    />
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/5">
+                        <Checkbox 
+                          id={`main-contact-${i}`}
+                          checked={c.contact_name === draft.primary_contact_name && c.contact_email === draft.primary_contact_email} 
+                          onCheckedChange={() => makeMain(i)} 
+                        />
+                        <label htmlFor={`main-contact-${i}`} className="text-[10px] font-bold text-primary uppercase cursor-pointer">Main</label>
+                      </div>
+
+                      <button
+                        onClick={() => deleteContact(i)}
+                        className="p-1.5 rounded hover:bg-destructive/10 text-destructive transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Position"
+                      value={c.contact_position || ''}
+                      onChange={e => updateContact(i, { contact_position: e.target.value })}
+                      className="flex-1 h-7 px-2 border border-border rounded bg-background text-[10px]"
+                    />
+                    <input
+                      placeholder="Email"
+                      value={c.contact_email || ''}
+                      onChange={e => updateContact(i, { contact_email: e.target.value })}
+                      className="flex-1 h-7 px-2 border border-border rounded bg-background text-[10px]"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div key={i} className="text-xs text-muted-foreground flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-foreground">{c.contact_name}</span>
+                    <span className="text-[10px] ml-1">
+                      {c.contact_name === clientInfo.primary_contact_name && (
+                        <span className="text-primary font-bold uppercase">(Main)</span>
+                      )}
+                      {c.contact_position && <span className="text-muted-foreground"> ({c.contact_position})</span>}
+                    </span>
+                    {c.contact_email && <span className="ml-1 text-muted-foreground">• {c.contact_email}</span>}
+                  </div>
+                </div>
+              )
             ))}
-            {clientContacts.length > 3 && (
-              <p className="text-xs text-muted-foreground">+{clientContacts.length - 3} more</p>
-            )}
           </div>
         </div>
       )}

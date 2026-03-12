@@ -124,8 +124,8 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   // Asset Outcome badge — prominently on front page
   if (craneStatus) {
-    const statusColor = craneStatus === 'Crane is Operational' ? RKA_GREEN
-      : craneStatus === 'Operate with Limitations' ? RKA_ORANGE : RKA_RED;
+    // User wants Green for pass and Red for defects (no orange)
+    const statusColor = (craneStatus === 'Crane is Operational') ? RKA_GREEN : RKA_RED;
 
     doc.setFillColor(...statusColor);
     const badgeLabel = craneStatus;
@@ -139,66 +139,77 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   }
 
   // Stats
-  const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
-  const defectCount = sections.reduce((sum, s) => sum + s.questions.filter(q => q.defect_flag).length, 0);
-  const passCount = sections.reduce((sum, s) => sum + s.questions.filter(q => q.pass_fail_status === 'Pass').length, 0);
-  const failCount = sections.reduce((sum, s) => sum + s.questions.filter(q => q.pass_fail_status === 'Fail' || q.pass_fail_status === 'No').length, 0);
-  const naCount = totalQuestions - passCount - failCount;
-  const passPercent = totalQuestions > 0 ? Math.round((passCount / totalQuestions) * 100) : 0;
-  const defectPercent = totalQuestions > 0 ? Math.round((defectCount / totalQuestions) * 100) : 0;
-  const failPercent = totalQuestions > 0 ? Math.round((failCount / totalQuestions) * 100) : 0;
-  const naPercent = totalQuestions > 0 ? 100 - passPercent - defectPercent - failPercent : 0;
+  const allQuestions = sections.flatMap(s => s.questions);
+  const totalQuestions = allQuestions.length;
+  const defectCount = allQuestions.filter(q => q.defect_flag || q.pass_fail_status === 'Fail' || q.pass_fail_status === 'No').length;
+  const passCount = allQuestions.filter(q => 
+    (q.pass_fail_status === 'Pass' || q.answer_value === 'Yes' || q.answer_value === 'Pass') && 
+    !(q.defect_flag || q.pass_fail_status === 'Fail' || q.pass_fail_status === 'No')
+  ).length;
+  const naCount = totalQuestions - passCount - defectCount;
+  
+  const passPercent = totalQuestions > 0 ? Math.floor((passCount / totalQuestions) * 100) : 0;
+  const defectPercent = totalQuestions > 0 ? Math.floor((defectCount / totalQuestions) * 100) : 0;
+  const naPercent = totalQuestions > 0 ? (100 - passPercent - defectPercent) : 0;
 
   doc.setTextColor(...DARK);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Total Items: ${totalQuestions}  |  Passed: ${passCount}  |  Defects: ${defectCount}`, pageW / 2, y, { align: 'center' });
+  doc.text(`Items: ${totalQuestions}  |  Passed: ${passCount}  |  Defects Noted: ${defectCount}  |  N/A: ${naCount}`, pageW / 2, y, { align: 'center' });
   y += 10;
 
   // Risk bar
   const barX = 30;
   const barW = pageW - 60;
   const barH = 8;
-  const passW = (passPercent / 100) * barW;
-  const defW = (defectPercent / 100) * barW;
-  const fW = (failPercent / 100) * barW;
-  const nW = barW - passW - defW - fW;
+  const passW = totalQuestions > 0 ? (passCount / totalQuestions) * barW : 0;
+  const defW = totalQuestions > 0 ? (defectCount / totalQuestions) * barW : 0;
+  const nW = barW - passW - defW;
 
   if (passW > 0) { doc.setFillColor(...RKA_GREEN); doc.rect(barX, y, passW, barH, 'F'); }
-  if (defW > 0) { doc.setFillColor(...RKA_ORANGE); doc.rect(barX + passW, y, defW, barH, 'F'); }
-  if (fW > 0) { doc.setFillColor(...RKA_RED); doc.rect(barX + passW + defW, y, fW, barH, 'F'); }
-  if (nW > 0) { doc.setFillColor(200, 200, 200); doc.rect(barX + passW + defW + fW, y, nW, barH, 'F'); }
+  if (defW > 0) { doc.setFillColor(...RKA_RED); doc.rect(barX + passW, y, defW, barH, 'F'); }
+  if (nW > 0) { doc.setFillColor(220, 220, 220); doc.rect(barX + passW + defW, y, nW, barH, 'F'); }
 
   y += barH + 5;
 
   // Legend
   doc.setFontSize(7.5);
   const legendItems = [
-    { label: 'Pass', color: RKA_GREEN, pct: passPercent },
-    { label: 'Defect', color: RKA_ORANGE, pct: defectPercent },
-    { label: 'Defect Noted', color: RKA_RED, pct: failPercent },
-    { label: 'N/A', color: [200, 200, 200] as [number, number, number], pct: naPercent },
+    { label: 'Pass', color: RKA_GREEN, count: passCount },
+    { label: 'Defect', color: RKA_RED, count: defectCount },
+    { label: 'N/A', color: [220, 220, 220] as [number, number, number], count: naCount },
   ];
   let lx = barX;
   for (const item of legendItems) {
     doc.setFillColor(...item.color);
     doc.rect(lx, y, 3, 3, 'F');
     doc.setTextColor(...DARK);
-    doc.text(`${item.label} ${item.pct}%`, lx + 5, y + 3);
+    doc.text(`${item.label} (${item.count})`, lx + 5, y + 3);
     lx += 35;
   }
   y += 10;
 
-  // Asset photo on cover
+  // Asset photo on cover - ensure it's always there
+  const maxPhotoW = 100;
+  const maxPhotoH = 70;
+  const imgX = (pageW - maxPhotoW) / 2;
+
   if (assetImg) {
-    const maxPhotoW = 100;
-    const maxPhotoH = 70;
     const ratio = Math.min(maxPhotoW / assetImg.width, maxPhotoH / assetImg.height);
     const imgW = assetImg.width * ratio;
     const imgH = assetImg.height * ratio;
-    const imgX = (pageW - imgW) / 2;
-    doc.addImage(assetImg, 'JPEG', imgX, y, imgW, imgH);
+    const centeredX = (pageW - imgW) / 2;
+    doc.addImage(assetImg, 'JPEG', centeredX, y, imgW, imgH);
     y += imgH + 6;
+  } else {
+    // Placeholder if no photo
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(imgX, y, maxPhotoW, maxPhotoH, 3, 3, 'FD');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Asset Photo Not Available', pageW / 2, y + (maxPhotoH / 2), { align: 'center' });
+    y += maxPhotoH + 6;
   }
 
   // Summary on cover (no heading titles like "Key Defects" etc)
@@ -241,7 +252,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   // ========== PAGE 2: DEFECT REGISTER ==========
   const urgencyOrder: Record<string, number> = {
     'Immediate - Remove From Service and Repair Immediately': 0,
-    'Urgent Repair Before Next Use': 1,
+    'Urgent Repair Within 7 Days': 1,
     'Schedule Repair Before Next Service': 2,
     'Monitor': 3,
   };
@@ -273,7 +284,10 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         doc.rect(15, dy - 2, pageW - 30, cardH + 4, 'F');
       }
 
-      const urgColor = d.urgency?.startsWith('Immediate') ? RKA_RED : d.urgency?.startsWith('Urgent') ? RKA_ORANGE : d.urgency?.startsWith('Schedule') ? [230, 200, 50] as [number, number, number] : RKA_GREEN;
+      const urgColor = d.urgency?.startsWith('Immediate') ? RKA_RED : 
+                        d.urgency?.startsWith('Urgent') ? RKA_ORANGE : 
+                        d.urgency?.startsWith('Schedule') ? [230, 200, 50] as [number, number, number] : 
+                        d.urgency === 'Monitor' ? [255, 243, 205] as [number, number, number] : RKA_GREEN;
       doc.setFillColor(...(urgColor as [number, number, number]));
       doc.rect(15, dy - 2, 3, cardH + 4, 'F');
 

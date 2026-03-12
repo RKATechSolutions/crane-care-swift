@@ -4,7 +4,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Save, ChevronDown, ChevronUp, Eye, Send, Loader2 } from 'lucide-react';
+import { Save, ChevronDown, ChevronUp, Eye, Send, Loader2, Download, CheckCircle } from 'lucide-react';
 import { generateRepairPdf } from '@/utils/generateRepairPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import type jsPDF from 'jspdf';
@@ -213,11 +213,22 @@ export default function RepairBreakdownForm({
         assetPhotoUrl,
       });
       setPreviewPdf(pdf);
-      setShowPreview(true);
+      return pdf;
     } catch (err: any) {
       toast.error('Failed to generate preview: ' + (err.message || 'Unknown error'));
+      return null;
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    let doc = previewPdf;
+    if (!doc) doc = await handlePreviewReport();
+    if (doc) {
+      const dateStr = format(new Date(), 'dd-MM-yyyy');
+      const filename = `${siteName} ${assetName} Report ${dateStr}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
+      doc.save(filename);
     }
   };
 
@@ -241,7 +252,8 @@ export default function RepairBreakdownForm({
         assetPhotoUrl,
       });
       const pdfBase64 = pdf.output('datauristring').split(',')[1];
-      const filename = `${assetName.replace(/\s+/g, '_')}_RepairReport_${format(new Date(), 'yyyyMMdd')}.pdf`;
+      const dateStr = format(new Date(), 'dd-MM-yyyy');
+      const filename = `${siteName} ${assetName} Report ${dateStr}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
 
       // Save to DB
       await saveRepairJob('Submitted');
@@ -355,29 +367,41 @@ export default function RepairBreakdownForm({
 
       {/* Action Buttons */}
       <div className="p-4 border-t border-border space-y-2 bg-background">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handlePreviewReport}
+            disabled={generating || !formData.job_type}
+            className="h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+          >
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            Preview PDF
+          </button>
+          <button
+            onClick={() => saveRepairJob('Draft')}
+            disabled={saving}
+            className="h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            Save Draft
+          </button>
+        </div>
+
         <button
-          onClick={() => saveRepairJob('Draft')}
-          disabled={saving}
-          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? 'Saving…' : 'Save Draft'}
-        </button>
-        <button
-          onClick={handlePreviewReport}
+          onClick={handleDownloadPdf}
           disabled={generating || !formData.job_type}
-          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+          className="w-full h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
         >
-          {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-          {generating ? 'Generating…' : 'Preview Report'}
+          <Download className="w-4 h-4" />
+          Download PDF
         </button>
+
         <button
           onClick={handleFinalise}
           disabled={saving || !formData.job_type}
-          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
+          className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
         >
-          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-          {saving ? 'Sending…' : 'Finalise Report & Send to Customer'}
+          {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
+          Finalise & Send Report
         </button>
       </div>
 

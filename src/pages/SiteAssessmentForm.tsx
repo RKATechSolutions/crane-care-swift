@@ -3,6 +3,7 @@ import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import {
   partAGroups,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   Download,
   Eye,
+  Save,
 } from 'lucide-react';
 
 type Answers = Record<string, number>;
@@ -225,6 +227,48 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
     setCompleting(false);
   };
 
+  const handlePreviewPdf = async () => {
+    setGeneratingPreview(true);
+    try {
+      const pdf = await generateAssessmentPdf({
+        siteName: site.name,
+        assessmentType,
+        completionMethod,
+        technicianName: state.currentUser?.name || '',
+        facetScores: scores.facetScores,
+        totalScore: scores.totalScore,
+        countNotYet: scores.countNotYet,
+        countPartial: scores.countPartial,
+        highestRiskFacet: facetNames[scores.highestRisk] || '',
+        strongestFacet: facetNames[scores.strongest] || '',
+        aiSummary: aiSummary || '',
+        facetNotes,
+        clientAddress: clientDetails.address || site.address,
+        clientContactName: clientDetails.contactName || site.contactName,
+        clientContactPhone: clientDetails.phone || site.contactPhone,
+        clientContactEmail: clientDetails.email,
+      });
+      setPreviewPdfDoc(pdf);
+      return pdf;
+    } catch (err) {
+      console.error('Preview error:', err);
+      toast({ title: 'Failed to generate preview', variant: 'destructive' });
+      return null;
+    } finally {
+      setGeneratingPreview(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    let doc = previewPdfDoc;
+    if (!doc) doc = await handlePreviewPdf();
+    if (doc) {
+      const dateStr = format(new Date(), 'dd-MM-yyyy');
+      const fileName = `${site.name} Site Assessment Report ${dateStr}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
+      doc.save(fileName);
+    }
+  };
+
   const goNext = () => {
     if (sectionIdx < SECTIONS.length - 1) {
       setSectionIdx(sectionIdx + 1);
@@ -407,7 +451,7 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
               )}
             </div>
 
-            {/* AI Summary */}
+            {/* AI Summary and Recommendations */}
             <div>
               <button
                 onClick={generateAISummary}
@@ -433,44 +477,6 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
                 </div>
               </div>
             )}
-
-            {/* Preview & Download Report */}
-            <button
-              onClick={async () => {
-                setGeneratingPreview(true);
-                try {
-                  const pdf = await generateAssessmentPdf({
-                    siteName: site.name,
-                    assessmentType,
-                    completionMethod,
-                    technicianName: state.currentUser?.name || '',
-                    facetScores: scores.facetScores,
-                    totalScore: scores.totalScore,
-                    countNotYet: scores.countNotYet,
-                    countPartial: scores.countPartial,
-                    highestRiskFacet: facetNames[scores.highestRisk] || '',
-                    strongestFacet: facetNames[scores.strongest] || '',
-                    aiSummary: aiSummary || '',
-                    facetNotes,
-                    clientAddress: clientDetails.address || site.address,
-                    clientContactName: clientDetails.contactName || site.contactName,
-                    clientContactPhone: clientDetails.phone || site.contactPhone,
-                    clientContactEmail: clientDetails.email,
-                  });
-                  setPreviewPdfDoc(pdf);
-                } catch (err) {
-                  console.error('Preview error:', err);
-                  toast({ title: 'Failed to generate preview', variant: 'destructive' });
-                } finally {
-                  setGeneratingPreview(false);
-                }
-              }}
-              disabled={generatingPreview}
-              className="w-full h-11 bg-foreground text-background rounded-xl font-bold text-sm flex items-center justify-center gap-2"
-            >
-              {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-              {generatingPreview ? 'Generating Preview…' : 'Preview Report PDF'}
-            </button>
           </div>
         )}
       </div>
@@ -491,30 +497,51 @@ export default function SiteAssessmentForm({ assessmentType, existingId, onBack 
 
       {/* Action buttons */}
       <div className="p-4 border-t border-border space-y-2 bg-background">
-        {!isReadOnly && (
-          <>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handlePreviewPdf}
+            disabled={generatingPreview}
+            className="h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+          >
+            {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            Preview PDF
+          </button>
+          {!isReadOnly ? (
             <button
               onClick={() => { saveAssessment(false); onBack(); }}
               disabled={saving}
+              className="h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save
+            </button>
+          ) : (
+            <button onClick={onBack} className="h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2">
+              Back to Assets
+            </button>
+          )}
+        </div>
+
+        {!isReadOnly && (
+          <>
+            <button
+              onClick={handleDownloadPdf}
+              disabled={generatingPreview}
               className="w-full h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Save & Return to Assets
+              <Download className="w-4 h-4" />
+              Download PDF
             </button>
+
             <button
               onClick={handleComplete}
               disabled={completing || !completionMethod}
-              className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+              className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
             >
               {completing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
               Complete Assessment
             </button>
           </>
-        )}
-        {isReadOnly && (
-          <button onClick={onBack} className="w-full h-11 bg-muted rounded-xl font-semibold text-sm">
-            Back to Assets
-          </button>
         )}
       </div>
 

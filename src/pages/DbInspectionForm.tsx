@@ -5,7 +5,7 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { StandardQuestionBlock, QuestionConfig, ResponseData } from '@/components/StandardQuestionBlock';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, CheckCircle, Check, Eye, Loader2, Sparkles, CalendarIcon } from 'lucide-react';
+import { Save, CheckCircle, Check, Eye, Loader2, Sparkles, CalendarIcon, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateInspectionPdf } from '@/utils/generateInspectionPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
@@ -54,6 +54,7 @@ export default function DbInspectionForm({
   const [showDateConfirm, setShowDateConfirm] = useState(false);
   const [inspectionDate, setInspectionDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [craneStatus, setCraneStatus] = useState<string | null>(null);
+  const [clientName, setClientName] = useState<string>('');
   
 
   // Load questions for this form
@@ -69,7 +70,7 @@ export default function DbInspectionForm({
         .single();
       if (formData) setFormName(formData.form_name);
 
-      // Fetch asset photo
+      // Fetch asset photo and client name
       if (assetId) {
         const { data: assetData } = await supabase
           .from('assets')
@@ -77,6 +78,15 @@ export default function DbInspectionForm({
           .eq('id', assetId)
           .single();
         if (assetData?.main_photo_url) setAssetPhotoUrl(assetData.main_photo_url);
+      }
+      
+      if (clientId) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('client_name')
+          .eq('id', clientId)
+          .single();
+        if (clientData) setClientName(clientData.client_name || '');
       }
 
       // Get questions via bridge table
@@ -258,7 +268,7 @@ export default function DbInspectionForm({
     return () => {
       if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
     };
-  }, [responses]);
+  }, [responses, aiSummary, otherNotes]);
 
   // Stats – only count visible questions
   const visibleQuestionIds = useMemo(() => new Set(sections.flatMap(s => s.questions.map(q => q.question_id))), [sections]);
@@ -372,11 +382,27 @@ export default function DbInspectionForm({
         assetPhotoUrl: latestPhotoUrl,
       });
       setPreviewPdfDoc(pdf);
+      return pdf;
     } catch (err: any) {
       console.error('Preview error:', err);
       toast.error('Failed to generate preview');
+      return null;
     } finally {
       setGeneratingPreview(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    let doc = previewPdfDoc;
+    if (!doc) {
+      doc = await handlePreviewPdf();
+    }
+    if (doc) {
+      const dateStr = format(new Date(inspectionDate), 'dd-MM-yyyy');
+      // Format: [Client Name] [Asset Name] Report [Date]
+      const rawFileName = `${clientName || siteName || 'Client'} ${assetName} Report ${dateStr}.pdf`;
+      const fileName = rawFileName.replace(/[/\\?%*:|"<>]/g, '-');
+      doc.save(fileName);
     }
   };
 
@@ -427,6 +453,7 @@ export default function DbInspectionForm({
             status,
             inspection_date: dateToUse,
             crane_status: craneStatus || null,
+            ai_summary: aiSummary || null,
           };
         if (taskId) insertPayload.task_id = taskId;
 
@@ -442,7 +469,14 @@ export default function DbInspectionForm({
       } else {
         await supabase
           .from('db_inspections')
-          .update({ status, updated_at: new Date().toISOString(), other_notes: otherNotes || null, inspection_date: dateToUse, crane_status: craneStatus || null } as any)
+          .update({ 
+            status, 
+            updated_at: new Date().toISOString(), 
+            other_notes: otherNotes || null, 
+            inspection_date: dateToUse, 
+            crane_status: craneStatus || null,
+            ai_summary: aiSummary || null
+          } as any)
           .eq('id', currentInspId);
       }
 
@@ -719,8 +753,27 @@ export default function DbInspectionForm({
             {generatingAI ? 'Generating AI Summary…' : aiSummary ? 'Regenerate AI Summary' : 'Generate AI Executive Summary'}
           </button>
           {aiSummary && (
-            <div className="bg-muted rounded-xl p-4 text-sm prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown>{aiSummary}</ReactMarkdown>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Edit Executive Summary</p>
+                <button
+                  onClick={() => saveInspection('Draft')}
+                  className="text-xs font-bold text-primary flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md"
+                >
+                  <Save className="w-3 h-3" />
+                  Save Summary Changes
+                </button>
+              </div>
+              <textarea
+                value={aiSummary}
+                onChange={(e) => setAiSummary(e.target.value)}
+                placeholder="Enter executive summary…"
+                rows={8}
+                className="w-full p-4 border border-border rounded-xl bg-muted text-sm resize-none focus:ring-2 focus:ring-primary/20 transition-all"
+              />
+              <p className="text-[10px] text-muted-foreground px-1 italic">
+                Note: This summary appears on the front page of the final PDF report.
+              </p>
             </div>
           )}
         </div>
@@ -728,31 +781,43 @@ export default function DbInspectionForm({
 
       {/* Action Buttons */}
       <div className="p-4 border-t border-border space-y-2 bg-background">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handlePreviewPdf}
+            disabled={generatingPreview || totalAnswered === 0}
+            className="h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+          >
+            {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            Preview PDF
+          </button>
+          <button
+            onClick={async () => {
+              await saveInspection('Draft');
+              onBack();
+            }}
+            disabled={saving}
+            className="h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            Save
+          </button>
+        </div>
+        
         <button
-          onClick={handlePreviewPdf}
+          onClick={handleDownloadPdf}
           disabled={generatingPreview || totalAnswered === 0}
-          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40"
+          className="w-full h-11 bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
         >
-          {generatingPreview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-          {generatingPreview ? 'Generating Preview…' : 'Preview Report'}
+          <Download className="w-4 h-4" />
+          Download PDF
         </button>
-        <button
-          onClick={async () => {
-            await saveInspection('Draft');
-            onBack();
-          }}
-          disabled={saving}
-          className="w-full tap-target bg-muted rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
-        >
-          <Save className="w-4 h-4" />
-          {saving ? 'Saving…' : 'Save Form and Return to Assets'}
-        </button>
+
         <button
           onClick={() => {
             setShowDateConfirm(true);
           }}
           disabled={saving || totalAnswered === 0}
-          className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
+          className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2 disabled:opacity-40"
         >
           <CheckCircle className="w-5 h-5" />
           Complete Form ({totalAnswered}/{totalQuestions})

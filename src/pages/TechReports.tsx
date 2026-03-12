@@ -5,14 +5,16 @@ import { FileText, Mail, Download, ClipboardCheck } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
+import { sortAssetsNumerically } from '@/utils/sorting';
 
 interface TechReportsProps {
   onBack: () => void;
 }
 
 export default function TechReports({ onBack }: TechReportsProps) {
-  const { state } = useApp();
-  const sentReports = state.sentReports || [];
+  const { state, dispatch } = useApp();
+  const rawReports = state.sentReports || [];
+  const sentReports = sortAssetsNumerically(rawReports, 'title');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const toggleSelect = (id: string) => {
@@ -38,8 +40,20 @@ export default function TechReports({ onBack }: TechReportsProps) {
       return;
     }
     const selected = sentReports.filter(r => selectedIds.has(r.id));
+    
+    // Check if they all belong to the same site
+    // For now, we'll just use the first site we can find or fallback
+    // In a real app we might want to group them or warn if multiple sites are selected
+    
+    dispatch({
+      type: 'SELECT_CRANE',
+      payload: {
+        crane: { id: '__site_summary__' } as any,
+        selectedReportIds: Array.from(selectedIds)
+      }
+    });
+
     toast.success(`Job Site Summary started with ${selected.length} report(s)`);
-    // TODO: Navigate to Job Site Summary with selected report IDs
   };
 
   const handleDownloadSelected = () => {
