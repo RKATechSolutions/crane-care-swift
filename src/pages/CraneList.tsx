@@ -637,7 +637,13 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
             </button>
             <button
               onClick={() => {
-                dispatch({ type: 'SELECT_CRANE', payload: { crane: { id: '__site_summary__' } as any } });
+                dispatch({
+                  type: 'SELECT_CRANE',
+                  payload: {
+                    crane: { id: '__site_summary__' } as any,
+                    selectedReportIds: selectedReportIds.size > 0 ? Array.from(selectedReportIds) : undefined,
+                  }
+                });
               }}
               className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all"
             >

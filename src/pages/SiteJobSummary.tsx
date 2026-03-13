@@ -1,4 +1,16 @@
 import { useState, useEffect } from 'react';
+
+function parseDbArray(val: unknown): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val as string[];
+  if (typeof val === 'string') {
+    if (val.startsWith('{') && val.endsWith('}')) {
+      return val.slice(1, -1).split(',').map(s => s.replace(/^"|"$/g, '').trim()).filter(Boolean);
+    }
+    try { return JSON.parse(val); } catch { return []; }
+  }
+  return [];
+}
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { SignaturePad } from '@/components/SignaturePad';
@@ -196,9 +208,9 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
         if (selectedIds.length > 0) {
           inspQuery = inspQuery.in('id', selectedIds);
         } else if (activeJobId) {
-          inspQuery = inspQuery.eq('task_id', activeJobId).eq('status', 'Submitted');
+          inspQuery = inspQuery.eq('task_id', activeJobId).in('status', ['Submitted', 'Completed']);
         } else {
-          inspQuery = inspQuery.eq('site_name', site.name).eq('status', 'Submitted');
+          inspQuery = inspQuery.eq('site_name', site.name).in('status', ['Submitted', 'Completed']);
         }
         
         const { data: inspections } = await inspQuery;
@@ -238,10 +250,10 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
           assetName: inspMap[r.inspection_id]?.asset_name || 'Unknown',
           severity: r.severity,
           urgency: r.urgency,
-          defectTypes: r.defect_types || [],
+          defectTypes: parseDbArray(r.defect_types),
           comment: r.comment,
-          photoUrls: r.photo_urls || [],
-          advancedDefectDetail: r.advanced_defect_detail || [],
+          photoUrls: parseDbArray(r.photo_urls),
+          advancedDefectDetail: parseDbArray(r.advanced_defect_detail),
           quoteStatus: 'Quote Now',
         }));
 
