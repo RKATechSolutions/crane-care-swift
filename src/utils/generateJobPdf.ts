@@ -253,8 +253,8 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
         ];
       });
     } else {
-      assetRows = sortAssetsNumerically(inspections.map(i => ({ ...i, craneName: site.cranes.find(c => c.id === i.craneId)?.name })), 'craneName').map(insp => {
-        const crane = site.cranes.find(c => c.id === insp.craneId);
+      assetRows = sortAssetsNumerically(inspections.map(i => ({ ...i, craneName: site.cranes?.find(c => c.id === i.craneId)?.name })), 'craneName').map(insp => {
+        const crane = site.cranes?.find(c => c.id === insp.craneId);
         const defectCount = insp.items.filter(i => i.result === 'defect').length;
         return [
           crane?.name || 'Unknown',

@@ -49,7 +49,8 @@ type Action =
   | { type: 'UPDATE_TEMPLATE_ITEM'; payload: { templateId: string; sectionId: string; item: import('@/types/inspection').TemplateItem } }
   | { type: 'UPDATE_ADMIN_CONFIG'; payload: Partial<AdminFormConfig> }
   | { type: 'ELEVATE_TO_ADMIN' }
-  | { type: 'EXIT_ADMIN' };
+  | { type: 'EXIT_ADMIN' }
+  | { type: 'SET_REPORT_IDS'; payload: string[] };
 
 function loadSavedAdminConfig(): AdminFormConfig {
   try {
@@ -110,6 +111,8 @@ function reducer(state: AppState, action: Action): AppState {
         selectedCrane: action.payload.crane,
         selectedReportIdsForSummary: action.payload.selectedReportIds || []
       };
+    case 'SET_REPORT_IDS':
+      return { ...state, selectedReportIdsForSummary: action.payload };
     case 'START_INSPECTION':
       return { ...state, currentInspection: action.payload };
     case 'UPDATE_INSPECTION_ITEM': {

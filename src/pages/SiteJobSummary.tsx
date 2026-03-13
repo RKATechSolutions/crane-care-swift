@@ -90,6 +90,11 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
   const [arofloQuoteSent, setArofloQuoteSent] = useState(false);
   const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
+  // Report selector
+  const [showReportSelector, setShowReportSelector] = useState(false);
+  const [allClientReports, setAllClientReports] = useState<any[]>([]);
+  const [pendingSelectedIds, setPendingSelectedIds] = useState<Set<string>>(new Set(state.selectedReportIdsForSummary));
+  const [includeLiftingRegister, setIncludeLiftingRegister] = useState(true);
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [autoServicePkg, setAutoServicePkg] = useState(false);
@@ -290,6 +295,26 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
     };
     loadLiftingDefects();
   }, [site.name]);
+
+  // Load all available reports for this client (for the report selector)
+  useEffect(() => {
+    const loadAllReports = async () => {
+      try {
+        const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
+        let query = supabase
+          .from('db_inspections')
+          .select('id, asset_name, inspection_date, status, technician_name, crane_status, form_id')
+          .order('inspection_date', { ascending: false });
+        if (clientId) query = query.eq('client_id', clientId);
+        else query = query.eq('site_name', site.name);
+        const { data } = await query;
+        if (data) setAllClientReports(data);
+      } catch (err) {
+        console.error('Error loading all client reports:', err);
+      }
+    };
+    loadAllReports();
+  }, [site.id, site.name]);
 
   // Load client details
   useEffect(() => {
@@ -548,7 +573,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
         template,
         summary: summaryPayload,
         customerDefectComments,
-        liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
+        liftingDefects: includeLiftingRegister && liftingDefects.length > 0 ? liftingDefects : undefined,
         dbInspections: dbInspections.length > 0 ? dbInspections : undefined,
         dbDefects: dbDefects.length > 0 ? dbDefects : undefined,
         servicePackage: autoServicePkg ? 'Automatic Service Package' : priorityServicePkg ? 'Priority Service Package' : 'No Service Package Selected',
@@ -664,7 +689,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
         template,
         summary: buildSummaryPayload(),
         customerDefectComments,
-        liftingDefects: liftingDefects.length > 0 ? liftingDefects : undefined,
+        liftingDefects: includeLiftingRegister && liftingDefects.length > 0 ? liftingDefects : undefined,
         dbInspections: dbInspections.length > 0 ? dbInspections : undefined,
         dbDefects: dbDefects.length > 0 ? dbDefects : undefined,
         servicePackage: autoServicePkg ? 'Automatic Service Package' : priorityServicePkg ? 'Priority Service Package' : 'No Service Package Selected',
@@ -678,6 +703,13 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
     } finally {
       setGeneratingPreview(false);
     }
+  };
+
+  const applyReportSelection = () => {
+    const newIds = Array.from(pendingSelectedIds);
+    dispatch({ type: 'SET_REPORT_IDS', payload: newIds });
+    setShowReportSelector(false);
+    setPreviewPdfDoc(null); // invalidate cached PDF
   };
 
   const handleDownloadPdf = async () => {
@@ -870,10 +902,94 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
           </div>
         </div>
 
+        {/* Report Selector Panel */}
+        {showReportSelector && (
+          <div className="fixed inset-0 z-[110] bg-background flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background">
+              <p className="font-bold text-sm">Select Reports</p>
+              <button onClick={() => setShowReportSelector(false)} className="tap-target flex items-center justify-center" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {/* Lifting Register toggle */}
+              <div className="px-4 py-3 border-b border-border bg-muted/30">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Other Data</p>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeLiftingRegister}
+                    onChange={e => setIncludeLiftingRegister(e.target.checked)}
+                    className="h-4 w-4 rounded accent-primary"
+                  />
+                  <span className="text-sm font-medium">Lifting Equipment Register</span>
+                </label>
+              </div>
+              {/* Inspection reports */}
+              <div className="px-4 pt-3 pb-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Inspection Reports ({allClientReports.length})
+                </p>
+              </div>
+              {allClientReports.length === 0 ? (
+                <p className="px-4 py-6 text-sm text-muted-foreground text-center">No reports found for this client.</p>
+              ) : (
+                allClientReports.map(r => (
+                  <label key={r.id} className={`flex items-start gap-3 px-4 py-3 border-b border-border cursor-pointer transition-colors ${pendingSelectedIds.has(r.id) ? 'bg-primary/5' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={pendingSelectedIds.has(r.id)}
+                      onChange={() => {
+                        setPendingSelectedIds(prev => {
+                          const next = new Set(prev);
+                          next.has(r.id) ? next.delete(r.id) : next.add(r.id);
+                          return next;
+                        });
+                      }}
+                      className="h-4 w-4 rounded accent-primary mt-0.5 flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{r.asset_name || 'Unknown Asset'}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {r.form_id} • {r.inspection_date ? format(new Date(r.inspection_date), 'dd MMM yyyy') : '—'} • {r.technician_name || '—'}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex-shrink-0 ${
+                      r.status === 'Submitted' || r.status === 'Completed' ? 'bg-rka-green-light text-rka-green-dark' : 'bg-muted text-muted-foreground'
+                    }`}>{r.status}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <div className="p-4 border-t border-border bg-background">
+              <p className="text-xs text-muted-foreground text-center mb-3">{pendingSelectedIds.size} report{pendingSelectedIds.size !== 1 ? 's' : ''} selected</p>
+              <button
+                onClick={applyReportSelection}
+                disabled={pendingSelectedIds.size === 0}
+                className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40"
+              >
+                Apply Selection
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Assets Inspected */}
         {isSectionVisible('assets_inspected') && (
         <div className="px-4 py-3 border-b border-border bg-muted/30">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Assets Inspected</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Assets Inspected</p>
+            <button
+              onClick={() => {
+                setPendingSelectedIds(new Set(state.selectedReportIdsForSummary));
+                setShowReportSelector(true);
+              }}
+              className="text-xs font-semibold text-primary flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" />
+              Change Reports
+            </button>
+          </div>
           {dbInspections.length > 0 ? (
             sortAssetsNumerically(dbInspections, 'asset_name').map(insp => {
               const defectCount = dbDefects.filter(d => d.inspectionId === insp.id).length;
@@ -906,8 +1022,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
               );
             })
           ) : completedInspections.length > 0 ? (
-            sortAssetsNumerically(completedInspections.map(i => ({ ...i, craneName: site.cranes.find(c => c.id === i.craneId)?.name })), 'craneName').map(insp => {
-              const crane = site.cranes.find(c => c.id === insp.craneId);
+            sortAssetsNumerically(completedInspections.map(i => ({ ...i, craneName: site.cranes?.find(c => c.id === i.craneId)?.name })), 'craneName').map(insp => {
+              const crane = site.cranes?.find(c => c.id === insp.craneId);
               const defectCount = insp.items.filter(i => i.result === 'defect').length;
               return (
                 <div key={insp.id} className="flex items-center justify-between py-2">
