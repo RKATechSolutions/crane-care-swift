@@ -1,13 +1,6 @@
 import { X, Download, Loader2 } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import type jsPDF from 'jspdf';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Use the bundled worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString();
 
 interface PdfPreviewModalProps {
   open: boolean;
@@ -18,48 +11,36 @@ interface PdfPreviewModalProps {
 }
 
 export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload, title = 'Report Preview' }: PdfPreviewModalProps) {
-  const [pageImages, setPageImages] = useState<string[]>([]);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!pdfDoc || !open) {
-      setPageImages([]);
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
       return;
     }
 
-    let cancelled = false;
-
-    async function renderPages() {
-      setLoading(true);
-      try {
-        const arrayBuffer = pdfDoc!.output('arraybuffer');
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        const images: string[] = [];
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-          if (cancelled) return;
-          const page = await pdf.getPage(i);
-          const scale = 2; // high-res rendering
-          const viewport = page.getViewport({ scale });
-          const canvas = document.createElement('canvas');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext('2d')!;
-          await page.render({ canvasContext: ctx, viewport }).promise;
-          images.push(canvas.toDataURL('image/png'));
-        }
-
-        if (!cancelled) setPageImages(images);
-      } catch (err) {
-        console.error('PDF render error:', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    setLoading(true);
+    try {
+      const blob = pdfDoc.output('blob');
+      const url = URL.createObjectURL(blob);
+      setBlobUrl(url);
+    } catch (err) {
+      console.error('PDF preview error:', err);
+      setBlobUrl(null);
+    } finally {
+      setLoading(false);
     }
 
-    renderPages();
-    return () => { cancelled = true; };
+    return () => {
+      setBlobUrl(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+    };
   }, [pdfDoc, open]);
 
   if (!open || !pdfDoc) return null;
@@ -89,16 +70,16 @@ export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload, title = 'Re
         </div>
       </div>
 
-      {/* PDF render area — rendered as images */}
-      <div ref={containerRef} className="flex-1 overflow-auto bg-muted p-4 space-y-4">
+      {/* PDF render area */}
+      <div className="flex-1 overflow-hidden bg-muted">
         {loading && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <div className="flex flex-col items-center justify-center h-full gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Rendering preview…</p>
           </div>
         )}
-        {!loading && pageImages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
+        {!loading && !blobUrl && (
+          <div className="flex flex-col items-center justify-center h-full gap-4">
             <p className="text-sm text-muted-foreground">Could not render preview.</p>
             {onDownload && (
               <button
@@ -111,14 +92,13 @@ export function PdfPreviewModal({ open, onClose, pdfDoc, onDownload, title = 'Re
             )}
           </div>
         )}
-        {pageImages.map((src, i) => (
-          <img
-            key={i}
-            src={src}
-            alt={`Page ${i + 1}`}
-            className="w-full rounded-lg shadow-md"
+        {blobUrl && (
+          <iframe
+            src={blobUrl}
+            className="w-full h-full border-0"
+            title="PDF Preview"
           />
-        ))}
+        )}
       </div>
     </div>
   );

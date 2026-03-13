@@ -1,4 +1,16 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+
+function parseDbArray(val: unknown): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val as string[];
+  if (typeof val === 'string') {
+    if (val.startsWith('{') && val.endsWith('}')) {
+      return val.slice(1, -1).split(',').map(s => s.replace(/^"|"$/g, '').trim()).filter(Boolean);
+    }
+    try { return JSON.parse(val); } catch { return []; }
+  }
+  return [];
+}
 import { useApp } from '@/contexts/AppContext';
 import { AppHeader } from '@/components/AppHeader';
 import { ProgressBar } from '@/components/ProgressBar';
@@ -123,14 +135,14 @@ export default function DbInspectionForm({
           help_text: bridge.override_help_text || q.help_text,
           standard_ref: bridge.override_standard_ref || q.standard_ref,
           answer_type: q.answer_type,
-          options: q.options,
+          options: q.options ? parseDbArray(q.options) : null,
           requires_photo_on_fail: q.requires_photo_on_fail,
           requires_comment_on_fail: q.requires_comment_on_fail,
           severity_required_on_fail: q.severity_required_on_fail,
           optional_photo: (q as any).optional_photo ?? false,
           optional_comment: (q as any).optional_comment ?? false,
-          auto_defect_types: (q as any).auto_defect_types ?? [],
-          advanced_defect_options: (q as any).advanced_defect_options ?? [],
+          auto_defect_types: parseDbArray((q as any).auto_defect_types),
+          advanced_defect_options: parseDbArray((q as any).advanced_defect_options),
           required: bridge.required,
           section: bridge.section_override || q.section,
           override_sort_order: bridge.override_sort_order,
@@ -177,11 +189,11 @@ export default function DbInspectionForm({
               pass_fail_status: sr.pass_fail_status,
               severity: sr.severity,
               comment: sr.comment,
-              photo_urls: sr.photo_urls || [],
+              photo_urls: parseDbArray(sr.photo_urls),
               defect_flag: sr.defect_flag,
               urgency: (sr as any).urgency || null,
-              defect_types: (sr as any).defect_types || [],
-              advanced_defect_detail: (sr as any).advanced_defect_detail || [],
+              defect_types: parseDbArray((sr as any).defect_types),
+              advanced_defect_detail: parseDbArray((sr as any).advanced_defect_detail),
               internal_note: (sr as any).internal_note || null,
             };
           });
