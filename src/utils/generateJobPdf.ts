@@ -363,7 +363,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
   // INDIVIDUAL ASSET REPORTS
   for (const insp of inspections) {
     doc.addPage();
-    const crane = site.cranes.find(c => c.id === insp.craneId);
+    const crane = site.cranes?.find(c => c.id === insp.craneId);
     y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'}`, imgs);
     
     y = addSectionTitle(doc, y, 'Asset Details');
@@ -381,7 +381,7 @@ export async function generateJobPdf(data: JobPdfData): Promise<jsPDF> {
       y += 14;
     }
 
-    template.sections.forEach(section => {
+    (template?.sections || []).forEach(section => {
       const sectionResults = insp.items.filter(i => i.sectionId === section.id);
       if (sectionResults.length === 0) return;
       if (y > 250) { doc.addPage(); y = addHeader(doc, `Asset Report — ${crane?.name || 'Unknown'}`, imgs); }

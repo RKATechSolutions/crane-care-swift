@@ -94,7 +94,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [autoServicePkg, setAutoServicePkg] = useState(false);
   const [priorityServicePkg, setPriorityServicePkg] = useState(false);
-  const [noServicePkg, setNoServicePkg] = useState(false);
+  const [noServicePkg, setNoServicePkg] = useState(true);
   const [clientContacts, setClientContacts] = useState<any[]>([]);
 
   // DB inspections (assets inspected)
@@ -321,8 +321,11 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
             ...matchedClient,
             client_custom_fields: matchedClient.client_custom_fields || {},
           });
-          setAutoServicePkg(matchedClient.automatic_service_package === 'Yes');
-          setPriorityServicePkg(matchedClient.priority_service_package === 'Yes');
+          const hasAuto = matchedClient.automatic_service_package === 'Yes';
+          const hasPriority = matchedClient.priority_service_package === 'Yes';
+          setAutoServicePkg(hasAuto);
+          setPriorityServicePkg(hasPriority);
+          setNoServicePkg(!hasAuto && !hasPriority);
 
           const { data: contacts } = await supabase
             .from('client_contacts')
@@ -1586,19 +1589,20 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
                     const newState = !bookingConfirmed;
                     setBookingConfirmed(newState);
                     if (newState) {
-                      // Notify admin to send manual invite
+                      const bookingPayload = {
+                        clientName: clientInfo?.client_name || site.name,
+                        siteName: site.name,
+                        nextDate: format(new Date(nextDate), 'dd MMM yyyy'),
+                        nextTime: nextTime,
+                        technicianName: state.currentUser?.name || 'Technician',
+                      };
+                      // Send email to team
+                      supabase.functions.invoke('send-booking-notification', { body: bookingPayload });
+                      // Also notify Slack
                       supabase.functions.invoke('slack-notify', {
-                        body: {
-                          type: 'booking_confirmed',
-                          clientName: clientInfo?.client_name || site.name,
-                          siteName: site.name,
-                          nextDate: format(new Date(nextDate), 'dd MMM yyyy'),
-                          nextTime: nextTime,
-                          technicianName: state.currentUser?.name || 'Technician',
-                          adminEmail: 'team@rkaindustrialsolutions.com.au'
-                        }
+                        body: { type: 'booking_confirmed', ...bookingPayload, adminEmail: 'team@rkaindustrialsolutions.com.au' }
                       });
-                      toast.success('Booking confirmed (Admin notified)');
+                      toast.success('Booking confirmed — email sent to team');
                     }
                   }}
                   className={`w-full tap-target rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
