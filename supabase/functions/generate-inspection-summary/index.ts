@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
       .map(([section, lines]) => `### ${section}\n${lines.join("\n")}`)
       .join("\n\n");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured");
 
     const prompt = `You are an industrial risk and lifting operations adviser based in Australia.
 Use Australian English throughout (e.g. "organisation", "colour", "utilise").
@@ -111,14 +111,14 @@ Always include the section name, then the question, then the urgency, then the t
 
 Keep entire output under 250 words total. Direct, professional tone. No fluff.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: "You are an Australian industrial risk and lifting operations adviser generating professional inspection summaries. Always use Australian English spelling and reference Australian Standards. Keep it short and scannable." },
           { role: "user", content: prompt },

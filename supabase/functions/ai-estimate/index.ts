@@ -17,8 +17,8 @@ Deno.serve(async (req) => {
   try {
     const { description, client_name, asset_name } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const systemPrompt = `You are an experienced crane and industrial equipment service estimator for RKA Industrial Solutions.
 Given a job description, provide a budget estimate breakdown with:
@@ -30,14 +30,14 @@ Format your response as a clear breakdown with line items and estimated costs in
 Be realistic and include a range (low-high) for uncertainty.
 Keep it concise and professional. End with a total estimate range.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         messages: [
           { role: "system", content: systemPrompt },
           {
