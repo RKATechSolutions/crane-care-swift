@@ -93,10 +93,9 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
   // Report selector
   const [showReportSelector, setShowReportSelector] = useState(false);
   const [allClientReports, setAllClientReports] = useState<any[]>([]);
-  const [allLiftingItems, setAllLiftingItems] = useState<any[]>([]);
   const [pendingSelectedIds, setPendingSelectedIds] = useState<Set<string>>(new Set(state.selectedReportIdsForSummary));
-  const [pendingLiftingIds, setPendingLiftingIds] = useState<Set<string>>(new Set(state.selectedLiftingIdsForSummary));
-  const includeLiftingRegister = pendingLiftingIds.size > 0 || (state.selectedLiftingIdsForSummary.length === 0 && liftingDefects.length > 0);
+  const [includeLiftingRegister, setIncludeLiftingRegister] = useState(true);
+  const [pendingIncludeLiftingRegister, setPendingIncludeLiftingRegister] = useState(true);
   // Client info from database
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [autoServicePkg, setAutoServicePkg] = useState(false);
@@ -278,19 +277,12 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
     const loadLiftingDefects = async () => {
       setLiftingDefectsLoading(true);
       try {
-        const selectedLiftingIds = state.selectedLiftingIdsForSummary || [];
-        let query = supabase
+        const { data } = await supabase
           .from('lifting_register')
           .select('id, equipment_type, serial_number, asset_tag, wll_value, wll_unit, equipment_status, tag_present, notes, manufacturer')
-          .eq('site_name', site.name);
+          .eq('site_name', site.name)
+          .or('equipment_status.eq.Failed,equipment_status.eq.Removed From Service,tag_present.eq.false,tag_present.eq.illegible');
 
-        if (selectedLiftingIds.length > 0) {
-          query = query.in('id', selectedLiftingIds);
-        } else {
-          query = query.or('equipment_status.eq.Failed,equipment_status.eq.Removed From Service,tag_present.eq.false,tag_present.eq.illegible');
-        }
-
-        const { data } = await query;
         if (data && data.length > 0) {
           setLiftingDefects(data.map(d => ({
             ...d,
@@ -305,7 +297,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
       setLiftingDefectsLoading(false);
     };
     loadLiftingDefects();
-  }, [site.name, state.selectedLiftingIdsForSummary]);
+  }, [site.name]);
 
   // Load all available reports for this client (for the report selector)
   useEffect(() => {
@@ -326,23 +318,6 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
     };
     loadAllReports();
   }, [site.id, site.name]);
-
-  // Load all lifting items for this site (for the report selector panel)
-  useEffect(() => {
-    const loadAllLiftingItems = async () => {
-      try {
-        const { data } = await supabase
-          .from('lifting_register')
-          .select('id, equipment_type, serial_number, asset_tag, wll_value, wll_unit, equipment_status')
-          .eq('site_name', site.name)
-          .order('equipment_type', { ascending: true });
-        if (data) setAllLiftingItems(data);
-      } catch (err) {
-        console.error('Error loading all lifting items:', err);
-      }
-    };
-    loadAllLiftingItems();
-  }, [site.name]);
 
   // Load client details
   useEffect(() => {
@@ -738,9 +713,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
 
   const applyReportSelection = () => {
     const newIds = Array.from(pendingSelectedIds);
-    const newLiftingIds = Array.from(pendingLiftingIds);
     dispatch({ type: 'SET_REPORT_IDS', payload: newIds });
-    dispatch({ type: 'SET_LIFTING_IDS', payload: newLiftingIds });
+    setIncludeLiftingRegister(pendingIncludeLiftingRegister);
     setShowReportSelector(false);
     setPreviewPdfDoc(null); // invalidate cached PDF
   };
@@ -946,62 +920,19 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
             </div>
             <div className="flex-1 overflow-auto">
               {/* Lifting Equipment Register items */}
-              <div className="border-b border-border">
-                <div className="px-4 pt-3 pb-1 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Lifting Equipment Register ({allLiftingItems.length})
-                    </p>
-                    {allLiftingItems.length > 0 && (
-                      <button
-                        onClick={() => {
-                          if (pendingLiftingIds.size === allLiftingItems.length) {
-                            setPendingLiftingIds(new Set());
-                          } else {
-                            setPendingLiftingIds(new Set(allLiftingItems.map(i => i.id)));
-                          }
-                        }}
-                        className="text-[11px] font-semibold text-primary"
-                      >
-                        {pendingLiftingIds.size === allLiftingItems.length ? 'Deselect All' : 'Select All'}
-                      </button>
-                    )}
-                  </div>
+              {/* Lifting Register toggle */}
+              <label className={`flex items-center gap-3 px-4 py-4 border-b border-border cursor-pointer transition-colors ${pendingIncludeLiftingRegister ? 'bg-primary/5' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={pendingIncludeLiftingRegister}
+                  onChange={e => setPendingIncludeLiftingRegister(e.target.checked)}
+                  className="h-4 w-4 rounded accent-primary flex-shrink-0"
+                />
+                <div>
+                  <p className="font-medium text-sm">Lifting Equipment Register defects</p>
+                  <p className="text-[11px] text-muted-foreground">Include failed / removed-from-service items for customer review</p>
                 </div>
-                {allLiftingItems.length === 0 ? (
-                  <p className="px-4 py-3 text-sm text-muted-foreground">No lifting items found for this site.</p>
-                ) : (
-                  allLiftingItems.map(item => (
-                    <label key={item.id} className={`flex items-start gap-3 px-4 py-3 border-b border-border/50 cursor-pointer transition-colors ${pendingLiftingIds.has(item.id) ? 'bg-primary/5' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={pendingLiftingIds.has(item.id)}
-                        onChange={() => {
-                          setPendingLiftingIds(prev => {
-                            const next = new Set(prev);
-                            next.has(item.id) ? next.delete(item.id) : next.add(item.id);
-                            return next;
-                          });
-                        }}
-                        className="h-4 w-4 rounded accent-primary mt-0.5 flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.equipment_type}</p>
-                        <p className="text-[11px] text-muted-foreground">
-                          {[item.serial_number && `S/N: ${item.serial_number}`, item.asset_tag && `Tag: ${item.asset_tag}`, item.wll_value && `WLL: ${item.wll_value}${item.wll_unit || ''}`].filter(Boolean).join(' • ')}
-                        </p>
-                      </div>
-                      {item.equipment_status && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex-shrink-0 ${
-                          item.equipment_status === 'Failed' || item.equipment_status === 'Removed From Service'
-                            ? 'bg-rka-red-light text-rka-red'
-                            : 'bg-rka-green-light text-rka-green-dark'
-                        }`}>{item.equipment_status}</span>
-                      )}
-                    </label>
-                  ))
-                )}
-              </div>
+              </label>
               {/* Inspection reports */}
               <div className="px-4 pt-3 pb-1">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
@@ -1040,11 +971,11 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
             </div>
             <div className="p-4 border-t border-border bg-background">
               <p className="text-xs text-muted-foreground text-center mb-3">
-                {pendingSelectedIds.size} report{pendingSelectedIds.size !== 1 ? 's' : ''} • {pendingLiftingIds.size} lifting item{pendingLiftingIds.size !== 1 ? 's' : ''} selected
+                {pendingSelectedIds.size} report{pendingSelectedIds.size !== 1 ? 's' : ''} selected{pendingIncludeLiftingRegister ? ' • lifting register defects included' : ''}
               </p>
               <button
                 onClick={applyReportSelection}
-                disabled={pendingSelectedIds.size === 0 && pendingLiftingIds.size === 0}
+                disabled={pendingSelectedIds.size === 0 && !pendingIncludeLiftingRegister}
                 className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-bold text-sm disabled:opacity-40"
               >
                 Apply Selection
@@ -1061,7 +992,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
             <button
               onClick={() => {
                 setPendingSelectedIds(new Set(state.selectedReportIdsForSummary));
-                setPendingLiftingIds(new Set(state.selectedLiftingIdsForSummary));
+                setPendingIncludeLiftingRegister(includeLiftingRegister);
                 setShowReportSelector(true);
               }}
               className="text-xs font-semibold text-primary flex items-center gap-1"
