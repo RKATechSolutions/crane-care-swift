@@ -334,6 +334,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
           
+          console.log("AppContext: Fetching role for user:", session.user.id);
           const { data: roleData, error: roleError } = await (supabase as any)
             .from('user_roles')
             .select('role')
@@ -343,7 +344,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           
           clearTimeout(timeoutId);
           
-          if (roleError) console.error("AppContext: Error fetching role:", roleError);
+          if (roleError) {
+            if (roleError.code === 'PGRST204' || roleError.code === 'PGRST205' || roleError.code === '42P01') {
+              console.warn("AppContext: user_roles table appears to be missing or empty. Defaulting to technician.");
+            } else {
+              console.error("AppContext: Error fetching role:", roleError);
+            }
+          }
+          
           if (roleData) {
             console.log("AppContext: User is admin");
             role = 'admin';
@@ -353,6 +361,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         if (mounted) {
+          console.log(`AppContext: Dispatching LOGIN for ${email} with role ${role}`);
           dispatch({
             type: 'LOGIN',
             payload: { id: session.user.id, name: displayName, email, role },

@@ -69,7 +69,7 @@ export default function Login() {
               setLoading(true);
               const { error } = await supabase.auth.signInWithPassword({
                 email: 'admin@rkaindustrialsolutions.com.au',
-                password: '123456',
+                password: 'password123',
               });
               if (error) toast.error(error.message);
               setLoading(false);
