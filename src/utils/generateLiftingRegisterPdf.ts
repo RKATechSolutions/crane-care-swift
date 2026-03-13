@@ -249,6 +249,7 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
         // Draw photo in first column
         if (data.section === 'body' && data.column.index === 0) {
           const item = groupItems[data.row.index];
+          if (!item) return;
           const itemKey = (item as any).id || item.asset_tag || '';
           const photoUrl = photoCache[itemKey];
           if (photoUrl) {

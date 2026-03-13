@@ -11,11 +11,17 @@ interface InspectionResponse {
   severity: string | null;
   comment: string | null;
   defect_flag: boolean;
-  photo_urls: string[];
+  photo_urls: string[] | string;
   standard_ref?: string | null;
   urgency?: string | null;
-  defect_types?: string[];
+  defect_types?: string[] | string;
   internal_note?: string | null;
+}
+
+function safeStringArray(val: string[] | string | null | undefined): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  try { return JSON.parse(val); } catch { return []; }
 }
 
 interface InspectionPdfData {
@@ -141,11 +147,23 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   // Stats
   const allQuestions = sections.flatMap(s => s.questions);
   const totalQuestions = allQuestions.length;
-  const defectCount = allQuestions.filter(q => q.defect_flag || q.pass_fail_status === 'Fail' || q.pass_fail_status === 'No').length;
-  const passCount = allQuestions.filter(q => 
-    (q.pass_fail_status === 'Pass' || q.answer_value === 'Yes' || q.answer_value === 'Pass') && 
-    !(q.defect_flag || q.pass_fail_status === 'Fail' || q.pass_fail_status === 'No')
-  ).length;
+  // Mirror the same fail/pass logic used in StandardQuestionBlock UI.
+  // pass_fail_status='Pass' always wins — corrupted defect_flag values in the DB
+  // (where defect_flag=true even for passed items) must not override an explicit pass status.
+  const failTriggers = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
+  const passValues = ['Pass', 'Yes', 'Current', 'Compliant', 'Not Required'];
+  const isDefect = (q: InspectionResponse) =>
+    // An explicit Pass status always wins — never treat a passed item as a defect
+    q.pass_fail_status !== 'Pass' &&
+    !passValues.includes(q.answer_value || '') &&
+    (q.defect_flag ||
+      failTriggers.includes(q.pass_fail_status || '') ||
+      failTriggers.includes(q.answer_value || ''));
+  const isPass = (q: InspectionResponse) =>
+    !isDefect(q) &&
+    (passValues.includes(q.pass_fail_status || '') || passValues.includes(q.answer_value || ''));
+  const defectCount = allQuestions.filter(isDefect).length;
+  const passCount = allQuestions.filter(isPass).length;
   const naCount = totalQuestions - passCount - defectCount;
   
   const passPercent = totalQuestions > 0 ? Math.floor((passCount / totalQuestions) * 100) : 0;
@@ -162,13 +180,14 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const barX = 30;
   const barW = pageW - 60;
   const barH = 8;
-  const passW = totalQuestions > 0 ? (passCount / totalQuestions) * barW : 0;
-  const defW = totalQuestions > 0 ? (defectCount / totalQuestions) * barW : 0;
-  const nW = barW - passW - defW;
+  const barTotal = passCount + defectCount;
+  const passW = barTotal > 0 ? (passCount / barTotal) * barW : 0;
+  const defW = barTotal > 0 ? (defectCount / barTotal) * barW : 0;
+  
 
   if (passW > 0) { doc.setFillColor(...RKA_GREEN); doc.rect(barX, y, passW, barH, 'F'); }
   if (defW > 0) { doc.setFillColor(...RKA_RED); doc.rect(barX + passW, y, defW, barH, 'F'); }
-  if (nW > 0) { doc.setFillColor(220, 220, 220); doc.rect(barX + passW + defW, y, nW, barH, 'F'); }
+  
 
   y += barH + 5;
 
@@ -177,7 +196,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const legendItems = [
     { label: 'Pass', color: RKA_GREEN, count: passCount },
     { label: 'Defect', color: RKA_RED, count: defectCount },
-    { label: 'N/A', color: [220, 220, 220] as [number, number, number], count: naCount },
+
   ];
   let lx = barX;
   for (const item of legendItems) {
@@ -256,7 +275,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     'Schedule Repair Before Next Service': 2,
     'Monitor': 3,
   };
-  const allDefects = sections.flatMap(s => s.questions.filter(q => q.defect_flag))
+  const allDefects = sections.flatMap(s => s.questions.filter(isDefect))
     .sort((a, b) => (urgencyOrder[a.urgency || ''] ?? 99) - (urgencyOrder[b.urgency || ''] ?? 99));
 
   if (allDefects.length > 0) {
@@ -274,7 +293,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
     for (let i = 0; i < allDefects.length; i++) {
       const d = allDefects[i];
-      const hasPhotos = d.photo_urls.length > 0;
+      const hasPhotos = safeStringArray(d.photo_urls).length > 0;
       const cardH = hasPhotos ? Math.max(36, 20) : 20;
 
       if (dy > pageH - cardH - 18) { doc.addPage(); addHeader(); addFooter(); dy = 18; }
@@ -315,8 +334,9 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
         ty += 3.5;
       }
       doc.setTextColor(...DARK);
-      if (d.defect_types && d.defect_types.length > 0) {
-        doc.text(`Category: ${d.defect_types.join(', ')}`, 20, ty);
+      const defectTypesArr = safeStringArray(d.defect_types);
+      if (defectTypesArr.length > 0) {
+        doc.text(`Category: ${defectTypesArr.join(', ')}`, 20, ty);
         ty += 3.5;
       }
 
@@ -333,7 +353,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
       if (hasPhotos) {
         const photoX = pageW - 55;
         let photoY = dy - 1;
-        for (const photoUrl of d.photo_urls.slice(0, 2)) {
+        for (const photoUrl of safeStringArray(d.photo_urls).slice(0, 2)) {
           try {
             const photoImg = await loadRemoteImage(photoUrl);
             const maxW = 38;
@@ -367,7 +387,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const bottomMargin = 18;
 
   for (const section of sections) {
-    const passedItems = section.questions.filter(q => !q.defect_flag && q.question_text !== 'Asset Status');
+    const passedItems = section.questions.filter(q => !isDefect(q) && q.question_text !== 'Asset Status');
     if (passedItems.length === 0) continue;
 
     if (sy > pageH - bottomMargin - 20) { doc.addPage(); addHeader(); addFooter(); sy = 18; }
