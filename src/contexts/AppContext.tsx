@@ -22,13 +22,14 @@ interface AppState {
   sentReports: SentReport[];
   adminConfig: AdminFormConfig;
   selectedReportIdsForSummary: string[];
+  selectedLiftingIdsForSummary: string[];
 }
 
 type Action =
   | { type: 'LOGIN'; payload: User }
   | { type: 'LOGOUT' }
   | { type: 'SELECT_SITE'; payload: Site }
-  | { type: 'SELECT_CRANE'; payload: { crane: Crane; selectedReportIds?: string[] } }
+  | { type: 'SELECT_CRANE'; payload: { crane: Crane; selectedReportIds?: string[]; selectedLiftingIds?: string[] } }
   | { type: 'START_INSPECTION'; payload: Inspection }
   | { type: 'UPDATE_INSPECTION_ITEM'; payload: { itemId: string; result: InspectionItemResult } }
   | { type: 'SET_CRANE_STATUS'; payload: { status: CraneOperationalStatus; overridden?: boolean } }
@@ -50,7 +51,8 @@ type Action =
   | { type: 'UPDATE_ADMIN_CONFIG'; payload: Partial<AdminFormConfig> }
   | { type: 'ELEVATE_TO_ADMIN' }
   | { type: 'EXIT_ADMIN' }
-  | { type: 'SET_REPORT_IDS'; payload: string[] };
+  | { type: 'SET_REPORT_IDS'; payload: string[] }
+  | { type: 'SET_LIFTING_IDS'; payload: string[] };
 
 function loadSavedAdminConfig(): AdminFormConfig {
   try {
@@ -76,6 +78,7 @@ const initialState: AppState = {
   sentReports: [],
   adminConfig: loadSavedAdminConfig(),
   selectedReportIdsForSummary: [],
+  selectedLiftingIdsForSummary: [],
 };
 
 function computeCraneStatus(items: InspectionItemResult[]): CraneOperationalStatus | undefined {
@@ -109,10 +112,13 @@ function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         selectedCrane: action.payload.crane,
-        selectedReportIdsForSummary: action.payload.selectedReportIds || []
+        selectedReportIdsForSummary: action.payload.selectedReportIds || [],
+        selectedLiftingIdsForSummary: action.payload.selectedLiftingIds || [],
       };
     case 'SET_REPORT_IDS':
       return { ...state, selectedReportIdsForSummary: action.payload };
+    case 'SET_LIFTING_IDS':
+      return { ...state, selectedLiftingIdsForSummary: action.payload };
     case 'START_INSPECTION':
       return { ...state, currentInspection: action.payload };
     case 'UPDATE_INSPECTION_ITEM': {

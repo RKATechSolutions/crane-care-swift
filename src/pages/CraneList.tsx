@@ -78,6 +78,8 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
   const [deletingReportId, setDeletingReportId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
+  const [selectedLiftingIds, setSelectedLiftingIds] = useState<Set<string>>(new Set());
+  const [liftingItems, setLiftingItems] = useState<any[]>([]);
   const [downloadingReports, setDownloadingReports] = useState(false);
   const [notebookLmLink, setNotebookLmLink] = useState<string>('');
   const [showNotebookLmEdit, setShowNotebookLmEdit] = useState(false);
@@ -173,9 +175,18 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
       const { data } = await query.order('created_at', { ascending: false });
       if (data) setClientReports(data);
     };
+    const fetchLiftingItems = async () => {
+      const { data } = await supabase
+        .from('lifting_register')
+        .select('id, equipment_type, serial_number, asset_tag, wll_value, wll_unit, equipment_status, manufacturer')
+        .eq('site_name', siteName)
+        .order('equipment_type', { ascending: true });
+      if (data) setLiftingItems(data);
+    };
     fetchQuotes();
     fetchJobs();
     fetchReports();
+    fetchLiftingItems();
   }, [site?.id, site?.name]);
 
   useEffect(() => {
@@ -1035,6 +1046,56 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 </div>
               ))}
 
+              {/* Lifting Equipment Register */}
+              {liftingItems.length > 0 && (
+                <div className="border-t border-border mt-2">
+                  <div className="flex items-center justify-between px-4 py-2 bg-muted/30">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lifting Equipment Register</p>
+                    <button
+                      onClick={() => {
+                        if (selectedLiftingIds.size === liftingItems.length) {
+                          setSelectedLiftingIds(new Set());
+                        } else {
+                          setSelectedLiftingIds(new Set(liftingItems.map(l => l.id)));
+                        }
+                      }}
+                      className="text-xs text-primary font-semibold"
+                    >
+                      {selectedLiftingIds.size === liftingItems.length ? 'Deselect all' : 'Select all'}
+                    </button>
+                  </div>
+                  {liftingItems.map(item => (
+                    <div key={item.id} className={`flex items-center gap-3 px-4 py-2.5 border-b border-border/50 transition-colors ${selectedLiftingIds.has(item.id) ? 'bg-primary/5' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedLiftingIds.has(item.id)}
+                        onChange={() => {
+                          setSelectedLiftingIds(prev => {
+                            const next = new Set(prev);
+                            next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                            return next;
+                          });
+                        }}
+                        className="h-4 w-4 rounded accent-primary flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{item.equipment_type}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {[item.serial_number && `S/N: ${item.serial_number}`, item.asset_tag && `Tag: ${item.asset_tag}`, item.wll_value && `WLL: ${item.wll_value}${item.wll_unit || 't'}`].filter(Boolean).join(' • ') || '—'}
+                        </p>
+                      </div>
+                      {item.equipment_status && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex-shrink-0 ${
+                          item.equipment_status === 'Failed' || item.equipment_status === 'Removed From Service'
+                            ? 'bg-rka-red-light text-rka-red'
+                            : 'bg-rka-green-light text-rka-green-dark'
+                        }`}>{item.equipment_status}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Action buttons */}
               <div className="p-4 space-y-2">
                 <button
@@ -1044,10 +1105,12 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                       type: 'SELECT_CRANE',
                       payload: {
                         crane: { id: '__site_summary__' } as any,
-                        selectedReportIds: Array.from(selectedReportIds)
+                        selectedReportIds: Array.from(selectedReportIds),
+                        selectedLiftingIds: selectedLiftingIds.size > 0 ? Array.from(selectedLiftingIds) : undefined,
                       }
                     });
-                    toast({ title: `Job Site Summary started with ${selectedReportIds.size} report(s)` });
+                    const liftingMsg = selectedLiftingIds.size > 0 ? ` + ${selectedLiftingIds.size} lifting item(s)` : '';
+                    toast({ title: `Job Site Summary started with ${selectedReportIds.size} report(s)${liftingMsg}` });
                   }}
                   disabled={selectedReportIds.size === 0}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40"
