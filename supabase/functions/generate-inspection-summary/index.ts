@@ -5,6 +5,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function parseDbArray(val: unknown): string[] {
+  if (!val) return [];
+  if (Array.isArray(val)) return val as string[];
+  if (typeof val === "string") {
+    if (val.startsWith("{") && val.endsWith("}")) {
+      return val.slice(1, -1).split(",").map(s => s.replace(/^"|"$/g, "").trim()).filter(Boolean);
+    }
+    try { return JSON.parse(val); } catch { return []; }
+  }
+  return [];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -63,7 +75,8 @@ Deno.serve(async (req) => {
       if (r.comment) line += ` — Comment: ${r.comment}`;
       if (r.defect_flag) {
         line += ` [DEFECT - Section: ${section}, Question: ${q.text}${r.urgency ? `, Urgency: ${r.urgency}` : ''}${r.comment ? `, Comment: ${r.comment}` : ''}]`;
-        if (r.defect_types && r.defect_types.length > 0) line += ` Categories: ${r.defect_types.join(', ')}`;
+        const defectTypes = parseDbArray(r.defect_types);
+        if (defectTypes.length > 0) line += ` Categories: ${defectTypes.join(', ')}`;
         defectCount++;
       }
       sectionData[section].push(line);
