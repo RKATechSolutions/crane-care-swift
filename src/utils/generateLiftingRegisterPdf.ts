@@ -215,8 +215,16 @@ export async function generateLiftingRegisterPdf(data: LiftingRegisterPdfData): 
       head: [head],
       body: rows,
       margin: { left: 10, right: 10 },
-      styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak', minCellHeight: 22 },
-      headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: 'bold', fontSize: 6 },
+      styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak' },
+      bodyStyles: { minCellHeight: 22 },
+      headStyles: {
+        fillColor: DARK,
+        textColor: WHITE,
+        fontStyle: 'bold',
+        fontSize: 6,
+        minCellHeight: 11,
+        cellPadding: 0.75,
+      },
       columnStyles: {
         0: { cellWidth: 20 }, // Photo column
         1: { cellWidth: 25 }, // Type column
