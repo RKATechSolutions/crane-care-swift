@@ -19,6 +19,9 @@ import { AssetDetailModal } from '@/components/AssetDetailModal';
 import { LiftingRegisterList } from '@/components/LiftingRegisterList';
 import { LiftingRegisterInspectionForm } from '@/components/LiftingRegisterInspectionForm';
 import { ClientDetailSection } from '@/components/ClientDetailSection';
+import { buildInspectionReportFileName } from '@/utils/reportFileName';
+import SiteJobSummary from '@/pages/SiteJobSummary';
+import { LIFTING_REPORT_SELECTION_ID } from '@/constants/reports';
 
 interface DbAsset {
   id: string;
@@ -46,6 +49,12 @@ interface CraneListProps {
   activeJobId?: string | null;
   onSetActiveJob?: (id: string | null) => void;
   initialTab?: ClientTab;
+}
+
+interface LiftingReportSummary {
+  inspectionsCount: number;
+  latestInspectionDate: string | null;
+  latestTechnicianName: string | null;
 }
 
 export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: CraneListProps = {}) {
@@ -79,6 +88,9 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
   const [deleting, setDeleting] = useState(false);
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
   const [downloadingReports, setDownloadingReports] = useState(false);
+  const [showSiteSummary, setShowSiteSummary] = useState(false);
+  const [summaryReportIds, setSummaryReportIds] = useState<string[]>([]);
+  const [liftingReportSummary, setLiftingReportSummary] = useState<LiftingReportSummary | null>(null);
   const [notebookLmLink, setNotebookLmLink] = useState<string>('');
   const [showNotebookLmEdit, setShowNotebookLmEdit] = useState(false);
   const [notebookLmInput, setNotebookLmInput] = useState('');
@@ -167,15 +179,46 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
       if (data) setClientJobs(data);
     };
     const fetchReports = async () => {
-      let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id');
+      let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, ai_summary, site_name, other_notes, client_id');
       if (clientId) query = query.eq('client_id', clientId);
       else query = query.eq('site_name', siteName);
       const { data } = await query.order('created_at', { ascending: false });
       if (data) setClientReports(data);
     };
+    const fetchLiftingReportSummary = async () => {
+      const latestQuery = supabase
+        .from('lifting_register_inspections')
+        .select('inspection_date, technician_name');
+      const countQuery = supabase
+        .from('lifting_register_inspections')
+        .select('id', { count: 'exact', head: true });
+
+      const latestFiltered = clientId
+        ? latestQuery.eq('client_id', clientId)
+        : latestQuery.eq('site_name', siteName);
+      const countFiltered = clientId
+        ? countQuery.eq('client_id', clientId)
+        : countQuery.eq('site_name', siteName);
+
+      const [{ data: latestRows }, { count }] = await Promise.all([
+        latestFiltered.order('inspection_date', { ascending: false }).limit(1),
+        countFiltered,
+      ]);
+
+      if ((count || 0) > 0) {
+        setLiftingReportSummary({
+          inspectionsCount: count || 0,
+          latestInspectionDate: latestRows?.[0]?.inspection_date || null,
+          latestTechnicianName: latestRows?.[0]?.technician_name || null,
+        });
+      } else {
+        setLiftingReportSummary(null);
+      }
+    };
     fetchQuotes();
     fetchJobs();
     fetchReports();
+    fetchLiftingReportSummary();
   }, [site?.id, site?.name]);
 
   useEffect(() => {
@@ -347,11 +390,37 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
 
   const refreshReports = async () => {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
-    let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, ai_summary, site_name, other_notes');
+    let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, ai_summary, site_name, other_notes, client_id');
     if (clientId) query = query.eq('client_id', clientId);
     else query = query.eq('site_name', site.name);
     const { data } = await query.order('created_at', { ascending: false });
     if (data) setClientReports(data);
+
+    const latestQuery = supabase
+      .from('lifting_register_inspections')
+      .select('inspection_date, technician_name');
+    const countQuery = supabase
+      .from('lifting_register_inspections')
+      .select('id', { count: 'exact', head: true });
+    const latestFiltered = clientId
+      ? latestQuery.eq('client_id', clientId)
+      : latestQuery.eq('site_name', site.name);
+    const countFiltered = clientId
+      ? countQuery.eq('client_id', clientId)
+      : countQuery.eq('site_name', site.name);
+    const [{ data: latestRows }, { count }] = await Promise.all([
+      latestFiltered.order('inspection_date', { ascending: false }).limit(1),
+      countFiltered,
+    ]);
+    if ((count || 0) > 0) {
+      setLiftingReportSummary({
+        inspectionsCount: count || 0,
+        latestInspectionDate: latestRows?.[0]?.inspection_date || null,
+        latestTechnicianName: latestRows?.[0]?.technician_name || null,
+      });
+    } else {
+      setLiftingReportSummary(null);
+    }
   };
 
   const handleDeleteReport = async (reportId: string) => {
@@ -378,6 +447,19 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
     acc[key].push(asset);
     return acc;
   }, {} as Record<string, DbAsset[]>);
+  const hasLiftingReportOption = !!liftingReportSummary;
+  const totalSelectableReports = clientReports.length + (hasLiftingReportOption ? 1 : 0);
+  const allReportsSelected = totalSelectableReports > 0 && selectedReportIds.size === totalSelectableReports;
+
+  if (showSiteSummary) {
+    return (
+      <SiteJobSummary
+        activeJobId={activeJobId}
+        preselectedReportIds={summaryReportIds}
+        onBack={() => setShowSiteSummary(false)}
+      />
+    );
+  }
 
   // Show lifting inspection form
   if (showLiftingInspection) {
@@ -637,7 +719,8 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
             </button>
             <button
               onClick={() => {
-                dispatch({ type: 'SELECT_CRANE', payload: { crane: { id: '__site_summary__' } as any } });
+                setSummaryReportIds([]);
+                setShowSiteSummary(true);
               }}
               className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all"
             >
@@ -932,7 +1015,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
       {/* Tab: Reports */}
       {activeTab === 'reports' && (
         <div className="flex-1 overflow-auto">
-          {clientReports.length === 0 ? (
+          {clientReports.length === 0 && !liftingReportSummary ? (
             <div className="p-8 text-center text-muted-foreground">
               <FileBarChart className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="font-medium">No inspection reports found</p>
@@ -942,22 +1025,59 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
               {/* Select all toggle */}
               <button
                 onClick={() => {
-                  if (selectedReportIds.size === clientReports.length) {
+                  if (allReportsSelected) {
                     setSelectedReportIds(new Set());
                   } else {
-                    setSelectedReportIds(new Set(clientReports.map(r => r.id)));
+                    const ids = clientReports.map(r => r.id);
+                    if (liftingReportSummary) ids.push(LIFTING_REPORT_SELECTION_ID);
+                    setSelectedReportIds(new Set(ids));
                   }
                 }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2"
               >
                 <input
                   type="checkbox"
-                  checked={selectedReportIds.size === clientReports.length}
+                  checked={allReportsSelected}
                   readOnly
                   className="h-4 w-4 rounded border-primary accent-primary"
                 />
-                <span>{selectedReportIds.size === clientReports.length ? 'Deselect all' : 'Select all'}</span>
+                <span>{allReportsSelected ? 'Deselect all' : 'Select all'}</span>
               </button>
+
+              {liftingReportSummary && (
+                <div className={`px-4 py-3 border-b border-border transition-colors ${selectedReportIds.has(LIFTING_REPORT_SELECTION_ID) ? 'bg-primary/5' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedReportIds.has(LIFTING_REPORT_SELECTION_ID)}
+                      onChange={() => {
+                        setSelectedReportIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(LIFTING_REPORT_SELECTION_ID)) next.delete(LIFTING_REPORT_SELECTION_ID);
+                          else next.add(LIFTING_REPORT_SELECTION_ID);
+                          return next;
+                        });
+                      }}
+                      className="h-4 w-4 rounded border-primary accent-primary flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-sm">Lifting Equipment Inspection Register</p>
+                          <p className="text-xs text-muted-foreground">
+                            {liftingReportSummary.latestTechnicianName || 'Technician'} • {liftingReportSummary.latestInspectionDate ? new Date(liftingReportSummary.latestInspectionDate).toLocaleDateString() : 'No date'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                            {liftingReportSummary.inspectionsCount} inspection{liftingReportSummary.inspectionsCount !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {clientReports.map(r => (
                 <div key={r.id} className={`px-4 py-3 border-b border-border transition-colors ${selectedReportIds.has(r.id) ? 'bg-primary/5' : ''}`}>
@@ -1035,13 +1155,8 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 <button
                   onClick={() => {
                     if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
-                    dispatch({
-                      type: 'SELECT_CRANE',
-                      payload: {
-                        crane: { id: '__site_summary__' } as any,
-                        selectedReportIds: Array.from(selectedReportIds)
-                      }
-                    });
+                    setSummaryReportIds(Array.from(selectedReportIds));
+                    setShowSiteSummary(true);
                     toast({ title: `Job Site Summary started with ${selectedReportIds.size} report(s)` });
                   }}
                   disabled={selectedReportIds.size === 0}
@@ -1053,9 +1168,22 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 <button
                   onClick={async () => {
                     if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
-                    setDownloadingReports(true);
-                    toast({ title: `Generating ${selectedReportIds.size} PDF(s)…` });
                     const selected = clientReports.filter(r => selectedReportIds.has(r.id));
+                    if (selected.length === 0) {
+                      toast({ title: 'No crane PDFs selected', description: 'Lifting register selection is used in Job Site Summary, not ZIP PDF download.', variant: 'destructive' });
+                      return;
+                    }
+                    setDownloadingReports(true);
+                    toast({ title: `Generating ${selected.length} PDF(s)…` });
+                    const clientIds = Array.from(new Set(selected.map(r => r.client_id).filter(Boolean)));
+                    const clientNameMap = new Map<string, string>();
+                    if (clientIds.length > 0) {
+                      const { data: clientRows } = await supabase
+                        .from('clients')
+                        .select('id, client_name')
+                        .in('id', clientIds as string[]);
+                      (clientRows || []).forEach(c => clientNameMap.set(c.id, c.client_name || 'Client'));
+                    }
                     const zip = new JSZip();
                     for (const report of selected) {
                       try {
@@ -1132,7 +1260,11 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                           assetPhotoUrl,
                         });
 
-                        const fileName = `${(report.asset_name || 'Inspection').replace(/[^a-zA-Z0-9]/g, '_')}_${report.inspection_date}.pdf`;
+                        const fileName = buildInspectionReportFileName({
+                          clientName: clientNameMap.get(report.client_id) || report.site_name || site?.name,
+                          assetName: report.asset_name || 'Inspection',
+                          inspectionDate: report.inspection_date,
+                        });
                         zip.file(fileName, pdf.output('arraybuffer'));
                       } catch (err) {
                         console.error('Failed to generate report', report.id, err);
