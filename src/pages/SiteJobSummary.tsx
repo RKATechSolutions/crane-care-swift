@@ -16,7 +16,7 @@ import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import { sortAssetsNumerically } from '@/utils/sorting';
 import { isInspectionResponseDefect } from '@/utils/inspectionDefects';
 import type jsPDF from 'jspdf';
-import { LIFTING_REPORT_SELECTION_ID } from '@/constants/reports';
+import { LIFTING_EQUIPMENT_FORM_SELECTION_ID, LIFTING_REPORT_SELECTION_ID } from '@/constants/reports';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
@@ -57,7 +57,9 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
   const effectiveSelectedReportIds = preselectedReportIds.length > 0
     ? preselectedReportIds
     : (state.selectedReportIdsForSummary || []);
-  const selectedDbReportIds = effectiveSelectedReportIds.filter(id => id !== LIFTING_REPORT_SELECTION_ID);
+  const selectedDbReportIds = effectiveSelectedReportIds.filter(
+    id => id !== LIFTING_REPORT_SELECTION_ID && id !== LIFTING_EQUIPMENT_FORM_SELECTION_ID
+  );
   const includeLiftingFromSelection = effectiveSelectedReportIds.includes(LIFTING_REPORT_SELECTION_ID);
   const effectiveSelectedReportIdsKey = effectiveSelectedReportIds.join('|');
   const selectedDbReportIdsKey = selectedDbReportIds.join('|');

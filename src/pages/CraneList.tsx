@@ -21,7 +21,7 @@ import { LiftingRegisterInspectionForm } from '@/components/LiftingRegisterInspe
 import { ClientDetailSection } from '@/components/ClientDetailSection';
 import { buildInspectionReportFileName } from '@/utils/reportFileName';
 import SiteJobSummary from '@/pages/SiteJobSummary';
-import { LIFTING_REPORT_SELECTION_ID } from '@/constants/reports';
+import { LIFTING_EQUIPMENT_FORM_SELECTION_ID, LIFTING_REPORT_SELECTION_ID } from '@/constants/reports';
 
 interface DbAsset {
   id: string;
@@ -447,8 +447,23 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
     acc[key].push(asset);
     return acc;
   }, {} as Record<string, DbAsset[]>);
+  const liftingEquipmentFormReports = clientReports.filter(r => r.form_id === 'FORM-2');
+  const nonLiftingEquipmentFormReports = clientReports.filter(r => r.form_id !== 'FORM-2');
+  const liftingEquipmentFormSummary = liftingEquipmentFormReports.length > 0
+    ? {
+        inspectionsCount: liftingEquipmentFormReports.length,
+        latestInspectionDate: liftingEquipmentFormReports
+          .map(r => r.inspection_date)
+          .filter(Boolean)
+          .sort((a, b) => (a > b ? -1 : 1))[0] || null,
+        latestTechnicianName: liftingEquipmentFormReports[0]?.technician_name || null,
+      }
+    : null;
   const hasLiftingReportOption = !!liftingReportSummary;
-  const totalSelectableReports = clientReports.length + (hasLiftingReportOption ? 1 : 0);
+  const hasLiftingEquipmentFormOption = !!liftingEquipmentFormSummary;
+  const totalSelectableReports = nonLiftingEquipmentFormReports.length
+    + (hasLiftingReportOption ? 1 : 0)
+    + (hasLiftingEquipmentFormOption ? 1 : 0);
   const allReportsSelected = totalSelectableReports > 0 && selectedReportIds.size === totalSelectableReports;
   const formNameMap = new Map(dbFormTemplates.map((t) => [t.form_id, t.form_name]));
   const getFormDisplayName = (formId?: string | null) => {
@@ -1020,7 +1035,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
       {/* Tab: Reports */}
       {activeTab === 'reports' && (
         <div className="flex-1 overflow-auto">
-          {clientReports.length === 0 && !liftingReportSummary ? (
+          {nonLiftingEquipmentFormReports.length === 0 && !liftingReportSummary && !liftingEquipmentFormSummary ? (
             <div className="p-8 text-center text-muted-foreground">
               <FileBarChart className="w-8 h-8 mx-auto mb-2 opacity-30" />
               <p className="font-medium">No inspection reports found</p>
@@ -1033,8 +1048,9 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                   if (allReportsSelected) {
                     setSelectedReportIds(new Set());
                   } else {
-                    const ids = clientReports.map(r => r.id);
+                    const ids = nonLiftingEquipmentFormReports.map(r => r.id);
                     if (liftingReportSummary) ids.push(LIFTING_REPORT_SELECTION_ID);
+                    if (liftingEquipmentFormSummary) ids.push(LIFTING_EQUIPMENT_FORM_SELECTION_ID);
                     setSelectedReportIds(new Set(ids));
                   }
                 }}
@@ -1048,6 +1064,41 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 />
                 <span>{allReportsSelected ? 'Deselect all' : 'Select all'}</span>
               </button>
+
+              {liftingEquipmentFormSummary && (
+                <div className={`px-4 py-3 border-b border-border transition-colors ${selectedReportIds.has(LIFTING_EQUIPMENT_FORM_SELECTION_ID) ? 'bg-primary/5' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedReportIds.has(LIFTING_EQUIPMENT_FORM_SELECTION_ID)}
+                      onChange={() => {
+                        setSelectedReportIds(prev => {
+                          const next = new Set(prev);
+                          if (next.has(LIFTING_EQUIPMENT_FORM_SELECTION_ID)) next.delete(LIFTING_EQUIPMENT_FORM_SELECTION_ID);
+                          else next.add(LIFTING_EQUIPMENT_FORM_SELECTION_ID);
+                          return next;
+                        });
+                      }}
+                      className="h-4 w-4 rounded border-primary accent-primary flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-sm">Lifting Equipment Inspection</p>
+                          <p className="text-xs text-muted-foreground">
+                            {liftingEquipmentFormSummary.latestTechnicianName || 'Technician'} • {liftingEquipmentFormSummary.latestInspectionDate ? new Date(liftingEquipmentFormSummary.latestInspectionDate).toLocaleDateString() : 'No date'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                            {liftingEquipmentFormSummary.inspectionsCount} report{liftingEquipmentFormSummary.inspectionsCount !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {liftingReportSummary && (
                 <div className={`px-4 py-3 border-b border-border transition-colors ${selectedReportIds.has(LIFTING_REPORT_SELECTION_ID) ? 'bg-primary/5' : ''}`}>
@@ -1084,7 +1135,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 </div>
               )}
 
-              {clientReports.map(r => (
+              {nonLiftingEquipmentFormReports.map(r => (
                 <div key={r.id} className={`px-4 py-3 border-b border-border transition-colors ${selectedReportIds.has(r.id) ? 'bg-primary/5' : ''}`}>
                   <div className="flex items-center gap-3">
                     <input
@@ -1161,9 +1212,15 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 <button
                   onClick={() => {
                     if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
-                    setSummaryReportIds(Array.from(selectedReportIds));
+                    const resolvedIds = Array.from(selectedReportIds).flatMap((id) => {
+                      if (id === LIFTING_EQUIPMENT_FORM_SELECTION_ID) {
+                        return liftingEquipmentFormReports.map((r) => r.id);
+                      }
+                      return [id];
+                    });
+                    setSummaryReportIds(Array.from(new Set(resolvedIds)));
                     setShowSiteSummary(true);
-                    toast({ title: `Job Site Summary started with ${selectedReportIds.size} report(s)` });
+                    toast({ title: `Job Site Summary started with ${selectedReportIds.size} selected report item(s)` });
                   }}
                   disabled={selectedReportIds.size === 0}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-40"
@@ -1174,7 +1231,15 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 <button
                   onClick={async () => {
                     if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
-                    const selected = clientReports.filter(r => selectedReportIds.has(r.id));
+                    const expandedSelectedReportIds = new Set(
+                      Array.from(selectedReportIds).flatMap((id) => {
+                        if (id === LIFTING_EQUIPMENT_FORM_SELECTION_ID) {
+                          return liftingEquipmentFormReports.map((r) => r.id);
+                        }
+                        return [id];
+                      })
+                    );
+                    const selected = clientReports.filter(r => expandedSelectedReportIds.has(r.id));
                     if (selected.length === 0) {
                       toast({ title: 'No crane PDFs selected', description: 'Lifting register selection is used in Job Site Summary, not ZIP PDF download.', variant: 'destructive' });
                       return;
