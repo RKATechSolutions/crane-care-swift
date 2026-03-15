@@ -41,6 +41,7 @@ interface Props {
   question: QuestionConfig;
   response: ResponseData;
   onUpdate: (response: ResponseData) => void;
+  onSaveDefect?: () => void;
 }
 
 const ALL_DEFECT_CATEGORIES = [
@@ -59,7 +60,7 @@ const URGENCY_LEVELS = [
   { value: 'Immediate - Remove From Service and Repair Immediately', label: 'Immediate - Remove From Service', color: 'bg-rka-red text-destructive-foreground' },
 ];
 
-export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
+export function StandardQuestionBlock({ question, response, onUpdate, onSaveDefect }: Props) {
   const [showComment, setShowComment] = useState(false);
   const [showPhotos, setShowPhotos] = useState(false);
   const [defectExpanded, setDefectExpanded] = useState(true);
@@ -468,7 +469,12 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 {/* Save Defect Button */}
                 <div className="pt-2">
                   <button
-                    onClick={() => setDefectExpanded(false)}
+                    onClick={() => {
+                      if (response.urgency && response.comment && photoUrls.length > 0) {
+                        setDefectExpanded(false);
+                        onSaveDefect?.();
+                      }
+                    }}
                     disabled={!response.urgency || !response.comment || (photoUrls.length === 0)}
                     className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${response.urgency && response.comment && photoUrls.length > 0
                       ? 'bg-rka-green text-white shadow-lg shadow-rka-green/20'
@@ -476,7 +482,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                       }`}
                   >
                     <CheckCircle className="w-5 h-5" />
-                    Save Defect Detail
+                    Save Defect
                   </button>
                   {(!response.urgency || !response.comment || photoUrls.length === 0) && (
                     <p className="text-[10px] text-center text-rka-red mt-2 font-bold uppercase tracking-tight">

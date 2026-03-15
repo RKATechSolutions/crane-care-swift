@@ -58,10 +58,12 @@ export default function DbInspectionForm({
   const [previewPdfDoc, setPreviewPdfDoc] = useState<jsPDF | null>(null);
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
+  const [aiSummaryEdited, setAiSummaryEdited] = useState(false);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [otherNotes, setOtherNotes] = useState<string>('');
   const [assetPhotoUrl, setAssetPhotoUrl] = useState<string | undefined>(undefined);
   const [showDateConfirm, setShowDateConfirm] = useState(false);
+  const [showSubmitSuccess, setShowSubmitSuccess] = useState(false);
   const [inspectionDate, setInspectionDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [craneStatus, setCraneStatus] = useState<string | null>(null);
   const [clientName, setClientName] = useState<string>('');
@@ -213,10 +215,11 @@ export default function DbInspectionForm({
         // Load existing AI summary and other notes
         const { data: inspData } = await supabase
           .from('db_inspections')
-          .select('ai_summary, other_notes, inspection_date')
+          .select('ai_summary, ai_summary_edited, other_notes, inspection_date')
           .eq('id', existingInspectionId)
           .single();
         if (inspData?.ai_summary) setAiSummary(inspData.ai_summary);
+        if ((inspData as any)?.ai_summary_edited) setAiSummaryEdited((inspData as any).ai_summary_edited);
         if ((inspData as any)?.other_notes) setOtherNotes((inspData as any).other_notes);
         if (inspData?.inspection_date) setInspectionDate(inspData.inspection_date);
         // Load crane_status
@@ -401,6 +404,7 @@ export default function DbInspectionForm({
         craneStatus: craneStatus || undefined,
         sections: pdfSections,
         aiSummary: aiSummary || undefined,
+        aiSummaryEdited,
         otherNotes: otherNotes || undefined,
         assetPhotoUrl: latestPhotoUrl,
       });
@@ -415,17 +419,20 @@ export default function DbInspectionForm({
     }
   };
 
+  const getDownloadFileName = () => {
+    const dateStr = format(new Date(inspectionDate), 'dd-MM-yyyy');
+    // Format: Client Name, Asset Name, Date Inspected
+    const raw = `${clientName || siteName || 'Client'}, ${assetName}, ${dateStr}.pdf`;
+    return raw.replace(/[/\\?%*:|"<>]/g, '-');
+  };
+
   const handleDownloadPdf = async () => {
     let doc = previewPdfDoc;
     if (!doc) {
       doc = await handlePreviewPdf();
     }
     if (doc) {
-      const dateStr = format(new Date(inspectionDate), 'dd-MM-yyyy');
-      // Format: [Client Name] [Asset Name] Report [Date]
-      const rawFileName = `${clientName || siteName || 'Client'} ${assetName} Report ${dateStr}.pdf`;
-      const fileName = rawFileName.replace(/[/\\?%*:|"<>]/g, '-');
-      doc.save(fileName);
+      doc.save(getDownloadFileName());
     }
   };
 
@@ -476,7 +483,8 @@ export default function DbInspectionForm({
           status,
           inspection_date: dateToUse,
           crane_status: craneStatus || null,
-          ai_summary: aiSummary || null,
+            ai_summary: aiSummary || null,
+            ai_summary_edited: aiSummaryEdited || false,
         };
         if (taskId) insertPayload.task_id = taskId;
 
@@ -498,7 +506,8 @@ export default function DbInspectionForm({
             other_notes: otherNotes || null,
             inspection_date: dateToUse,
             crane_status: craneStatus || null,
-            ai_summary: aiSummary || null
+            ai_summary: aiSummary || null,
+            ai_summary_edited: aiSummaryEdited || false
           } as any)
           .eq('id', currentInspId);
       }
@@ -735,6 +744,10 @@ export default function DbInspectionForm({
                   defect_flag: false,
                 }}
                 onUpdate={(r) => handleResponseUpdate(q.question_id, r)}
+                onSaveDefect={() => {
+                  saveInspection('Draft');
+                  toast.success('Defect saved');
+                }}
               />
             </div>
           );
@@ -819,7 +832,7 @@ export default function DbInspectionForm({
               </div>
               <textarea
                 value={aiSummary}
-                onChange={(e) => setAiSummary(e.target.value)}
+                onChange={(e) => { setAiSummary(e.target.value); setAiSummaryEdited(true); }}
                 placeholder="Enter executive summary…"
                 rows={8}
                 className="w-full p-4 border border-border rounded-xl bg-muted text-sm resize-none focus:ring-2 focus:ring-primary/20 transition-all"
@@ -898,7 +911,7 @@ export default function DbInspectionForm({
               onClick={async () => {
                 setShowDateConfirm(false);
                 await saveInspection('Submitted', inspectionDate);
-                (onSubmitComplete || onBack)();
+                setShowSubmitSuccess(true);
               }}
               disabled={saving}
               className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2"
@@ -916,6 +929,41 @@ export default function DbInspectionForm({
         </div>
       )}
 
+      {/* Submit Success — Download Form */}
+      {showSubmitSuccess && (
+        <div className="fixed inset-0 z-[100] bg-foreground/50 flex items-end justify-center">
+          <div className="bg-background w-full max-w-lg rounded-t-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className="w-6 h-6 text-rka-green" />
+              <h3 className="text-lg font-bold">Form Complete</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Your inspection has been submitted. Download your report below.
+            </p>
+            <button
+              onClick={async () => {
+                await handleDownloadPdf();
+                setShowSubmitSuccess(false);
+                (onSubmitComplete || onBack)();
+              }}
+              className="w-full tap-target bg-primary text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              Download Report
+            </button>
+            <button
+              onClick={() => {
+                setShowSubmitSuccess(false);
+                (onSubmitComplete || onBack)();
+              }}
+              className="w-full tap-target bg-muted rounded-xl font-semibold text-sm"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
       <NoteToAdminModal isOpen={noteOpen} onClose={() => setNoteOpen(false)} />
 
       <PdfPreviewModal
@@ -924,9 +972,7 @@ export default function DbInspectionForm({
         pdfDoc={previewPdfDoc}
         onDownload={() => {
           if (!previewPdfDoc) return;
-          const safeName = assetName.replace(/[^a-zA-Z0-9]/g, '_');
-          const dateStr = new Date().toISOString().slice(0, 10);
-          previewPdfDoc.save(`${safeName}_Inspection_${dateStr}.pdf`);
+          previewPdfDoc.save(getDownloadFileName());
         }}
         title="Inspection Report Preview"
       />

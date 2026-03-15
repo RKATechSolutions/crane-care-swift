@@ -33,6 +33,7 @@ interface InspectionPdfData {
   craneStatus?: string;
   sections: { name: string; questions: InspectionResponse[] }[];
   aiSummary?: string;
+  aiSummaryEdited?: boolean;
   otherNotes?: string;
   assetPhotoUrl?: string;
 }
@@ -71,7 +72,7 @@ async function loadRemoteImage(src: string): Promise<HTMLImageElement> {
 }
 
 export async function generateInspectionPdf(data: InspectionPdfData): Promise<jsPDF> {
-  const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections, aiSummary, assetPhotoUrl } = data;
+  const { formName, assetName, siteName, technicianName, inspectionDate, craneStatus, sections, aiSummary, aiSummaryEdited, assetPhotoUrl } = data;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -191,12 +192,12 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
 
   y += barH + 5;
 
-  // Legend
+  // Legend — Pass, Defect, N/A so all items add up to total inspected
   doc.setFontSize(7.5);
   const legendItems = [
     { label: 'Pass', color: RKA_GREEN, count: passCount },
     { label: 'Defect', color: RKA_RED, count: defectCount },
-
+    { label: 'N/A', color: [150, 150, 150] as [number, number, number], count: naCount },
   ];
   let lx = barX;
   for (const item of legendItems) {
@@ -239,7 +240,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...WHITE);
-    doc.text('Summary', pageW / 2, y + 5.5, { align: 'center' });
+    doc.text(aiSummaryEdited ? 'Summary (Edited)' : 'Summary', pageW / 2, y + 5.5, { align: 'center' });
     y += 12;
 
     doc.setFontSize(8.5);

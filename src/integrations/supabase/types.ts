@@ -677,6 +677,7 @@ export type Database = {
         Row: {
           ai_12_month_plan: string | null
           ai_summary: string | null
+          ai_summary_edited: boolean | null
           asset_id: string | null
           asset_name: string | null
           client_id: string | null
@@ -700,6 +701,7 @@ export type Database = {
         Insert: {
           ai_12_month_plan?: string | null
           ai_summary?: string | null
+          ai_summary_edited?: boolean | null
           asset_id?: string | null
           asset_name?: string | null
           client_id?: string | null
@@ -723,6 +725,7 @@ export type Database = {
         Update: {
           ai_12_month_plan?: string | null
           ai_summary?: string | null
+          ai_summary_edited?: boolean | null
           asset_id?: string | null
           asset_name?: string | null
           client_id?: string | null

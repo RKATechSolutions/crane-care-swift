@@ -3,7 +3,7 @@ import { sortAssetsNumerically } from '@/utils/sorting';
 import { AppHeader } from '@/components/AppHeader';
 import { NoteToAdminModal } from '@/components/NoteToAdminModal';
 import { useState, useEffect } from 'react';
-import { PlayCircle, Package, Plus, Pencil, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2, Users, FileBarChart, Briefcase, DollarSign, AlertCircle, BookOpen, Download, ClipboardCheck } from 'lucide-react';
+import { PlayCircle, Package, Plus, Pencil, RefreshCw, FileText, X, ClipboardList, BarChart3, Link2, Users, FileBarChart, Briefcase, DollarSign, AlertCircle, BookOpen, Download, ClipboardCheck, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import SiteAssessmentForm from '@/pages/SiteAssessmentForm';
@@ -19,6 +19,9 @@ import { AssetDetailModal } from '@/components/AssetDetailModal';
 import { LiftingRegisterList } from '@/components/LiftingRegisterList';
 import { LiftingRegisterInspectionForm } from '@/components/LiftingRegisterInspectionForm';
 import { ClientDetailSection } from '@/components/ClientDetailSection';
+import { PdfPreviewModal } from '@/components/PdfPreviewModal';
+import type jsPDF from 'jspdf';
+import { format } from 'date-fns';
 
 interface DbAsset {
   id: string;
@@ -79,6 +82,9 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
   const [deleting, setDeleting] = useState(false);
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
   const [downloadingReports, setDownloadingReports] = useState(false);
+  const [previewReportPdf, setPreviewReportPdf] = useState<jsPDF | null>(null);
+  const [previewReport, setPreviewReport] = useState<any | null>(null);
+  const [generatingReportPdfId, setGeneratingReportPdfId] = useState<string | null>(null);
   const [notebookLmLink, setNotebookLmLink] = useState<string>('');
   const [showNotebookLmEdit, setShowNotebookLmEdit] = useState(false);
   const [notebookLmInput, setNotebookLmInput] = useState('');
@@ -167,7 +173,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
       if (data) setClientJobs(data);
     };
     const fetchReports = async () => {
-      let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id');
+      let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, site_name, ai_summary, ai_summary_edited, other_notes');
       if (clientId) query = query.eq('client_id', clientId);
       else query = query.eq('site_name', siteName);
       const { data } = await query.order('created_at', { ascending: false });
@@ -347,11 +353,78 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
 
   const refreshReports = async () => {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
-    let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, ai_summary, site_name, other_notes');
+    let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, ai_summary, ai_summary_edited, site_name, other_notes');
     if (clientId) query = query.eq('client_id', clientId);
     else query = query.eq('site_name', site.name);
     const { data } = await query.order('created_at', { ascending: false });
     if (data) setClientReports(data);
+  };
+
+  const getReportDownloadFileName = (report: { asset_name?: string; inspection_date: string }) => {
+    const clientName = site?.name?.split(' - ')[0] || 'Client';
+    const assetName = report.asset_name || 'Inspection';
+    const dateStr = format(new Date(report.inspection_date), 'dd-MM-yyyy');
+    return `${clientName}, ${assetName}, ${dateStr}.pdf`.replace(/[/\\?%*:|"<>]/g, '-');
+  };
+
+  const generateReportPdf = async (report: any): Promise<jsPDF | null> => {
+    try {
+      const { data: ftqs } = await supabase
+        .from('form_template_questions')
+        .select('question_id, section_override, override_sort_order, sub_heading')
+        .eq('form_id', report.form_id)
+        .order('override_sort_order', { ascending: true });
+      const questionIds = (ftqs || []).map((q: any) => q.question_id);
+      const { data: questions } = await supabase.from('question_library').select('*').in('question_id', questionIds);
+      const { data: responses } = await supabase.from('inspection_responses').select('*').eq('inspection_id', report.id);
+      const responseMap: Record<string, any> = {};
+      (responses || []).forEach((r: any) => { responseMap[r.question_id] = r; });
+      const sectionMap = new Map<string, any[]>();
+      for (const ftq of (ftqs || [])) {
+        const q = (questions || []).find((ql: any) => ql.question_id === ftq.question_id);
+        if (!q) continue;
+        const sectionName = ftq.section_override || q.section || 'General';
+        if (!sectionMap.has(sectionName)) sectionMap.set(sectionName, []);
+        const resp = responseMap[q.question_id] || {};
+        sectionMap.get(sectionName)!.push({
+          question_text: q.question_text,
+          section: sectionName,
+          answer_value: resp.answer_value || null,
+          pass_fail_status: resp.pass_fail_status || null,
+          severity: resp.severity || null,
+          comment: resp.comment || null,
+          defect_flag: resp.defect_flag || false,
+          photo_urls: resp.photo_urls || [],
+          standard_ref: q.standard_ref || null,
+          urgency: resp.urgency || null,
+          defect_types: resp.defect_types || [],
+          internal_note: resp.internal_note || null,
+        });
+      }
+      const pdfSections = Array.from(sectionMap.entries()).map(([name, qs]) => ({ name, questions: qs }));
+      const { data: formData } = await supabase.from('form_templates').select('form_name').eq('form_id', report.form_id).single();
+      let assetPhotoUrl: string | undefined;
+      if (report.asset_id) {
+        const { data: asset } = await supabase.from('assets').select('main_photo_url').eq('id', report.asset_id).single();
+        if (asset?.main_photo_url) assetPhotoUrl = asset.main_photo_url;
+      }
+      return await generateInspectionPdf({
+        formName: formData?.form_name || 'Inspection',
+        assetName: report.asset_name || 'Site Inspection',
+        siteName: report.site_name || site?.name,
+        technicianName: report.technician_name,
+        inspectionDate: report.inspection_date,
+        craneStatus: report.crane_status || undefined,
+        sections: pdfSections,
+        aiSummary: report.ai_summary || undefined,
+        aiSummaryEdited: report.ai_summary_edited || false,
+        otherNotes: report.other_notes || undefined,
+        assetPhotoUrl,
+      });
+    } catch (err) {
+      console.error('Failed to generate report PDF', err);
+      return null;
+    }
   };
 
   const handleDeleteReport = async (reportId: string) => {
@@ -992,7 +1065,45 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                             }`}>{r.status}</span>
                         </div>
                       </div>
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        <button
+                          onClick={async () => {
+                            setGeneratingReportPdfId(r.id);
+                            const pdf = await generateReportPdf(r);
+                            setGeneratingReportPdfId(null);
+                            if (pdf) {
+                              setPreviewReport(r);
+                              setPreviewReportPdf(pdf);
+                            } else toast({ title: 'Failed to generate preview', variant: 'destructive' });
+                          }}
+                          disabled={generatingReportPdfId === r.id}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
+                        >
+                          {generatingReportPdfId === r.id ? (
+                            <span className="animate-pulse">…</span>
+                          ) : (
+                            <><Eye className="w-3.5 h-3.5" /> Preview</>
+                          )}
+                        </button>
+                        <button
+                          onClick={async () => {
+                            setGeneratingReportPdfId(r.id);
+                            const pdf = await generateReportPdf(r);
+                            setGeneratingReportPdfId(null);
+                            if (pdf) {
+                              pdf.save(getReportDownloadFileName(r));
+                              toast({ title: 'Report downloaded' });
+                            } else toast({ title: 'Failed to generate PDF', variant: 'destructive' });
+                          }}
+                          disabled={generatingReportPdfId === r.id}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
+                        >
+                          {generatingReportPdfId === r.id ? (
+                            <span className="animate-pulse">…</span>
+                          ) : (
+                            <><Download className="w-3.5 h-3.5" /> Download</>
+                          )}
+                        </button>
                         <button
                           onClick={() => {
                             if (!r.form_id) {
@@ -1012,14 +1123,14 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                             setEditingReportId(r.id);
                             setActiveDbForm({ formId: r.form_id, crane, assetId: r.asset_id || undefined });
                           }}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                           Edit
                         </button>
                         <button
                           onClick={() => setDeletingReportId(r.id)}
-                          className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-bold"
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-bold"
                         >
                           <X className="w-3.5 h-3.5" />
                           Delete
@@ -1128,11 +1239,12 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                           craneStatus: report.crane_status || undefined,
                           sections: pdfSections,
                           aiSummary: report.ai_summary || undefined,
+                          aiSummaryEdited: report.ai_summary_edited || false,
                           otherNotes: report.other_notes || undefined,
                           assetPhotoUrl,
                         });
 
-                        const fileName = `${(report.asset_name || 'Inspection').replace(/[^a-zA-Z0-9]/g, '_')}_${report.inspection_date}.pdf`;
+                        const fileName = getReportDownloadFileName(report);
                         zip.file(fileName, pdf.output('arraybuffer'));
                       } catch (err) {
                         console.error('Failed to generate report', report.id, err);
@@ -1244,6 +1356,19 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
           </div>
         </div>
       )}
+
+      <PdfPreviewModal
+        open={!!previewReportPdf}
+        onClose={() => { setPreviewReportPdf(null); setPreviewReport(null); }}
+        pdfDoc={previewReportPdf}
+        onDownload={() => {
+          if (previewReportPdf && previewReport) {
+            previewReportPdf.save(getReportDownloadFileName(previewReport));
+            toast({ title: 'Report downloaded' });
+          }
+        }}
+        title="Overhead Crane Report Preview"
+      />
 
       {editingAsset && (
         <AssetDetailModal
