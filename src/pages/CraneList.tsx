@@ -447,6 +447,9 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
     acc[key].push(asset);
     return acc;
   }, {} as Record<string, DbAsset[]>);
+  const hasLiftingReportOption = !!liftingReportSummary;
+  const totalSelectableReports = clientReports.length + (hasLiftingReportOption ? 1 : 0);
+  const allReportsSelected = totalSelectableReports > 0 && selectedReportIds.size === totalSelectableReports;
 
   if (showSiteSummary) {
     return (
@@ -1019,33 +1022,27 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
             </div>
           ) : (
             <>
-              {(() => {
-                const totalSelectable = clientReports.length + (liftingReportSummary ? 1 : 0);
-                const allSelected = totalSelectable > 0 && selectedReportIds.size === totalSelectable;
-                return (
               {/* Select all toggle */}
               <button
                 onClick={() => {
-                      if (allSelected) {
+                  if (allReportsSelected) {
                     setSelectedReportIds(new Set());
                   } else {
-                        const ids = clientReports.map(r => r.id);
-                        if (liftingReportSummary) ids.push(LIFTING_REPORT_SELECTION_ID);
-                        setSelectedReportIds(new Set(ids));
+                    const ids = clientReports.map(r => r.id);
+                    if (liftingReportSummary) ids.push(LIFTING_REPORT_SELECTION_ID);
+                    setSelectedReportIds(new Set(ids));
                   }
                 }}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors px-4 py-2"
               >
                 <input
                   type="checkbox"
-                      checked={allSelected}
+                  checked={allReportsSelected}
                   readOnly
                   className="h-4 w-4 rounded border-primary accent-primary"
                 />
-                    <span>{allSelected ? 'Deselect all' : 'Select all'}</span>
+                <span>{allReportsSelected ? 'Deselect all' : 'Select all'}</span>
               </button>
-                );
-              })()}
 
               {liftingReportSummary && (
                 <div className={`px-4 py-3 border-b border-border transition-colors ${selectedReportIds.has(LIFTING_REPORT_SELECTION_ID) ? 'bg-primary/5' : ''}`}>
