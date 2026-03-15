@@ -24,6 +24,35 @@ interface SiteJobSummaryProps {
   isRemoteSignoff?: boolean;
 }
 
+const DEFECT_FAIL_TRIGGERS = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
+const DEFECT_PASS_VALUES = ['Pass', 'Yes', 'Current', 'Compliant', 'Not Required'];
+
+function parseStringArray(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(v => String(v));
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.map(v => String(v)) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+function isDbResponseDefect(response: {
+  defect_flag?: boolean | null;
+  pass_fail_status?: string | null;
+  answer_value?: string | null;
+}) {
+  const passFail = response.pass_fail_status || '';
+  const answer = response.answer_value || '';
+  if (passFail === 'Pass') return false;
+  if (DEFECT_PASS_VALUES.includes(answer)) return false;
+  return !!response.defect_flag || DEFECT_FAIL_TRIGGERS.includes(passFail) || DEFECT_FAIL_TRIGGERS.includes(answer);
+}
+
 export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSignoff }: SiteJobSummaryProps) {
   const { state, dispatch } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
@@ -196,14 +225,16 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
         if (selectedIds.length > 0) {
           inspQuery = inspQuery.in('id', selectedIds);
         } else if (activeJobId) {
-          inspQuery = inspQuery.eq('task_id', activeJobId).eq('status', 'Submitted');
+          inspQuery = inspQuery.eq('task_id', activeJobId);
         } else {
-          inspQuery = inspQuery.eq('site_name', site.name).eq('status', 'Submitted');
+          inspQuery = inspQuery.eq('site_name', site.name);
         }
         
         const { data: inspections } = await inspQuery;
 
         if (!inspections || inspections.length === 0) {
+          setDbInspections([]);
+          setDbDefects([]);
           setDbDefectsLoading(false);
           return;
         }
@@ -213,16 +244,18 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
 
         const { data: responses } = await supabase
           .from('inspection_responses')
-          .select('id, inspection_id, question_id, severity, urgency, defect_types, comment, photo_urls, advanced_defect_detail, defect_flag')
-          .in('inspection_id', inspectionIds)
-          .eq('defect_flag', true);
+          .select('id, inspection_id, question_id, severity, urgency, defect_types, comment, photo_urls, advanced_defect_detail, defect_flag, pass_fail_status, answer_value')
+          .in('inspection_id', inspectionIds);
 
-        if (!responses || responses.length === 0) {
+        const defectResponses = (responses || []).filter(isDbResponseDefect);
+
+        if (defectResponses.length === 0) {
+          setDbDefects([]);
           setDbDefectsLoading(false);
           return;
         }
 
-        const qIds = [...new Set(responses.map(r => r.question_id))];
+        const qIds = [...new Set(defectResponses.map(r => r.question_id))];
         const { data: questions } = await supabase
           .from('question_library')
           .select('question_id, question_text')
@@ -231,17 +264,17 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
 
         const inspMap = Object.fromEntries(inspections.map(i => [i.id, i]));
 
-        const defects: DbDefect[] = responses.map(r => ({
+        const defects: DbDefect[] = defectResponses.map(r => ({
           responseId: r.id,
           inspectionId: r.inspection_id,
           questionText: qMap[r.question_id] || r.question_id,
           assetName: inspMap[r.inspection_id]?.asset_name || 'Unknown',
           severity: r.severity,
           urgency: r.urgency,
-          defectTypes: r.defect_types || [],
+          defectTypes: parseStringArray(r.defect_types),
           comment: r.comment,
-          photoUrls: r.photo_urls || [],
-          advancedDefectDetail: r.advanced_defect_detail || [],
+          photoUrls: parseStringArray(r.photo_urls),
+          advancedDefectDetail: parseStringArray(r.advanced_defect_detail),
           quoteStatus: 'Quote Now',
         }));
 
@@ -495,7 +528,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
 
   const buildSummaryPayload = () => ({
     siteId: site.id,
-    inspectionIds: completedInspections.map(i => i.id),
+    inspectionIds: dbInspections.length > 0 ? dbInspections.map(i => i.id) : completedInspections.map(i => i.id),
     nextInspectionDate: nextDate,
     nextInspectionTime: nextTime,
     bookingConfirmed,
@@ -1002,7 +1035,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
                                   'bg-rka-yellow text-foreground'
                                 }`}>{defect.severity}</span>
                               )}
-                              {defect.defectTypes.map((dt, i) => (
+                              {(defect.defectTypes || []).map((dt, i) => (
                                 <span key={i} className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{dt}</span>
                               ))}
                             </div>
@@ -1019,11 +1052,11 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
                               </div>
                             )}
 
-                            {defect.photoUrls.length > 0 && (
+                            {(defect.photoUrls || []).length > 0 && (
                               <div>
                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Evidence Photos</p>
                                 <div className="flex gap-2 flex-wrap">
-                                  {defect.photoUrls.map((p, i) => (
+                                  {(defect.photoUrls || []).map((p, i) => (
                                     <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-border shadow-sm cursor-pointer" onClick={() => setPreviewPhoto(p)}>
                                       <img src={p} alt={`Defect photo ${i + 1}`} className="w-full h-full object-cover" />
                                       <div className="absolute bottom-0 left-0 bg-foreground/60 text-background rounded-tr-lg p-1">
@@ -1035,11 +1068,11 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
                               </div>
                             )}
 
-                            {defect.advancedDefectDetail.length > 0 && (
+                            {(defect.advancedDefectDetail || []).length > 0 && (
                               <div>
                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Specific Details</p>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {defect.advancedDefectDetail.map((d, i) => (
+                                  {(defect.advancedDefectDetail || []).map((d, i) => (
                                     <span key={i} className="text-xs font-medium px-2 py-0.5 rounded bg-muted text-foreground">{d}</span>
                                   ))}
                                 </div>
