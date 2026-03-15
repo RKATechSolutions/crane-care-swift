@@ -14,8 +14,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { generateJobPdf } from '@/utils/generateJobPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import { sortAssetsNumerically } from '@/utils/sorting';
+import { isInspectionResponseDefect } from '@/utils/inspectionDefects';
 import type jsPDF from 'jspdf';
-import { LIFTING_REPORT_SELECTION_ID } from '@/constants/reports';
+import { LIFTING_EQUIPMENT_FORM_SELECTION_ID, LIFTING_REPORT_SELECTION_ID } from '@/constants/reports';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
@@ -26,9 +27,6 @@ interface SiteJobSummaryProps {
   preselectedReportIds?: string[];
   onBack?: () => void;
 }
-
-const DEFECT_FAIL_TRIGGERS = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
-const DEFECT_PASS_VALUES = ['Pass', 'Yes', 'Current', 'Compliant', 'Not Required'];
 
 function parseStringArray(value: unknown): string[] {
   if (!value) return [];
@@ -49,11 +47,7 @@ function isDbResponseDefect(response: {
   pass_fail_status?: string | null;
   answer_value?: string | null;
 }) {
-  const passFail = response.pass_fail_status || '';
-  const answer = response.answer_value || '';
-  if (passFail === 'Pass') return false;
-  if (DEFECT_PASS_VALUES.includes(answer)) return false;
-  return !!response.defect_flag || DEFECT_FAIL_TRIGGERS.includes(passFail) || DEFECT_FAIL_TRIGGERS.includes(answer);
+  return isInspectionResponseDefect(response);
 }
 
 export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSignoff, preselectedReportIds = [], onBack }: SiteJobSummaryProps) {
@@ -63,7 +57,9 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
   const effectiveSelectedReportIds = preselectedReportIds.length > 0
     ? preselectedReportIds
     : (state.selectedReportIdsForSummary || []);
-  const selectedDbReportIds = effectiveSelectedReportIds.filter(id => id !== LIFTING_REPORT_SELECTION_ID);
+  const selectedDbReportIds = effectiveSelectedReportIds.filter(
+    id => id !== LIFTING_REPORT_SELECTION_ID && id !== LIFTING_EQUIPMENT_FORM_SELECTION_ID
+  );
   const includeLiftingFromSelection = effectiveSelectedReportIds.includes(LIFTING_REPORT_SELECTION_ID);
   const effectiveSelectedReportIdsKey = effectiveSelectedReportIds.join('|');
   const selectedDbReportIdsKey = selectedDbReportIds.join('|');

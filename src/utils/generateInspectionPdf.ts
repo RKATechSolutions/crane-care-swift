@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import rkaLogoUrl from '@/assets/rka-main-logo.png';
+import { isInspectionResponseDefect, isPassAnswerValue } from '@/utils/inspectionDefects';
 
 interface InspectionResponse {
   question_text: string;
@@ -151,18 +152,15 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   // Mirror the same fail/pass logic used in StandardQuestionBlock UI.
   // pass_fail_status='Pass' always wins — corrupted defect_flag values in the DB
   // (where defect_flag=true even for passed items) must not override an explicit pass status.
-  const failTriggers = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
-  const passValues = ['Pass', 'Yes', 'Current', 'Compliant', 'Not Required'];
   const isDefect = (q: InspectionResponse) =>
-    // An explicit Pass status always wins — never treat a passed item as a defect
-    q.pass_fail_status !== 'Pass' &&
-    !passValues.includes(q.answer_value || '') &&
-    (q.defect_flag ||
-      failTriggers.includes(q.pass_fail_status || '') ||
-      failTriggers.includes(q.answer_value || ''));
+    isInspectionResponseDefect({
+      defect_flag: q.defect_flag,
+      pass_fail_status: q.pass_fail_status,
+      answer_value: q.answer_value,
+    });
   const isPass = (q: InspectionResponse) =>
     !isDefect(q) &&
-    (passValues.includes(q.pass_fail_status || '') || passValues.includes(q.answer_value || ''));
+    (isPassAnswerValue(q.pass_fail_status) || isPassAnswerValue(q.answer_value));
   const isNA = (q: InspectionResponse) =>
     q.pass_fail_status === 'NA' ||
     q.answer_value === 'NA' ||

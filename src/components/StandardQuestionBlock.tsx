@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CheckCircle, XCircle, MinusCircle, Camera, X, ChevronDown, ChevronUp, AlertTriangle, ImagePlus, Loader2 } from 'lucide-react';
 import { compressImage, uploadCompressedFile } from '@/utils/uploadHelper';
+import { isDefectAnswerValue } from '@/utils/inspectionDefects';
 import { toast } from 'sonner';
 
 export interface QuestionConfig {
@@ -86,8 +87,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
   const safeAdvancedOptions = safeArray(question.advanced_defect_options);
   const photoUrls = safeArray(response.photo_urls);
 
-  const failTriggers = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
-  const isFail = failTriggers.includes(response.pass_fail_status || '') || failTriggers.includes(response.answer_value || '');
+  const isFail = isDefectAnswerValue(response.pass_fail_status) || isDefectAnswerValue(response.answer_value) || !!response.defect_flag;
   const isAnswered = !!response.answer_value || !!response.pass_fail_status;
   const isPassed = response.pass_fail_status === 'Pass' ||
     (['Yes', 'Current', 'Compliant', 'Not Required'].includes(response.answer_value || '') && !isFail);
@@ -101,7 +101,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
   };
 
   const handlePassFail = (status: string) => {
-    const defect = failTriggers.includes(status);
+    const defect = isDefectAnswerValue(status);
     const newResponse: Partial<ResponseData> = {
       pass_fail_status: status,
       answer_value: status,
@@ -125,7 +125,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
   };
 
   const handleSelectValue = (val: string) => {
-    const defect = failTriggers.includes(val);
+    const defect = isDefectAnswerValue(val);
     const newResponse: Partial<ResponseData> = {
       answer_value: val,
       pass_fail_status: defect ? 'Fail' : 'Pass',
@@ -340,7 +340,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                     : optIdx === 1 ? 'bg-rka-orange text-destructive-foreground'
                       : 'bg-rka-red text-destructive-foreground';
                 } else {
-                  selectedClass = failTriggers.includes(opt) ? 'bg-rka-red text-destructive-foreground' : 'bg-primary text-primary-foreground';
+                  selectedClass = isDefectAnswerValue(opt) ? 'bg-rka-red text-destructive-foreground' : 'bg-primary text-primary-foreground';
                 }
               }
               return (
