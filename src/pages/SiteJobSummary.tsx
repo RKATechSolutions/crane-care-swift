@@ -15,6 +15,7 @@ import { generateJobPdf } from '@/utils/generateJobPdf';
 import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import { sortAssetsNumerically } from '@/utils/sorting';
 import type jsPDF from 'jspdf';
+import { LIFTING_REPORT_SELECTION_ID } from '@/constants/reports';
 
 const GOOGLE_REVIEW_URL = 'https://g.page/r/YOUR_REVIEW_LINK/review';
 
@@ -62,6 +63,10 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
   const effectiveSelectedReportIds = preselectedReportIds.length > 0
     ? preselectedReportIds
     : (state.selectedReportIdsForSummary || []);
+  const selectedDbReportIds = effectiveSelectedReportIds.filter(id => id !== LIFTING_REPORT_SELECTION_ID);
+  const includeLiftingFromSelection = effectiveSelectedReportIds.includes(LIFTING_REPORT_SELECTION_ID);
+  const effectiveSelectedReportIdsKey = effectiveSelectedReportIds.join('|');
+  const selectedDbReportIdsKey = selectedDbReportIds.join('|');
 
   const [job, setJob] = useState<any>(null);
 
@@ -84,8 +89,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
     i => {
       const isSiteMatch = i.siteId === site.id && i.status === 'completed';
       if (!isSiteMatch) return false;
-      if (effectiveSelectedReportIds.length > 0) {
-        return effectiveSelectedReportIds.includes(i.id);
+      if (selectedDbReportIds.length > 0) {
+        return selectedDbReportIds.includes(i.id);
       }
       return true;
     }
@@ -221,7 +226,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
     const loadDbDefects = async () => {
       setDbDefectsLoading(true);
       try {
-        const selectedIds = effectiveSelectedReportIds;
+        const selectedIds = selectedDbReportIds;
         
         let inspQuery = supabase
           .from('db_inspections')
@@ -229,6 +234,12 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
         
         if (selectedIds.length > 0) {
           inspQuery = inspQuery.in('id', selectedIds);
+        } else if (effectiveSelectedReportIds.length > 0) {
+          // User explicitly selected reports, but none are crane inspections.
+          setDbInspections([]);
+          setDbDefects([]);
+          setDbDefectsLoading(false);
+          return;
         } else if (activeJobId) {
           inspQuery = inspQuery.eq('task_id', activeJobId);
         } else {
@@ -290,13 +301,21 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
       setDbDefectsLoading(false);
     };
     loadDbDefects();
-  }, [site.name, activeJobId, effectiveSelectedReportIds]);
+  }, [site.name, activeJobId, effectiveSelectedReportIdsKey, selectedDbReportIdsKey]);
 
   // Load lifting register items
   useEffect(() => {
     const loadLiftingDefects = async () => {
       setLiftingDefectsLoading(true);
       try {
+        const hasExplicitSelection = effectiveSelectedReportIds.length > 0;
+        const includeLifting = !hasExplicitSelection || includeLiftingFromSelection;
+        if (!includeLifting) {
+          setLiftingDefects([]);
+          setLiftingDefectsLoading(false);
+          return;
+        }
+
         const { data } = await supabase
           .from('lifting_register')
           .select('id, equipment_type, serial_number, asset_tag, wll_value, wll_unit, equipment_status, tag_present, notes, manufacturer')
@@ -308,6 +327,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
             ...d,
             quoteStatus: 'Quote Now',
           })));
+        } else {
+          setLiftingDefects([]);
         }
       } catch (err) {
         console.error('Error loading lifting defects:', err);
@@ -315,7 +336,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
       setLiftingDefectsLoading(false);
     };
     loadLiftingDefects();
-  }, [site.name]);
+  }, [site.name, effectiveSelectedReportIdsKey, includeLiftingFromSelection]);
 
   // Load client details
   useEffect(() => {
