@@ -20,6 +20,7 @@ import { LiftingRegisterList } from '@/components/LiftingRegisterList';
 import { LiftingRegisterInspectionForm } from '@/components/LiftingRegisterInspectionForm';
 import { ClientDetailSection } from '@/components/ClientDetailSection';
 import { buildInspectionReportFileName } from '@/utils/reportFileName';
+import SiteJobSummary from '@/pages/SiteJobSummary';
 
 interface DbAsset {
   id: string;
@@ -80,6 +81,8 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
   const [deleting, setDeleting] = useState(false);
   const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(new Set());
   const [downloadingReports, setDownloadingReports] = useState(false);
+  const [showSiteSummary, setShowSiteSummary] = useState(false);
+  const [summaryReportIds, setSummaryReportIds] = useState<string[]>([]);
   const [notebookLmLink, setNotebookLmLink] = useState<string>('');
   const [showNotebookLmEdit, setShowNotebookLmEdit] = useState(false);
   const [notebookLmInput, setNotebookLmInput] = useState('');
@@ -380,6 +383,16 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
     return acc;
   }, {} as Record<string, DbAsset[]>);
 
+  if (showSiteSummary) {
+    return (
+      <SiteJobSummary
+        activeJobId={activeJobId}
+        preselectedReportIds={summaryReportIds}
+        onBack={() => setShowSiteSummary(false)}
+      />
+    );
+  }
+
   // Show lifting inspection form
   if (showLiftingInspection) {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : undefined;
@@ -638,7 +651,8 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
             </button>
             <button
               onClick={() => {
-                dispatch({ type: 'SELECT_CRANE', payload: { crane: { id: '__site_summary__' } as any } });
+                setSummaryReportIds([]);
+                setShowSiteSummary(true);
               }}
               className="rounded-xl bg-muted flex flex-col items-center justify-center gap-1 p-2 text-center active:scale-[0.97] transition-all"
             >
@@ -1036,13 +1050,8 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                 <button
                   onClick={() => {
                     if (selectedReportIds.size === 0) { toast({ title: 'Select at least one report', variant: 'destructive' }); return; }
-                    dispatch({
-                      type: 'SELECT_CRANE',
-                      payload: {
-                        crane: { id: '__site_summary__' } as any,
-                        selectedReportIds: Array.from(selectedReportIds)
-                      }
-                    });
+                    setSummaryReportIds(Array.from(selectedReportIds));
+                    setShowSiteSummary(true);
                     toast({ title: `Job Site Summary started with ${selectedReportIds.size} report(s)` });
                   }}
                   disabled={selectedReportIds.size === 0}

@@ -22,6 +22,8 @@ interface SiteJobSummaryProps {
   onCreateQuote?: (defects: any[]) => void;
   activeJobId?: string | null;
   isRemoteSignoff?: boolean;
+  preselectedReportIds?: string[];
+  onBack?: () => void;
 }
 
 const DEFECT_FAIL_TRIGGERS = ['Fail', 'No', 'Present but Not Maintained', 'Overdue'];
@@ -53,10 +55,13 @@ function isDbResponseDefect(response: {
   return !!response.defect_flag || DEFECT_FAIL_TRIGGERS.includes(passFail) || DEFECT_FAIL_TRIGGERS.includes(answer);
 }
 
-export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSignoff }: SiteJobSummaryProps) {
+export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSignoff, preselectedReportIds = [], onBack }: SiteJobSummaryProps) {
   const { state, dispatch } = useApp();
   const [noteOpen, setNoteOpen] = useState(false);
   const site = state.selectedSite!;
+  const effectiveSelectedReportIds = preselectedReportIds.length > 0
+    ? preselectedReportIds
+    : (state.selectedReportIdsForSummary || []);
 
   const [job, setJob] = useState<any>(null);
 
@@ -79,8 +84,8 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
     i => {
       const isSiteMatch = i.siteId === site.id && i.status === 'completed';
       if (!isSiteMatch) return false;
-      if (state.selectedReportIdsForSummary.length > 0) {
-        return state.selectedReportIdsForSummary.includes(i.id);
+      if (effectiveSelectedReportIds.length > 0) {
+        return effectiveSelectedReportIds.includes(i.id);
       }
       return true;
     }
@@ -216,7 +221,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
     const loadDbDefects = async () => {
       setDbDefectsLoading(true);
       try {
-        const selectedIds = state.selectedReportIdsForSummary || [];
+        const selectedIds = effectiveSelectedReportIds;
         
         let inspQuery = supabase
           .from('db_inspections')
@@ -285,7 +290,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
       setDbDefectsLoading(false);
     };
     loadDbDefects();
-  }, [site.name, activeJobId, state.selectedReportIdsForSummary]);
+  }, [site.name, activeJobId, effectiveSelectedReportIds]);
 
   // Load lifting register items
   useEffect(() => {
@@ -747,7 +752,7 @@ export default function SiteJobSummary({ onCreateQuote, activeJobId, isRemoteSig
       <AppHeader
         title="Site Job Summary"
         subtitle={site.name}
-        onBack={() => dispatch({ type: 'BACK_TO_CRANES' })}
+        onBack={onBack || (() => dispatch({ type: 'BACK_TO_CRANES' }))}
         onNoteToAdmin={() => setNoteOpen(true)}
       />
 
