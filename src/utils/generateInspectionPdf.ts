@@ -44,6 +44,7 @@ const RKA_ORANGE: [number, number, number] = [230, 126, 13];
 const WHITE: [number, number, number] = [255, 255, 255];
 const DARK: [number, number, number] = [40, 32, 39];
 const LIGHT_GRAY: [number, number, number] = [245, 245, 245];
+const NA_GRAY: [number, number, number] = [132, 142, 156];
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -162,32 +163,34 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const isPass = (q: InspectionResponse) =>
     !isDefect(q) &&
     (passValues.includes(q.pass_fail_status || '') || passValues.includes(q.answer_value || ''));
+  const isNA = (q: InspectionResponse) =>
+    q.pass_fail_status === 'NA' ||
+    q.answer_value === 'NA' ||
+    q.answer_value === 'N/A';
   const defectCount = allQuestions.filter(isDefect).length;
   const passCount = allQuestions.filter(isPass).length;
-  const naCount = totalQuestions - passCount - defectCount;
+  const naCount = allQuestions.filter(q => !isDefect(q) && !isPass(q) && isNA(q)).length;
+  const remainingCount = Math.max(totalQuestions - passCount - defectCount - naCount, 0);
+  const naDisplayCount = naCount + remainingCount;
   
-  const passPercent = totalQuestions > 0 ? Math.floor((passCount / totalQuestions) * 100) : 0;
-  const defectPercent = totalQuestions > 0 ? Math.floor((defectCount / totalQuestions) * 100) : 0;
-  const naPercent = totalQuestions > 0 ? (100 - passPercent - defectPercent) : 0;
-
   doc.setTextColor(...DARK);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Items: ${totalQuestions}  |  Passed: ${passCount}  |  Defects Noted: ${defectCount}  |  N/A: ${naCount}`, pageW / 2, y, { align: 'center' });
+  doc.text(`Items: ${totalQuestions}  |  Passed: ${passCount}  |  Defects Noted: ${defectCount}  |  N/A: ${naDisplayCount}`, pageW / 2, y, { align: 'center' });
   y += 10;
 
   // Risk bar
   const barX = 30;
   const barW = pageW - 60;
   const barH = 8;
-  const barTotal = passCount + defectCount;
+  const barTotal = totalQuestions;
   const passW = barTotal > 0 ? (passCount / barTotal) * barW : 0;
   const defW = barTotal > 0 ? (defectCount / barTotal) * barW : 0;
-  
+  const naW = barTotal > 0 ? (naDisplayCount / barTotal) * barW : 0;
 
   if (passW > 0) { doc.setFillColor(...RKA_GREEN); doc.rect(barX, y, passW, barH, 'F'); }
   if (defW > 0) { doc.setFillColor(...RKA_RED); doc.rect(barX + passW, y, defW, barH, 'F'); }
-  
+  if (naW > 0) { doc.setFillColor(...NA_GRAY); doc.rect(barX + passW + defW, y, naW, barH, 'F'); }
 
   y += barH + 5;
 
@@ -196,7 +199,7 @@ export async function generateInspectionPdf(data: InspectionPdfData): Promise<js
   const legendItems = [
     { label: 'Pass', color: RKA_GREEN, count: passCount },
     { label: 'Defect', color: RKA_RED, count: defectCount },
-
+    { label: 'N/A', color: NA_GRAY, count: naDisplayCount },
   ];
   let lx = barX;
   for (const item of legendItems) {

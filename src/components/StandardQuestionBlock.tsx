@@ -63,6 +63,7 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
   const [showComment, setShowComment] = useState(false);
   const [showPhotos, setShowPhotos] = useState(false);
   const [defectExpanded, setDefectExpanded] = useState(true);
+  const [defectSaved, setDefectSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -90,6 +91,10 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
   const isAnswered = !!response.answer_value || !!response.pass_fail_status;
   const isPassed = response.pass_fail_status === 'Pass' ||
     (['Yes', 'Current', 'Compliant', 'Not Required'].includes(response.answer_value || '') && !isFail);
+
+  useEffect(() => {
+    setDefectSaved(false);
+  }, [response.urgency, response.comment, response.photo_urls, response.pass_fail_status, response.answer_value]);
 
   const update = (partial: Partial<ResponseData>) => {
     onUpdate({ ...response, ...partial });
@@ -180,6 +185,25 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
       ? current.filter(d => d !== detail)
       : [...current, detail];
     update({ advanced_defect_detail: updated });
+  };
+
+  const canSaveDefect = !!response.urgency && !!response.comment && photoUrls.length > 0;
+
+  const handleSaveDefect = () => {
+    if (!canSaveDefect) return;
+
+    // Explicit "save defect" action for technicians to lock details before moving on.
+    update({
+      defect_flag: true,
+      pass_fail_status: response.pass_fail_status || 'Fail',
+      answer_value: response.answer_value || 'Fail',
+      urgency: response.urgency,
+      comment: response.comment,
+      photo_urls: photoUrls,
+    });
+    setDefectSaved(true);
+    setDefectExpanded(false);
+    toast.success('Defect details saved');
   };
 
   const rowClass = isPassed ? 'bg-rka-green/5 border-l-4 border-l-rka-green' : isFail ? 'bg-rka-red/5 border-l-4 border-l-rka-red' : '';
@@ -468,17 +492,17 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
                 {/* Save Defect Button */}
                 <div className="pt-2">
                   <button
-                    onClick={() => setDefectExpanded(false)}
-                    disabled={!response.urgency || !response.comment || (photoUrls.length === 0)}
-                    className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${response.urgency && response.comment && photoUrls.length > 0
+                    onClick={handleSaveDefect}
+                    disabled={!canSaveDefect}
+                    className={`w-full h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all ${defectSaved
                       ? 'bg-rka-green text-white shadow-lg shadow-rka-green/20'
                       : 'bg-muted text-muted-foreground opacity-50'
                       }`}
                   >
                     <CheckCircle className="w-5 h-5" />
-                    Save Defect Detail
+                    {defectSaved ? 'Defect Saved' : 'Save Defect'}
                   </button>
-                  {(!response.urgency || !response.comment || photoUrls.length === 0) && (
+                  {!canSaveDefect && (
                     <p className="text-[10px] text-center text-rka-red mt-2 font-bold uppercase tracking-tight">
                       {!response.urgency ? 'Select Urgency' : !response.comment ? 'Add Comment' : 'Photo Required'} to Save
                     </p>

@@ -12,6 +12,7 @@ import { PdfPreviewModal } from '@/components/PdfPreviewModal';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
 import type jsPDF from 'jspdf';
+import { buildInspectionReportFileName } from '@/utils/reportFileName';
 
 interface DbInspectionFormProps {
   formId: string;
@@ -361,7 +362,7 @@ export default function DbInspectionForm({
     .filter(q => passableTypes.includes(q.answer_type))
     .every(q => responses[q.question_id]?.pass_fail_status === 'Pass' || (responses[q.question_id]?.answer_value && !responses[q.question_id]?.defect_flag)) || false;
 
-  const handlePreviewPdf = async () => {
+  const generatePdfDoc = async (showPreviewModal: boolean): Promise<jsPDF | null> => {
     setGeneratingPreview(true);
     try {
       // Re-fetch latest asset photo URL before generating
@@ -404,7 +405,11 @@ export default function DbInspectionForm({
         otherNotes: otherNotes || undefined,
         assetPhotoUrl: latestPhotoUrl,
       });
-      setPreviewPdfDoc(pdf);
+
+      if (showPreviewModal) {
+        setPreviewPdfDoc(pdf);
+      }
+
       return pdf;
     } catch (err: any) {
       console.error('Preview error:', err);
@@ -415,16 +420,18 @@ export default function DbInspectionForm({
     }
   };
 
+  const handlePreviewPdf = async () => {
+    return generatePdfDoc(true);
+  };
+
   const handleDownloadPdf = async () => {
-    let doc = previewPdfDoc;
-    if (!doc) {
-      doc = await handlePreviewPdf();
-    }
+    const doc = await generatePdfDoc(false);
     if (doc) {
-      const dateStr = format(new Date(inspectionDate), 'dd-MM-yyyy');
-      // Format: [Client Name] [Asset Name] Report [Date]
-      const rawFileName = `${clientName || siteName || 'Client'} ${assetName} Report ${dateStr}.pdf`;
-      const fileName = rawFileName.replace(/[/\\?%*:|"<>]/g, '-');
+      const fileName = buildInspectionReportFileName({
+        clientName: clientName || siteName,
+        assetName,
+        inspectionDate,
+      });
       doc.save(fileName);
     }
   };
@@ -477,6 +484,7 @@ export default function DbInspectionForm({
           inspection_date: dateToUse,
           crane_status: craneStatus || null,
           ai_summary: aiSummary || null,
+          other_notes: otherNotes || null,
         };
         if (taskId) insertPayload.task_id = taskId;
 
@@ -907,6 +915,19 @@ export default function DbInspectionForm({
               {saving ? 'Submitting…' : 'Confirm & Submit'}
             </button>
             <button
+              onClick={async () => {
+                setShowDateConfirm(false);
+                await saveInspection('Submitted', inspectionDate);
+                await handleDownloadPdf();
+                (onSubmitComplete || onBack)();
+              }}
+              disabled={saving}
+              className="w-full tap-target bg-rka-green text-primary-foreground rounded-xl font-bold text-base flex items-center justify-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              {saving ? 'Submitting…' : 'Confirm, Submit & Download Form'}
+            </button>
+            <button
               onClick={() => setShowDateConfirm(false)}
               className="w-full tap-target bg-muted rounded-xl font-semibold text-sm"
             >
@@ -923,10 +944,7 @@ export default function DbInspectionForm({
         onClose={() => setPreviewPdfDoc(null)}
         pdfDoc={previewPdfDoc}
         onDownload={() => {
-          if (!previewPdfDoc) return;
-          const safeName = assetName.replace(/[^a-zA-Z0-9]/g, '_');
-          const dateStr = new Date().toISOString().slice(0, 10);
-          previewPdfDoc.save(`${safeName}_Inspection_${dateStr}.pdf`);
+          handleDownloadPdf();
         }}
         title="Inspection Report Preview"
       />

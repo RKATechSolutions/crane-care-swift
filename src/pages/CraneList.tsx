@@ -19,6 +19,7 @@ import { AssetDetailModal } from '@/components/AssetDetailModal';
 import { LiftingRegisterList } from '@/components/LiftingRegisterList';
 import { LiftingRegisterInspectionForm } from '@/components/LiftingRegisterInspectionForm';
 import { ClientDetailSection } from '@/components/ClientDetailSection';
+import { buildInspectionReportFileName } from '@/utils/reportFileName';
 
 interface DbAsset {
   id: string;
@@ -167,7 +168,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
       if (data) setClientJobs(data);
     };
     const fetchReports = async () => {
-      let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id');
+      let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, ai_summary, site_name, other_notes, client_id');
       if (clientId) query = query.eq('client_id', clientId);
       else query = query.eq('site_name', siteName);
       const { data } = await query.order('created_at', { ascending: false });
@@ -347,7 +348,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
 
   const refreshReports = async () => {
     const clientId = site.id.startsWith('db-') ? site.id.replace('db-', '') : null;
-    let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, ai_summary, site_name, other_notes');
+    let query = supabase.from('db_inspections').select('id, asset_id, asset_name, inspection_date, status, technician_name, crane_status, form_id, ai_summary, site_name, other_notes, client_id');
     if (clientId) query = query.eq('client_id', clientId);
     else query = query.eq('site_name', site.name);
     const { data } = await query.order('created_at', { ascending: false });
@@ -1056,6 +1057,15 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                     setDownloadingReports(true);
                     toast({ title: `Generating ${selectedReportIds.size} PDF(s)…` });
                     const selected = clientReports.filter(r => selectedReportIds.has(r.id));
+                    const clientIds = Array.from(new Set(selected.map(r => r.client_id).filter(Boolean)));
+                    const clientNameMap = new Map<string, string>();
+                    if (clientIds.length > 0) {
+                      const { data: clientRows } = await supabase
+                        .from('clients')
+                        .select('id, client_name')
+                        .in('id', clientIds as string[]);
+                      (clientRows || []).forEach(c => clientNameMap.set(c.id, c.client_name || 'Client'));
+                    }
                     const zip = new JSZip();
                     for (const report of selected) {
                       try {
@@ -1132,7 +1142,11 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                           assetPhotoUrl,
                         });
 
-                        const fileName = `${(report.asset_name || 'Inspection').replace(/[^a-zA-Z0-9]/g, '_')}_${report.inspection_date}.pdf`;
+                        const fileName = buildInspectionReportFileName({
+                          clientName: clientNameMap.get(report.client_id) || report.site_name || site?.name,
+                          assetName: report.asset_name || 'Inspection',
+                          inspectionDate: report.inspection_date,
+                        });
                         zip.file(fileName, pdf.output('arraybuffer'));
                       } catch (err) {
                         console.error('Failed to generate report', report.id, err);
