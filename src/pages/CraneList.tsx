@@ -450,6 +450,11 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
   const hasLiftingReportOption = !!liftingReportSummary;
   const totalSelectableReports = clientReports.length + (hasLiftingReportOption ? 1 : 0);
   const allReportsSelected = totalSelectableReports > 0 && selectedReportIds.size === totalSelectableReports;
+  const formNameMap = new Map(dbFormTemplates.map((t) => [t.form_id, t.form_name]));
+  const getFormDisplayName = (formId?: string | null) => {
+    if (!formId) return 'Inspection Form';
+    return formNameMap.get(formId) || formId;
+  };
 
   if (showSiteSummary) {
     return (
@@ -1100,6 +1105,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-sm">{r.asset_name || 'Site Inspection'}</p>
                           <p className="text-xs text-muted-foreground">{r.technician_name} • {new Date(r.inspection_date).toLocaleDateString()}</p>
+                          <p className="text-[11px] text-muted-foreground/90">{getFormDisplayName(r.form_id)}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           {r.crane_status && (
