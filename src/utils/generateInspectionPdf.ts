@@ -21,7 +21,22 @@ interface InspectionResponse {
 function safeStringArray(val: string[] | string | null | undefined): string[] {
   if (!val) return [];
   if (Array.isArray(val)) return val;
-  try { return JSON.parse(val); } catch { return []; }
+  try {
+    const parsed = JSON.parse(val);
+    if (Array.isArray(parsed)) return parsed.map(v => String(v));
+  } catch {
+    const trimmed = val.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      const inner = trimmed.slice(1, -1);
+      if (!inner) return [];
+      return inner
+        .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+        .map(s => s.trim().replace(/^"(.*)"$/, '$1'))
+        .map(s => s.replace(/\\"/g, '"'))
+        .filter(Boolean);
+    }
+  }
+  return [];
 }
 
 interface InspectionPdfData {

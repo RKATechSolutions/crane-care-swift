@@ -33,6 +33,13 @@ interface FormQuestion extends QuestionConfig {
   conditional_rule: string | null;
 }
 
+const ASSET_STATUS_QUESTION_IDS = new Set(['OC2-AO-001', 'JIB_OUT_01']);
+const ASSET_STATUS_OPTIONS = ['Crane is Operational', 'Operate with Limitations', 'Unsafe to Operate'];
+
+function normalizeAssetStatusValue(value: string): string {
+  return value === 'Safe to Operate' ? 'Crane is Operational' : value;
+}
+
 export default function DbInspectionForm({
   formId, assetName, assetId, clientId, siteName, existingInspectionId, taskId, onBack, onSubmitComplete
 }: DbInspectionFormProps) {
@@ -42,7 +49,22 @@ export default function DbInspectionForm({
     if (!val) return [];
     if (Array.isArray(val)) return val;
     if (typeof val === 'string') {
-      try { return JSON.parse(val); } catch { return []; }
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed.map(v => String(v));
+      } catch {
+        // Support Postgres array literals, e.g. {"A","B","C"}
+        const trimmed = val.trim();
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+          const inner = trimmed.slice(1, -1);
+          if (!inner) return [];
+          return inner
+            .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+            .map(s => s.trim().replace(/^"(.*)"$/, '$1'))
+            .map(s => s.replace(/\\"/g, '"'))
+            .filter(Boolean);
+        }
+      }
     }
     return [];
   };
@@ -137,7 +159,10 @@ export default function DbInspectionForm({
         if (!q) return null;
 
         // Parse any JSON-string fields that may come from text-typed DB columns
-        const parsedOptions = parseJsonArray(q.options);
+        const parsedOptions = parseJsonArray(q.options).map(normalizeAssetStatusValue);
+        const normalizedOptions = ASSET_STATUS_QUESTION_IDS.has(q.question_id)
+          ? ASSET_STATUS_OPTIONS.map(opt => parsedOptions.find(v => v === opt) || opt)
+          : parsedOptions;
         const parsedAutoDefects = parseJsonArray((q as any).auto_defect_types);
         const parsedAdvancedOptions = parseJsonArray((q as any).advanced_defect_options);
 
@@ -147,7 +172,7 @@ export default function DbInspectionForm({
           help_text: bridge.override_help_text || q.help_text,
           standard_ref: bridge.override_standard_ref || q.standard_ref,
           answer_type: q.answer_type,
-          options: parsedOptions.length > 0 ? parsedOptions : null,
+          options: normalizedOptions.length > 0 ? normalizedOptions : null,
           requires_photo_on_fail: q.requires_photo_on_fail,
           requires_comment_on_fail: q.requires_comment_on_fail,
           severity_required_on_fail: q.severity_required_on_fail,
@@ -197,7 +222,7 @@ export default function DbInspectionForm({
           savedResponses.forEach(sr => {
             initResponses[sr.question_id] = {
               question_id: sr.question_id,
-              answer_value: sr.answer_value,
+              answer_value: sr.answer_value ? normalizeAssetStatusValue(sr.answer_value) : null,
               pass_fail_status: sr.pass_fail_status,
               severity: sr.severity,
               comment: sr.comment,
@@ -226,7 +251,7 @@ export default function DbInspectionForm({
           .select('crane_status')
           .eq('id', existingInspectionId)
           .single();
-        if (statusData?.crane_status) setCraneStatus(statusData.crane_status);
+        if (statusData?.crane_status) setCraneStatus(normalizeAssetStatusValue(statusData.crane_status));
       }
 
       setResponses(initResponses);
@@ -306,9 +331,10 @@ export default function DbInspectionForm({
     if (questionId === 'OC2-AO-001' || questionId === 'JIB_OUT_01') {
       const val = response.answer_value;
       if (val) {
-        setCraneStatus(val);
+        const normalizedStatus = normalizeAssetStatusValue(val);
+        setCraneStatus(normalizedStatus);
         if (inspectionId) {
-          supabase.from('db_inspections').update({ crane_status: val }).eq('id', inspectionId);
+          supabase.from('db_inspections').update({ crane_status: normalizedStatus }).eq('id', inspectionId);
         }
       }
     }

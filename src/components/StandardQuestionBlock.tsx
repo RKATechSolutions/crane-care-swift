@@ -78,7 +78,23 @@ export function StandardQuestionBlock({ question, response, onUpdate }: Props) {
   const safeArray = (val: any): string[] => {
     if (!val) return [];
     if (Array.isArray(val)) return val;
-    if (typeof val === 'string') { try { return JSON.parse(val); } catch { return []; } }
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed.map(v => String(v));
+      } catch {
+        const trimmed = val.trim();
+        if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+          const inner = trimmed.slice(1, -1);
+          if (!inner) return [];
+          return inner
+            .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+            .map(s => s.trim().replace(/^"(.*)"$/, '$1'))
+            .map(s => s.replace(/\\"/g, '"'))
+            .filter(Boolean);
+        }
+      }
+    }
     return [];
   };
 
