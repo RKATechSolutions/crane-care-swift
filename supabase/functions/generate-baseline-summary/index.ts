@@ -41,6 +41,69 @@ Deno.serve(async (req) => {
     const adjustedCost = baseline.backup_crane === 'No' ? annualCost * 1.2 : annualCost;
     const trainingCoverage = totalOps > 0 ? (refresherOps / totalOps) * 100 : 0;
 
+    // ── New accountability / financial metrics (mirror the form's calc) ──
+    const b: any = baseline;
+    const opHoursPerYear = (b.operating_hours_per_day || 0) * (b.days_per_week || 0) * 52;
+    const mtbf = breakdowns > 0 && opHoursPerYear > 0 ? opHoursPerYear / breakdowns : 0;
+    const availability = opHoursPerYear > 0 ? Math.max(0, (opHoursPerYear - annualDowntime) / opHoursPerYear) * 100 : 0;
+    const preventable = b.preventable_breakdowns || 0;
+    const preventabilityIndex = breakdowns > 0 ? (preventable / breakdowns) * 100 : 0;
+    const adoptionRate = b.repairs_approved_per_10 != null ? (b.repairs_approved_per_10 / 10) * 100 : 0;
+    const deferredRisk = b.declined_work_value || 0;
+    const labourCost = b.labour_cost_per_hour || 0;
+    const idleHeadcount = b.idle_headcount_during_downtime || 0;
+    const overtimeHours = b.overtime_hours_downtime || 0;
+    const trueAnnualCost = annualDowntime * (revHour + idleHeadcount * labourCost) + overtimeHours * labourCost;
+
+    const MATURITY_FIELDS = [
+      'cleanliness_standard', 'workshop_tidy', 'environmental_factors', 'crane_hazards_meetings',
+      'breakdown_response_process', 'preventative_maintenance', 'pre_start_inspections', 'logbooks_updated', 'findings_reviewed', 'defects_tracked',
+      'walkways_clear', 'signage_current', 'ppe_worn', 'within_capacity', 'lifting_register_maintained', 'load_handling_education', 'complex_lifts_process',
+      'competency_matrix', 'supervisors_trained', 'near_misses_recorded', 'near_misses_reviewed',
+      'design_work_period', 'remaining_service_life', 'digital_monitoring', 'capital_forecast', 'duty_classification_reassessed',
+      'reports_electronic', 'reports_risk_ranking', 'engineering_advice', 'lifecycle_planning',
+      'decision_maker_reachable', 'critical_spares_onsite',
+    ];
+    const scoreAnswer = (v: string): number => {
+      const lower = (v || '').toLowerCase();
+      if (lower === 'yes') return 2;
+      if (lower === 'partially' || lower === 'somewhat') return 1;
+      if (lower === 'no') return 0;
+      return -1;
+    };
+    let mPts = 0, mMax = 0;
+    MATURITY_FIELDS.forEach((k) => { const s = scoreAnswer(b[k]); if (s >= 0) { mPts += s; mMax += 2; } });
+    const maturityScore = mMax > 0 ? (mPts / mMax) * 100 : 0;
+
+    const respParts: number[] = [];
+    if (b.repairs_approved_per_10 != null) respParts.push(adoptionRate);
+    if (b.quote_approval_lag != null) respParts.push(Math.max(0, 100 - (b.quote_approval_lag / 30) * 100));
+    if (b.decision_maker_reachable) respParts.push(scoreAnswer(b.decision_maker_reachable) / 2 * 100);
+    const responsivenessScore = respParts.length ? respParts.reduce((a, c) => a + c, 0) / respParts.length : 0;
+
+    // ── Inspection findings (last 12 months) by crane ──
+    let defectText = 'None on file';
+    try {
+      const { data: defectRows } = await supabase
+        .from('v_crane_defect_summary')
+        .select('crane, fails, immediate, urgent, scheduled, monitor')
+        .eq('site_name', baseline.site_name);
+      if (defectRows && defectRows.length) {
+        const byCrane: Record<string, { fails: number; urgent: number; scheduled: number; monitor: number }> = {};
+        defectRows.forEach((r: any) => {
+          const k = r.crane || 'Unknown';
+          if (!byCrane[k]) byCrane[k] = { fails: 0, urgent: 0, scheduled: 0, monitor: 0 };
+          byCrane[k].fails += r.fails || 0;
+          byCrane[k].urgent += (r.immediate || 0) + (r.urgent || 0);
+          byCrane[k].scheduled += r.scheduled || 0;
+          byCrane[k].monitor += r.monitor || 0;
+        });
+        defectText = Object.entries(byCrane)
+          .map(([c, v]) => `${c}: ${v.fails} fail(s), ${v.urgent} urgent, ${v.scheduled} scheduled, ${v.monitor} monitor`)
+          .join('; ');
+      }
+    } catch (_) { /* findings optional */ }
+
     const selectFields = [
       ['Cleanliness standard', baseline.cleanliness_standard],
       ['Workshop tidy', baseline.workshop_tidy],
@@ -76,6 +139,7 @@ Deno.serve(async (req) => {
 
     const prompt = `You are an Australian industrial crane and lifting operations strategic adviser.
 Use Australian English throughout. Reference Australian Standards where relevant (AS 2550, AS 1418, AS 4991).
+RKA's motto is "fix the system, not just the crane" — reflect that throughout.
 
 Based on this Crane Culture & Performance Baseline assessment:
 
@@ -85,20 +149,38 @@ Number of Cranes: ${baseline.number_of_cranes || 'Not specified'}
 Operating Hours/Day: ${baseline.operating_hours_per_day || 'N/A'}
 Production Increased: ${baseline.production_increased || 'N/A'}
 
-PERFORMANCE DATA:
-- Breakdowns (12 months): ${breakdowns}
+HEADLINE SCORES:
+- System Maturity Score: ${maturityScore.toFixed(0)}/100 (overall systems health, higher is better)
+- Responsiveness Score: ${responsivenessScore.toFixed(0)}/100 (how fast recommended work is approved & actioned)
+- Crane Availability: ${availability.toFixed(1)}%
+- Preventability Index: ${preventabilityIndex.toFixed(0)}% (share of breakdowns flagged beforehand but not actioned)
+
+PERFORMANCE DATA (last 12 months):
+- Breakdowns: ${breakdowns}
 - Avg Downtime per Breakdown: ${avgDowntime} hrs
-- Longest Downtime: ${baseline.longest_downtime || 'N/A'} hrs
 - Annual Downtime: ${annualDowntime.toFixed(1)} hrs
+- Mean Time Between Failures: ${mtbf.toFixed(0)} hrs
 - Reactive Maintenance Ratio: ${reactiveRatio.toFixed(1)}%
 - Mean Time To Repair: ${mttr.toFixed(1)} hrs
 - First-Time Fix Rate: ${baseline.first_time_fix || 'N/A'}%
+
+FINANCIAL IMPACT:
 - Revenue/Hour: $${revHour}
 - Cost Per Breakdown: $${costPerBreakdown.toFixed(0)}
 - Annual Downtime Cost: $${annualCost.toFixed(0)}
+- True Annual Cost of Downtime (incl. idle labour & overtime): $${trueAnnualCost.toFixed(0)}
 ${baseline.backup_crane === 'No' ? `- Adjusted Cost (No Backup): $${adjustedCost.toFixed(0)}` : ''}
-- Training Coverage: ${trainingCoverage.toFixed(1)}%
-- Top Recurring Issues: ${baseline.top_recurring_issues || 'None specified'}
+
+ACCOUNTABILITY & RESPONSIVENESS (customer-side levers):
+- Advice Adoption Rate: ${adoptionRate.toFixed(0)}% of recommended repairs approved
+- Average Quote-to-Approval Lag: ${baseline.quote_approval_lag != null ? baseline.quote_approval_lag + ' days' : 'N/A'}
+- Deferred Risk Exposure (recommended work not yet approved): $${deferredRisk.toFixed(0)}
+- Customer self-rates approvals as prompt: ${baseline.acts_on_recommendations || 'N/A'}
+- Decision-maker reachable on-site for sign-off: ${baseline.decision_maker_reachable || 'N/A'}
+
+INSPECTION FINDINGS BY CRANE (last 12 months): ${defectText}
+
+KEY RECURRING ISSUES: ${baseline.top_recurring_issues || 'None specified'}
 
 CULTURE & COMPLIANCE RESPONSES:
 ${selectFields}
@@ -110,25 +192,21 @@ PROVIDER FEEDBACK:
 
 Generate a strategic executive summary for a busy site/operations manager. Keep it scannable.
 
-1. Executive Summary — MAX 120 words. State overall crane culture maturity level, biggest risks, and strongest areas.
+1. Executive Summary — MAX 120 words. State overall crane culture maturity, biggest risks, strongest areas, and — where the data shows it — whether outcomes are constrained by the equipment itself or by how quickly recommended work is approved.
 
-2. Top 3 Strategic Risks — One line each, ranked by business impact.
+2. Top 3 Strategic Risks — One line each, ranked by business impact. Name specific cranes or findings where the inspection data allows.
 
-3. Financial Impact Summary — 2-3 sentences on the cost of current crane management approach.
+3. Accountability Insight — 2-3 sentences. Using Advice Adoption, Quote-to-Approval Lag and Deferred Risk Exposure, state plainly whether deferred or slow-approved work is holding back results, and quantify the deferred exposure in dollars. Be factual and constructive, never blaming. If the customer self-rates approvals as prompt but the adoption rate is low, note that gap neutrally.
 
-4. Prioritised Recommendations — Numbered list, ranked by impact. For each recommendation:
-   - State the issue clearly
-   - Provide a specific RKA solution (e.g., "RKA can implement a scheduled preventative maintenance program", "RKA's digital monitoring package can track real-time crane health", "RKA can conduct operator competency assessments and refresher training", "RKA's engineering team can perform a Design Work Period assessment per AS 2550")
-   - Estimate the benefit (cost savings, downtime reduction, compliance improvement)
+4. Financial Impact Summary — 2-3 sentences on the true cost of the current approach.
 
-5. 12-Month Improvement Roadmap — Bullet points only, max 3 items per phase:
-   - NOW (0–3 months) — most critical
-   - NEXT (3–6 months)
-   - LATER (6–12 months)
+5. Prioritised Recommendations — Numbered, ranked by impact. For each: state the issue, a specific RKA solution (e.g. scheduled preventative maintenance, digital monitoring, operator competency/refresher training, a Design Work Period assessment per AS 2550), and the estimated benefit (downtime, cost, compliance).
 
-6. Culture Score Assessment — Rate the overall crane culture maturity as: Reactive / Developing / Proactive / Leading. Explain in one sentence.
+6. 12-Month Improvement Roadmap — Bullets, max 3 per phase: NOW (0–3 months), NEXT (3–6 months), LATER (6–12 months).
 
-Use direct, professional tone. No fluff, no sales language. Keep entire output under 700 words total.`;
+7. Culture Score Assessment — Rate maturity as Reactive / Developing / Proactive / Leading, with one sentence why.
+
+Use direct, professional tone. No fluff, no sales language. Keep entire output under 750 words total.`;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
