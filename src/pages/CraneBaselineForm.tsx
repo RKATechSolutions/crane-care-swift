@@ -340,12 +340,37 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
   const handleExportPdf = async () => {
     setGeneratingPdf(true);
     try {
+      // Pull per-crane inspection findings (last 12 months) for this site, aggregated by crane.
+      const siteKey = str('company_name') || site.name;
+      let defectSummary: { crane: string; fails: number; urgent: number; scheduled: number; monitor: number }[] | undefined;
+      try {
+        const { data: defectRows } = await (supabase as any)
+          .from('v_crane_defect_summary')
+          .select('crane, fails, immediate, urgent, scheduled, monitor')
+          .eq('site_name', siteKey);
+        if (defectRows && defectRows.length) {
+          const byCrane: Record<string, { crane: string; fails: number; urgent: number; scheduled: number; monitor: number }> = {};
+          defectRows.forEach((r: any) => {
+            const k = r.crane || 'Unknown';
+            if (!byCrane[k]) byCrane[k] = { crane: k, fails: 0, urgent: 0, scheduled: 0, monitor: 0 };
+            byCrane[k].fails += r.fails || 0;
+            byCrane[k].urgent += (r.immediate || 0) + (r.urgent || 0);
+            byCrane[k].scheduled += r.scheduled || 0;
+            byCrane[k].monitor += r.monitor || 0;
+          });
+          defectSummary = Object.values(byCrane);
+        }
+      } catch {
+        // Inspection findings are optional — report still generates without them.
+      }
+
       const doc = await generateBaselinePdf({
         siteName: site.name,
         companyName: str('company_name'),
         technicianName: state.currentUser?.name || '',
         formData,
         calculations: calc,
+        defectSummary,
         aiSummary: aiSummary || undefined,
       });
       setPreviewPdfDoc(doc);

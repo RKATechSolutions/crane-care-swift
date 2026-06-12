@@ -16,7 +16,16 @@ interface BaselinePdfData {
     annualCost: number;
     adjustedCost: number;
     trainingCoverage: number;
+    mtbf: number;
+    availability: number;
+    preventabilityIndex: number;
+    adoptionRate: number;
+    deferredRiskExposure: number;
+    trueAnnualCost: number;
+    maturityScore: number;
+    responsivenessScore: number;
   };
+  defectSummary?: { crane: string; fails: number; urgent: number; scheduled: number; monitor: number }[];
   aiSummary?: string;
 }
 
@@ -59,7 +68,7 @@ function getScoreColor(score: number, max: number): [number, number, number] {
 }
 
 export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF> {
-  const { siteName, companyName, technicianName, formData, calculations, aiSummary } = data;
+  const { siteName, companyName, technicianName, formData, calculations, defectSummary, aiSummary } = data;
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -139,7 +148,113 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
     y = (doc as any).lastAutoTable?.finalY + 6 || y + 6;
   };
 
+  // ─── 12-Month Findings & Accountability (executive page) ───
+  doc.addPage();
+  addHeader();
+  y = 24;
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...DARK);
+  doc.text('12-Month Findings & Accountability', pageW / 2, y, { align: 'center' });
+  y += 4;
+  doc.setDrawColor(...RKA_BLUE);
+  doc.setLineWidth(0.5);
+  doc.line(15, y, pageW - 15, y);
+  y += 8;
+
+  // Headline score cards (4 across)
+  const headlineCards = [
+    { label: 'System Maturity', value: fmtNum(calculations.maturityScore, '', '/100'), color: calculations.maturityScore >= 75 ? RKA_GREEN : calculations.maturityScore >= 50 ? RKA_ORANGE : RKA_RED },
+    { label: 'Responsiveness', value: fmtNum(calculations.responsivenessScore, '', '/100'), color: calculations.responsivenessScore >= 70 ? RKA_GREEN : calculations.responsivenessScore >= 50 ? RKA_ORANGE : RKA_RED },
+    { label: 'Crane Availability', value: fmtNum(calculations.availability, '', '%'), color: calculations.availability >= 95 ? RKA_GREEN : calculations.availability >= 85 ? RKA_ORANGE : RKA_RED },
+    { label: 'Preventability', value: fmtNum(calculations.preventabilityIndex, '', '%'), color: calculations.preventabilityIndex <= 25 ? RKA_GREEN : calculations.preventabilityIndex <= 50 ? RKA_ORANGE : RKA_RED },
+  ];
+  const hcW = (pageW - 30 - 9) / 4;
+  headlineCards.forEach((c, i) => {
+    const hx = 15 + i * (hcW + 3);
+    doc.setFillColor(248, 248, 248);
+    doc.roundedRect(hx, y, hcW, 20, 2, 2, 'F');
+    doc.setFillColor(...c.color);
+    doc.roundedRect(hx, y, hcW, 3, 1.5, 1.5, 'F');
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(c.label, hx + 3, y + 10);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...DARK);
+    doc.text(c.value, hx + 3, y + 17);
+  });
+  y += 26;
+
+  // Service & reliability (last 12 months)
+  addSectionTitle('Service & Reliability (last 12 months)');
+  addTable([
+    ['Breakdowns', numStr('breakdowns')],
+    ['Emergency call-outs', numStr('emergency_visits')],
+    ['Scheduled maintenance visits', numStr('scheduled_visits')],
+    ['First-time fix rate', numStr('first_time_fix', '%')],
+    ['Estimated annual downtime', fmtNum(calculations.annualDowntime, '', ' hrs')],
+    ['Mean time between failures', fmtNum(calculations.mtbf, '', ' hrs')],
+  ]);
+
+  // Advice & investment — the accountability story
+  addSectionTitle('Advice & Investment');
+  addTable([
+    ['Advice adoption rate', fmtNum(calculations.adoptionRate, '', '%')],
+    ['Average quote to approval', numStr('quote_approval_lag', ' days')],
+    ['Recommended work not yet approved', fmtNum(calculations.deferredRiskExposure, '$')],
+    ['True annual cost of downtime', fmtNum(calculations.trueAnnualCost, '$')],
+  ]);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(90, 90, 90);
+  const frameLines = doc.splitTextToSize(
+    'These figures reflect work RKA has recommended over the last 12 months. Acting on recommended work sooner is consistently the single biggest lever on reliability, safety and cost.',
+    pageW - 30,
+  );
+  doc.text(frameLines, 15, y);
+  y += frameLines.length * 4 + 4;
+
+  // Key open items (recurring issues)
+  if (str('top_recurring_issues') !== '—') {
+    checkPage(30);
+    addSectionTitle('Key Open Items');
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...DARK);
+    const openItems = doc.splitTextToSize(str('top_recurring_issues'), pageW - 30);
+    for (const line of openItems) {
+      if (y > pageH - 20) { doc.addPage(); addHeader(); y = 24; }
+      doc.text(line, 15, y);
+      y += 4.5;
+    }
+    y += 4;
+  }
+
+  // Per-crane inspection findings
+  if (defectSummary && defectSummary.length) {
+    checkPage(40);
+    addSectionTitle('Inspection Findings by Crane');
+    autoTable(doc, {
+      startY: y,
+      head: [['Crane', 'Fails', 'Urgent', 'Scheduled', 'Monitor']],
+      body: defectSummary.map(d => [d.crane, String(d.fails), String(d.urgent), String(d.scheduled), String(d.monitor)]),
+      margin: { left: 15, right: 15, bottom: 14 },
+      theme: 'grid',
+      headStyles: { fillColor: DARK, fontSize: 8, textColor: [255, 255, 255] },
+      bodyStyles: { fontSize: 8, textColor: DARK },
+      columnStyles: { 0: { fontStyle: 'bold' } },
+      alternateRowStyles: { fillColor: LIGHT_GRAY },
+      didDrawPage: () => addHeader(),
+    });
+    y = (doc as any).lastAutoTable?.finalY + 6 || y + 6;
+  }
+
   // ─── Section 1: Site & Ops ───
+  doc.addPage();
+  addHeader();
+  y = 24;
   addSectionTitle('Site & Operations Overview');
   addTable([
     ['Company Name', str('company_name')],
@@ -434,6 +549,10 @@ export async function generateBaselinePdf(data: BaselinePdfData): Promise<jsPDF>
 
   // Summary cards
   const summaryItems = [
+    { label: 'System Maturity Score', value: fmtNum(calculations.maturityScore, '', '/100'), explainer: 'Overall systems health — the number to grow year on year', color: calculations.maturityScore >= 75 ? RKA_GREEN : calculations.maturityScore >= 50 ? RKA_ORANGE : RKA_RED },
+    { label: 'Responsiveness Score', value: fmtNum(calculations.responsivenessScore, '', '/100'), explainer: 'How fast recommended work is approved and actioned', color: calculations.responsivenessScore >= 70 ? RKA_GREEN : calculations.responsivenessScore >= 50 ? RKA_ORANGE : RKA_RED },
+    { label: 'Advice Adoption', value: fmtNum(calculations.adoptionRate, '', '%'), explainer: 'Share of recommended repairs approved', color: calculations.adoptionRate >= 75 ? RKA_GREEN : calculations.adoptionRate >= 50 ? RKA_ORANGE : RKA_RED },
+    { label: 'Deferred Risk Exposure', value: fmtNum(calculations.deferredRiskExposure, '$'), explainer: 'Value of recommended work not yet approved', color: RKA_ORANGE },
     { label: 'Annual Downtime', value: fmtNum(calculations.annualDowntime, '', ' hrs'), explainer: 'Total crane downtime per year from all breakdowns', color: calculations.annualDowntime > 50 ? RKA_RED : calculations.annualDowntime > 20 ? RKA_ORANGE : RKA_GREEN },
     { label: 'Reactive Ratio', value: fmtNum(calculations.reactiveRatio, '', '%'), explainer: 'Share of maintenance that is unplanned emergency work', color: calculations.reactiveRatio > 60 ? RKA_RED : calculations.reactiveRatio > 30 ? RKA_ORANGE : RKA_GREEN },
     { label: 'Mean Time To Repair', value: fmtNum(calculations.mttr, '', ' hrs'), explainer: 'Average hours from breakdown to crane back in service', color: calculations.mttr > 8 ? RKA_RED : calculations.mttr > 4 ? RKA_ORANGE : RKA_GREEN },
