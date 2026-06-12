@@ -16,21 +16,45 @@ interface CraneBaselineFormProps {
   customerSiteName?: string;
 }
 
+// Lean, customer-only flow. Anything AroFlo or InspectAll already holds
+// (breakdowns, jobs, quotes, defects, crane count, contacts) is NOT asked here —
+// it is pre-filled and shown read-only on the Summary. These sections cover only
+// what no system knows: the business impact of a stoppage and how the customer's
+// own decisions and practices work.
 const SECTIONS = [
-  { id: 'site_ops', label: 'Site & Ops' },
-  { id: 'breakdown', label: 'Breakdowns' },
-  { id: 'financial', label: 'Financial' },
-  { id: 'environment', label: 'Environment' },
-  { id: 'maintenance', label: 'Maintenance' },
-  { id: 'safety', label: 'Safety' },
-  { id: 'training', label: 'Training' },
-  { id: 'engineering', label: 'Engineering' },
-  { id: 'provider', label: 'Provider' },
+  { id: 'operation', label: 'Operation' },
+  { id: 'cost', label: 'Cost of Downtime' },
+  { id: 'resilience', label: 'Resilience' },
+  { id: 'decisions', label: 'Decisions' },
+  { id: 'practices', label: 'Practices' },
+  { id: 'people', label: 'People' },
+  { id: 'planning', label: 'Planning' },
+  { id: 'perspective', label: 'Your View' },
   { id: 'summary', label: 'Summary' },
 ];
 
 const YES_PARTIAL_NO = ['Yes', 'Partially', 'No'];
 const YES_SOMEWHAT_NO = ['Yes', 'Somewhat', 'No'];
+
+// Select fields where "Yes" is the healthy answer. Drives the System Maturity Score.
+const MATURITY_FIELDS = [
+  'cleanliness_standard', 'workshop_tidy', 'environmental_factors', 'crane_hazards_meetings',
+  'breakdown_response_process', 'preventative_maintenance', 'pre_start_inspections', 'logbooks_updated', 'findings_reviewed', 'defects_tracked',
+  'walkways_clear', 'signage_current', 'ppe_worn', 'within_capacity', 'lifting_register_maintained', 'load_handling_education', 'complex_lifts_process',
+  'competency_matrix', 'supervisors_trained', 'near_misses_recorded', 'near_misses_reviewed',
+  'design_work_period', 'remaining_service_life', 'digital_monitoring', 'capital_forecast', 'duty_classification_reassessed',
+  'reports_electronic', 'reports_risk_ranking', 'engineering_advice', 'lifecycle_planning',
+  'decision_maker_reachable', 'critical_spares_onsite',
+];
+
+// Score a Yes / Partially(Somewhat) / No answer. Returns -1 when unanswered so it can be excluded.
+const scoreAnswer = (v: string): number => {
+  const lower = (v || '').toLowerCase();
+  if (lower === 'yes') return 2;
+  if (lower === 'partially' || lower === 'somewhat') return 1;
+  if (lower === 'no') return 0;
+  return -1;
+};
 
 // Fields that are answered by the customer (pre-visit sections)
 const CUSTOMER_FIELDS = new Set([
@@ -40,7 +64,29 @@ const CUSTOMER_FIELDS = new Set([
   'avg_response_time', 'scheduled_visits', 'emergency_visits', 'first_time_fix',
   'top_recurring_issues', 'rev_hour', 'labour_cost_per_hour', 'backup_crane',
   'value_most', 'most_frustrating', 'magic_wand',
+  // Production & Risk (customer pre-visit)
+  'preventable_breakdowns', 'lifts_per_shift', 'crane_single_point_failure',
+  'idle_headcount_during_downtime', 'overtime_hours_downtime', 'penalty_per_missed_dispatch',
+  'critical_spares_onsite', 'critical_part_lead_time',
+  // Responsiveness (customer pre-visit)
+  'quote_approval_lag', 'repairs_approved_per_10', 'declined_work_value',
+  'approval_threshold', 'capital_budget_month', 'decision_maker_reachable',
+  'acts_on_recommendations',
 ]);
+
+// Fields auto-filled from AroFlo + InspectAll — shown read-only on the Summary,
+// never asked in the question flow.
+const AUTO_FILLED_ROWS: { label: string; key: string; prefix?: string; suffix?: string; pct10?: boolean }[] = [
+  { label: 'Cranes on site', key: 'number_of_cranes' },
+  { label: 'Breakdowns (last 12 mo)', key: 'breakdowns' },
+  { label: 'Avg downtime / breakdown', key: 'avg_downtime', suffix: ' hrs' },
+  { label: 'Emergency call-outs', key: 'emergency_visits' },
+  { label: 'Scheduled visits', key: 'scheduled_visits' },
+  { label: 'First-time fix', key: 'first_time_fix', suffix: '%' },
+  { label: 'Advice adoption (from records)', key: 'repairs_approved_per_10', suffix: '%', pct10: true },
+  { label: 'Avg quote → approval', key: 'quote_approval_lag', suffix: ' days' },
+  { label: 'Deferred work value', key: 'declined_work_value', prefix: '$' },
+];
 
 type FormData = Record<string, string | number | null>;
 
@@ -151,6 +197,7 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
     const emergencyVisits = num('emergency_visits');
     const scheduledVisits = num('scheduled_visits');
     const revHour = num('rev_hour');
+    const labourCost = num('labour_cost_per_hour');
     const totalOps = num('total_operators');
     const refresherOps = num('refresher_operators');
     const backupCrane = str('backup_crane');
@@ -164,7 +211,50 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
     const adjustedCost = backupCrane === 'No' ? annualCost * 1.2 : annualCost;
     const trainingCoverage = totalOps > 0 ? (refresherOps / totalOps) * 100 : 0;
 
-    return { annualDowntime, reactiveRatio, mttr, costPerBreakdown, annualCost, adjustedCost, trainingCoverage };
+    // ── Reliability: MTBF & Availability ──
+    const scheduledHours = num('operating_hours_per_day') * num('days_per_week') * 52;
+    const mtbf = breakdowns > 0 && scheduledHours > 0 ? scheduledHours / breakdowns : 0;
+    const availability = scheduledHours > 0
+      ? Math.max(0, (scheduledHours - annualDowntime) / scheduledHours) * 100 : 0;
+
+    // ── Accountability: Preventability & Advice Adoption ──
+    const preventable = num('preventable_breakdowns');
+    const preventabilityIndex = breakdowns > 0 ? (preventable / breakdowns) * 100 : 0;
+    const adoptionRate = formData.repairs_approved_per_10 != null ? (num('repairs_approved_per_10') / 10) * 100 : 0;
+    const deferredRiskExposure = num('declined_work_value');
+
+    // ── True cost of downtime (idle labour + overtime on top of lost revenue) ──
+    const idleHeadcount = num('idle_headcount_during_downtime');
+    const overtimeHours = num('overtime_hours_downtime');
+    const trueCostPerHour = revHour + idleHeadcount * labourCost;
+    const trueAnnualCost = annualDowntime * trueCostPerHour + overtimeHours * labourCost;
+
+    // ── System Maturity Score (0–100) from all "Yes is good" questions ──
+    let maturityPoints = 0;
+    let maturityMax = 0;
+    MATURITY_FIELDS.forEach(k => {
+      const s = scoreAnswer(str(k));
+      if (s >= 0) { maturityPoints += s; maturityMax += 2; }
+    });
+    const maturityScore = maturityMax > 0 ? (maturityPoints / maturityMax) * 100 : 0;
+
+    // ── Responsiveness Score (0–100): average of answered sub-scores ──
+    const respParts: number[] = [];
+    if (formData.repairs_approved_per_10 != null) respParts.push(adoptionRate);
+    if (formData.quote_approval_lag != null) {
+      // 0 days = 100, 30+ days = 0
+      respParts.push(Math.max(0, 100 - (num('quote_approval_lag') / 30) * 100));
+    }
+    if (str('decision_maker_reachable')) {
+      respParts.push(scoreAnswer(str('decision_maker_reachable')) / 2 * 100);
+    }
+    const responsivenessScore = respParts.length ? respParts.reduce((a, b) => a + b, 0) / respParts.length : 0;
+
+    return {
+      annualDowntime, reactiveRatio, mttr, costPerBreakdown, annualCost, adjustedCost, trainingCoverage,
+      mtbf, availability, preventabilityIndex, adoptionRate, deferredRiskExposure,
+      trueAnnualCost, maturityScore, responsivenessScore,
+    };
   }, [formData]);
 
   const save = async () => {
@@ -353,113 +443,99 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
     </div>
   );
 
+  const renderReadOnly = (label: string, display: string) => (
+    <div key={label} className="flex justify-between items-center py-1.5 border-b border-border/40 last:border-0">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm font-semibold text-foreground">{display}</span>
+    </div>
+  );
+
   const currentSection = SECTIONS[sectionIdx];
 
   const renderSection = () => {
     switch (currentSection.id) {
-      case 'site_ops':
+      case 'operation':
         return (
           <div className="space-y-4">
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-2">
-              <p className="text-xs text-muted-foreground">Complete before our onsite visit to speed up your strategic review.</p>
+              <p className="text-xs text-muted-foreground">We've already pulled your crane list, service history and quotes from our records — you'll see them on the Summary. These few questions cover the things only you can tell us, so we can prove in black and white where the gains are.</p>
             </div>
-            {renderTextField('Company Name', 'company_name', true)}
-            {renderTextField('Site Location', 'site_location')}
-            {renderTextField('Main Contact Name', 'main_contact_name')}
-            {renderTextField('Role / Position', 'role_position')}
-            {renderNumberField('Number of Cranes Onsite', 'number_of_cranes')}
             {renderNumberField('Operating Hours per Day', 'operating_hours_per_day')}
             {renderNumberField('Shifts per Day', 'shifts_per_day')}
             {renderNumberField('Days per Week', 'days_per_week')}
-            {renderSelect('Has production increased in the last 3–5 years?', 'production_increased', ['No', 'Slightly', 'Significantly'])}
+            {renderNumberField('Lifts (or Tonnes) Moved per Shift', 'lifts_per_shift')}
+            {renderSelect('Has production grown in the last 3–5 years?', 'production_increased', ['No', 'Slightly', 'Significantly'])}
           </div>
         );
 
-      case 'breakdown':
+      case 'cost':
         return (
           <div className="space-y-4">
-            {renderNumberField('Total Crane Breakdowns (Last 12 Months)', 'breakdowns')}
-            {renderNumberField('Average Downtime per Breakdown', 'avg_downtime', '0', 'hours')}
-            {renderNumberField('Longest Downtime Event', 'longest_downtime', '0', 'hours')}
-            {renderNumberField('Average Technician Response Time', 'avg_response_time', '0', 'hours')}
-            {renderNumberField('Scheduled Maintenance Visits per Year', 'scheduled_visits')}
-            {renderNumberField('Emergency Call-Outs per Year', 'emergency_visits')}
-            {renderNumberField('First-Time Fix Rate', 'first_time_fix', '0', '%')}
-            {renderTextArea('Top 3 Recurring Crane Issues', 'top_recurring_issues')}
-            
-            <div className="pt-2 space-y-3">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Calculated Metrics</p>
-              {renderCalcField('Estimated Annual Downtime', calc.annualDowntime, '', ' hours', 'Total hours your cranes are out of action each year based on breakdown frequency and average repair time.')}
-              {renderCalcField('Reactive Maintenance Ratio', calc.reactiveRatio, '', '%', 'Percentage of maintenance that is unplanned. Above 50% indicates a reactive maintenance culture.')}
-              {renderCalcField('Mean Time To Repair', calc.mttr, '', ' hours', 'Average time from breakdown to crane back in service. Lower is better — industry benchmark is under 4 hours.')}
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-2">
+              <p className="text-xs text-muted-foreground">What a stopped crane actually costs your business — the numbers no inspection can see. This turns downtime hours into dollars.</p>
             </div>
-          </div>
-        );
-
-      case 'financial':
-        return (
-          <div className="space-y-4">
             {renderNumberField('Revenue Generated per Production Hour', 'rev_hour', '0', '$')}
             {renderNumberField('Labour Cost per Downtime Hour', 'labour_cost_per_hour', '0', '$')}
+            {renderNumberField('People Standing Idle When a Crane Stops', 'idle_headcount_during_downtime', '0', 'people')}
+            {renderNumberField('Overtime Hours Caused by Downtime (Last 12 Months)', 'overtime_hours_downtime', '0', 'hours')}
+            {renderNumberField('Penalty / Late-Delivery Cost per Missed Dispatch', 'penalty_per_missed_dispatch', '0', '$')}
             {renderSelect('Backup Crane Available?', 'backup_crane', ['Yes', 'No'])}
 
             <div className="pt-2 space-y-3">
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Financial Impact</p>
-              {renderCalcField('Estimated Cost Per Breakdown', calc.costPerBreakdown, '$', '', 'Revenue lost each time a crane breaks down, based on your hourly production value.')}
-              {renderCalcField('Estimated Annual Downtime Cost', calc.annualCost, '$', '', 'Total annual revenue lost due to crane downtime across all breakdowns.')}
-              {str('backup_crane') === 'No' && (
-                <div className="bg-destructive/10 border border-destructive/30 rounded-xl p-3">
-                  <p className="text-xs text-muted-foreground mb-1">Adjusted Annual Downtime Cost (No Backup — 20% buffer)</p>
-                  <p className="text-lg font-bold text-destructive">
-                    ${isNaN(calc.adjustedCost) ? '—' : calc.adjustedCost.toLocaleString('en-AU', { maximumFractionDigits: 0 })}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-1 leading-tight">
-                    Without a backup crane, downtime impact increases by ~20% due to production bottlenecks, overtime costs, and delivery penalties.
-                  </p>
-                </div>
-              )}
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Live Impact</p>
+              {renderCalcField('True Annual Cost of Downtime', calc.trueAnnualCost, '$', '', 'Lost revenue plus idle labour and overtime — the full hit downtime takes on the business, not just the crane.')}
             </div>
           </div>
         );
 
-      case 'environment':
+      case 'resilience':
         return (
           <div className="space-y-4">
-            {renderSelect('Clear standard for crane area cleanliness?', 'cleanliness_standard', YES_SOMEWHAT_NO)}
-            {renderSelect('Workshop consistently tidy and organised?', 'workshop_tidy', YES_SOMEWHAT_NO)}
-            {renderSelect('Environmental factors actively managed?', 'environmental_factors', YES_SOMEWHAT_NO)}
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-2">
+              <p className="text-xs text-muted-foreground">How exposed you are when a crane stops — criticality, backup and spares. Only you know your production layout.</p>
+            </div>
+            {renderSelect('Is any crane a single point of failure for the line?', 'crane_single_point_failure', YES_PARTIAL_NO)}
+            {renderSelect('Are critical spare parts held onsite?', 'critical_spares_onsite', YES_PARTIAL_NO)}
+            {renderNumberField('Typical Lead Time for a Critical Spare Part', 'critical_part_lead_time', '0', 'days')}
+          </div>
+        );
+
+      case 'decisions':
+        return (
+          <div className="space-y-4">
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-2">
+              <p className="text-xs text-muted-foreground">How decisions get made when work is recommended. Our records show how fast things move — these tell us why, so delays can be fixed at the source.</p>
+            </div>
+            {renderSelect('When we recommend repairs, are they approved promptly?', 'acts_on_recommendations', YES_PARTIAL_NO)}
+            {renderSelect('Is a decision-maker reachable on-site for sign-off?', 'decision_maker_reachable', YES_PARTIAL_NO)}
+            {renderTextField('Spend Sign-Off Threshold / Who Approves', 'approval_threshold')}
+            {renderTextField('When Is the Capital Budget Set Each Year?', 'capital_budget_month')}
+          </div>
+        );
+
+      case 'practices':
+        return (
+          <div className="space-y-4">
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-2">
+              <p className="text-xs text-muted-foreground">Your team's day-to-day habits around the cranes — the system around the machine.</p>
+            </div>
+            {renderSelect('Operators complete pre-start inspections?', 'pre_start_inspections', YES_PARTIAL_NO)}
+            {renderSelect('Logbooks kept up to date?', 'logbooks_updated', YES_PARTIAL_NO)}
+            {renderSelect('Documented breakdown response process?', 'breakdown_response_process', YES_PARTIAL_NO)}
+            {renderSelect('Inspection findings reviewed by management?', 'findings_reviewed', YES_PARTIAL_NO)}
+            {renderSelect('Defects tracked through to close-out?', 'defects_tracked', YES_PARTIAL_NO)}
+            {renderSelect('Workers trained in safe load handling?', 'load_handling_education', YES_PARTIAL_NO)}
+            {renderSelect('Formal process for complex lifts?', 'complex_lifts_process', YES_PARTIAL_NO)}
             {renderSelect('Crane hazards discussed in safety meetings?', 'crane_hazards_meetings', YES_SOMEWHAT_NO)}
           </div>
         );
 
-      case 'maintenance':
+      case 'people':
         return (
           <div className="space-y-4">
-            {renderSelect('Documented breakdown response process?', 'breakdown_response_process', YES_PARTIAL_NO)}
-            {renderSelect('Preventative maintenance adhered to?', 'preventative_maintenance', YES_PARTIAL_NO)}
-            {renderSelect('Pre-start inspections consistently completed?', 'pre_start_inspections', YES_PARTIAL_NO)}
-            {renderSelect('Logbooks regularly updated?', 'logbooks_updated', YES_PARTIAL_NO)}
-            {renderSelect('Inspection findings reviewed by management?', 'findings_reviewed', YES_PARTIAL_NO)}
-            {renderSelect('Defects tracked to close-out?', 'defects_tracked', YES_PARTIAL_NO)}
-          </div>
-        );
-
-      case 'safety':
-        return (
-          <div className="space-y-4">
-            {renderSelect('Walkways clear and unobstructed?', 'walkways_clear', YES_PARTIAL_NO)}
-            {renderSelect('Signage current and visible?', 'signage_current', YES_PARTIAL_NO)}
-            {renderSelect('PPE consistently worn?', 'ppe_worn', YES_PARTIAL_NO)}
-            {renderSelect('Operating within rated capacity?', 'within_capacity', YES_PARTIAL_NO)}
-            {renderSelect('Lifting equipment register maintained?', 'lifting_register_maintained', YES_PARTIAL_NO)}
-            {renderSelect('Workers educated on load handling?', 'load_handling_education', YES_PARTIAL_NO)}
-            {renderSelect('Formal process for complex lifts?', 'complex_lifts_process', YES_PARTIAL_NO)}
-          </div>
-        );
-
-      case 'training':
-        return (
-          <div className="space-y-4">
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-2">
+              <p className="text-xs text-muted-foreground">Operator competency and your near-miss culture — the people side no inspection captures.</p>
+            </div>
             {renderNumberField('Total Crane Operators', 'total_operators')}
             {renderNumberField('Operators with Refresher Training (Last 2 Years)', 'refresher_operators')}
             {renderSelect('Competency matrix exists?', 'competency_matrix', YES_PARTIAL_NO)}
@@ -473,40 +549,92 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
           </div>
         );
 
-      case 'engineering':
+      case 'planning':
         return (
           <div className="space-y-4">
-            {renderSelect('Design Work Period calculated?', 'design_work_period', YES_PARTIAL_NO)}
-            {renderSelect('Remaining service life known?', 'remaining_service_life', YES_PARTIAL_NO)}
-            {renderSelect('Digital monitoring installed?', 'digital_monitoring', YES_PARTIAL_NO)}
-            {renderSelect('2–5 year capital forecast exists?', 'capital_forecast', YES_PARTIAL_NO)}
-            {renderSelect('Duty classification reassessed since production growth?', 'duty_classification_reassessed', YES_PARTIAL_NO)}
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-2">
+              <p className="text-xs text-muted-foreground">How far ahead you're planning for your crane assets — where most sites have the biggest blind spots.</p>
+            </div>
+            {renderSelect("Do you know each crane's Design Work Period?", 'design_work_period', YES_PARTIAL_NO)}
+            {renderSelect("Do you know each crane's remaining service life?", 'remaining_service_life', YES_PARTIAL_NO)}
+            {renderSelect('2–5 year capital forecast for crane assets?', 'capital_forecast', YES_PARTIAL_NO)}
+            {renderSelect('Duty classification reviewed since production changed?', 'duty_classification_reassessed', YES_PARTIAL_NO)}
+            {renderSelect('Interested in real-time / digital crane monitoring?', 'digital_monitoring', YES_PARTIAL_NO)}
           </div>
         );
 
-      case 'provider':
+      case 'perspective':
         return (
           <div className="space-y-4">
-            {renderSelect('Reports electronic & detailed?', 'reports_electronic', YES_PARTIAL_NO)}
-            {renderSelect('Reports include risk ranking?', 'reports_risk_ranking', YES_PARTIAL_NO)}
-            {renderSelect('Engineering advice provided?', 'engineering_advice', YES_PARTIAL_NO)}
-            {renderSelect('Lifecycle planning discussed annually?', 'lifecycle_planning', YES_PARTIAL_NO)}
-            {renderTextArea('What do you value most about your current provider?', 'value_most')}
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-2">
+              <p className="text-xs text-muted-foreground">In your words — this shapes how we work with you.</p>
+            </div>
+            {renderTextArea('What do you value most about your current crane partner?', 'value_most')}
             {renderTextArea('What has been most frustrating?', 'most_frustrating')}
-            {renderTextArea('If you had a magic wand, what would you improve?', 'magic_wand')}
+            {renderTextArea('If you had a magic wand, what would you fix?', 'magic_wand')}
           </div>
         );
 
-      case 'summary':
+      case 'summary': {
+        const autoRows = AUTO_FILLED_ROWS
+          .filter(r => formData[r.key] != null && formData[r.key] !== '')
+          .map(r => {
+            const base = r.pct10 ? num(r.key) * 10 : num(r.key);
+            const display = `${r.prefix || ''}${base.toLocaleString('en-AU', { maximumFractionDigits: 1 })}${r.suffix || ''}`;
+            return { label: r.label, display };
+          });
+        const hasAuto = autoRows.length > 0 || !!str('top_recurring_issues');
+        // Self-report vs measured adoption gap
+        const saysPrompt = str('acts_on_recommendations') === 'Yes';
+        const measuredAdoption = formData.repairs_approved_per_10 != null ? num('repairs_approved_per_10') * 10 : null;
+        const showGap = saysPrompt && measuredAdoption != null && measuredAdoption < 60;
+
         return (
           <div className="space-y-6">
+            {hasAuto && (
+              <div>
+                <h3 className="text-sm font-bold text-foreground mb-2">📂 What your records already tell us</h3>
+                <p className="text-[10px] text-muted-foreground mb-2 leading-tight">Pulled automatically from our service history and inspections — no need to re-enter.</p>
+                <div className="bg-muted/30 border border-border rounded-xl p-3">
+                  {autoRows.map(r => renderReadOnly(r.label, r.display))}
+                  {str('top_recurring_issues') && (
+                    <div className="pt-2 mt-1">
+                      <p className="text-xs text-muted-foreground mb-1">Recurring issues (from inspections)</p>
+                      <p className="text-xs text-foreground leading-snug">{str('top_recurring_issues')}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {showGap && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+                <p className="text-xs font-bold text-foreground mb-1">Worth a conversation</p>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  You rated approvals as prompt, yet our records show only {Math.round(measuredAdoption!)}% of recommended repairs were approved. Closing that gap is often the single biggest lever on your results.
+                </p>
+              </div>
+            )}
+
+            <div>
+              <h3 className="text-sm font-bold text-foreground mb-3">⭐ Headline Scores</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {renderCalcField('System Maturity Score', calc.maturityScore, '', '/ 100', 'Your overall systems health across practices, people, planning and decision-making. The single number to grow year on year.')}
+                {renderCalcField('Responsiveness Score', calc.responsivenessScore, '', '/ 100', 'How fast recommended work is approved and actioned — the customer-side lever on results.')}
+                {renderCalcField('Crane Availability', calc.availability, '', '%', 'Share of scheduled time the crane is available. World-class is above 95%.')}
+                {renderCalcField('Preventability Index', calc.preventabilityIndex, '', '%', 'Share of breakdowns that were avoidable — flagged before but not actioned.')}
+              </div>
+            </div>
+
             <div>
               <h3 className="text-sm font-bold text-foreground mb-3">🏗 Reliability Overview</h3>
               <div className="grid grid-cols-2 gap-3">
                 {renderCalcField('Annual Downtime', calc.annualDowntime, '', ' hrs', 'Total crane downtime per year from all breakdowns.')}
                 {renderCalcField('Reactive Ratio', calc.reactiveRatio, '', '%', 'Share of maintenance that is unplanned emergency work.')}
                 {renderCalcField('Mean Time To Repair', calc.mttr, '', ' hrs', 'Average hours from breakdown to crane back in service.')}
+                {renderCalcField('Mean Time Between Failures', calc.mtbf, '', ' hrs', 'Average operating hours between breakdowns — higher is better.')}
                 {renderCalcField('First-Time Fix', num('first_time_fix'), '', '%', 'How often issues are resolved on the first visit.')}
+                {renderCalcField('Advice Adoption', calc.adoptionRate, '', '%', 'Share of recommended repairs the customer approves.')}
               </div>
             </div>
 
@@ -515,6 +643,8 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
               <div className="grid grid-cols-2 gap-3">
                 {renderCalcField('Cost Per Breakdown', calc.costPerBreakdown, '$', '', 'Revenue lost each time a crane goes down.')}
                 {renderCalcField('Annual Cost', calc.annualCost, '$', '', 'Total yearly revenue impact from all crane downtime.')}
+                {renderCalcField('True Annual Cost', calc.trueAnnualCost, '$', '', 'Lost revenue plus idle labour and overtime — the full business impact.')}
+                {renderCalcField('Deferred Risk Exposure', calc.deferredRiskExposure, '$', '', 'Value of recommended work not yet approved.')}
                 {str('backup_crane') === 'No' && renderCalcField('Adjusted Cost (No Backup)', calc.adjustedCost, '$', '', 'Includes 20% buffer for no backup crane — covers overtime, delays and penalties.')}
               </div>
             </div>
@@ -634,6 +764,7 @@ export default function CraneBaselineForm({ existingId, onBack, mode = 'technici
             )}
           </div>
         );
+      }
 
       default:
         return null;
