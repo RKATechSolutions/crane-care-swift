@@ -700,7 +700,7 @@ export default function CraneList({ activeJobId, onSetActiveJob, initialTab }: C
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-600">
                 <BarChart3 className="w-4 h-4" />
               </div>
-              <span className="text-[8px] font-bold leading-tight text-foreground mt-0.5">Site Inspection</span>
+              <span className="text-[8px] font-bold leading-tight text-foreground mt-0.5">RKA 360 Assessment</span>
             </button>
             <button
               onClick={() => setShowLiftingRegisterList(true)}
